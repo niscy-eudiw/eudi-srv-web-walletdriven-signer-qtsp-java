@@ -1,0 +1,46 @@
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO
+
+#spring:
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          sca-client-oidc:
+#            provider: spring
+#            client-id: sca-client
+#            client-secret: secret
+#            authorization-grant-type: authorization_code
+#            redirect-uri: "http://localhost:8080/login/oauth2/code/{registrationId}"
+#            scope: service, credential
+#            client-name: sca-client-oidc
+#          sca-client-authorization-code:
+#            provider: spring
+#            client-id: sca-client
+#            client-secret: secret
+#            authorization-grant-type: authorization_code
+#            redirect-uri: "http://localhost:8080/authorized"
+#            scope: service, credential
+#            client-name: sca-client-authorization-code
+#          sca-client-client-credentials:
+#            provider: spring
+#            client-id: sca-client
+#            client-secret: secret
+#            authorization-grant-type: client_credentials
+#            scope: service, credential
+#            client-name: sca-client-client-credential
+#        provider:
+#          spring:
+#            issuer-uri: http://localhost:9000
+#          spring-tls:
+#            token-uri: https://localhost:9443/oauth2/token
+#
+#messages:
+#  base-uri: https://localhost:8443/messages

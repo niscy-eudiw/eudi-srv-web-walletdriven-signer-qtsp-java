@@ -1,0 +1,27 @@
+server:
+  port: 8443
+  ssl:
+    bundle: messages-resource
+    client-auth: need
+
+spring:
+  ssl:
+    bundle:
+      jks:
+        messages-resource:
+          key:
+            alias: messages-resource-sample
+            password: password
+          keystore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+          truststore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:9000
