@@ -1,27 +1,18 @@
 server:
-  port: 8443
-  ssl:
-    bundle: messages-resource
-    client-auth: need
+  port: 8081
 
 spring:
-  ssl:
-    bundle:
-      jks:
-        messages-resource:
-          key:
-            alias: messages-resource-sample
-            password: password
-          keystore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
-          truststore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:9000
+  application:
+    name: qtsp
+    version: 0.0.1
+
+info:
+  specs: "2.0.0.0"
+  name: "remote Qualifies Electronic Signature R3 QTSP"
+  logo: "img"
+  region: "EU"
+  lang: "en-US"
+  description: "This is a test Qualified Trust Service Provider"
+
+credentials:
+  onlyValidSupport: false

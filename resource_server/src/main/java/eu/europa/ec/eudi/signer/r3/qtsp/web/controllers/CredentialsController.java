@@ -38,9 +38,28 @@ public class CredentialsController {
     @Autowired
     private CredentialsService credentialsService;
 
+
     @PostMapping(value = "/list", consumes = "application/json", produces = "application/json")
     public CredentialsListResponse list(@RequestBody CredentialsListRequest listRequestDTO) {
         System.out.println(listRequestDTO.toString());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // onlyValid = listRequestDTO.getOnlyValid() && is supported by the QTSP:
         boolean onlyValid = listRequestDTO.getOnlyValid();

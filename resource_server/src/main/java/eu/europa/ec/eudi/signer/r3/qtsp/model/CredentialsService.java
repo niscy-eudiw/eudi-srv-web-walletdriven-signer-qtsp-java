@@ -203,4 +203,11 @@ public class CredentialsService {
                 .getCertificate(certBuilder.build(contentSigner));
         return certificate;
     }
+
+
+
+    public static void createCredential(){
+
+    }
+
 }
