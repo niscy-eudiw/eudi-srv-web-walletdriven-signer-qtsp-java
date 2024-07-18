@@ -1,11 +1,11 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
 public class CredentialsInfoRequest {
     private String credentialID;
     // none | single | chain
-    private String certificates;
-    private Boolean certInfo;
-    private Boolean authInfo;
+    private String certificates = "single";
+    private Boolean certInfo = false;
+    private Boolean authInfo = false;
     private String lang;
     private String clientData;
 

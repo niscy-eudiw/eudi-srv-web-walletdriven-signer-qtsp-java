@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
 import java.util.List;
 

@@ -1,101 +1,90 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.Controllers;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.controllers;
 
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoCert;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfoAuth;
-import eu.europa.ec.eudi.signer.r3.qtsp.Model.CredentialsService;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.crypto.util.AlgorithmIdentifierFactory;
+import eu.europa.ec.eudi.signer.r3.qtsp.config.CredentialsConfig;
+import eu.europa.ec.eudi.signer.r3.qtsp.model.CredentialsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsListRequest;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsListResponse;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoKey;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoRequest;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoResponse;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.Base64;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsListRequest;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsListResponse;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfoRequest;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfoResponse;
+
 import java.util.List;
 
 @RestController
 @RequestMapping(value = "/csc/v2/credentials")
 public class CredentialsController {
 
-    @Autowired
     private CredentialsService credentialsService;
+    private CredentialsConfig credentialsConfig;
 
+    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig){
+        this.credentialsService = credentialsService;
+        this.credentialsConfig = credentialsConfig;
+    }
 
     @PostMapping(value = "/list", consumes = "application/json", produces = "application/json")
     public CredentialsListResponse list(@RequestBody CredentialsListRequest listRequestDTO) {
         System.out.println(listRequestDTO.toString());
+        CredentialsListResponse credentialsListResponse = new CredentialsListResponse();
 
+        try {
+            // onlyValid requested && onlyValid supported by the QTSP
+            boolean onlyValid = listRequestDTO.getOnlyValid() && credentialsConfig.getOnlyValidSupport();
+            credentialsListResponse.setOnlyValid(onlyValid);
 
+            // get the list of the available credentials of the user
+            List<String> listAvailableCredentialsId =
+                  credentialsService.getAvailableCredentialsID(
+                        listRequestDTO.getUserID(),
+                        onlyValid);
+            credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // onlyValid = listRequestDTO.getOnlyValid() && is supported by the QTSP:
-        boolean onlyValid = listRequestDTO.getOnlyValid();
-
-        CredentialsListResponse clr = new CredentialsListResponse();
-
-        List<String> availableCredentialsId = credentialsService.getAvailableCredentialsID(listRequestDTO.getUserID(), onlyValid);
-        clr.setCredentialIDs(availableCredentialsId);
-
-        if(listRequestDTO.getCredentialInfo()){
-            // return the main information included in the public key certificate and the public key certificate or the certificate chain.
-            List<CredentialsListResponse.CredentialInfo> ci = credentialsService.getCredentialInfo(listRequestDTO.getCertificates(), listRequestDTO.getCertInfo(), listRequestDTO.getAuthInfo(), onlyValid);
-            clr.setCredentialInfos(ci);
+            if(listRequestDTO.getCredentialInfo()){ // return the main information included in the public key certificate and the public key certificate or the certificate chain
+                List<CredentialsListResponse.CredentialInfo> ci =
+                      credentialsService.getCredentialInfo(
+                            listAvailableCredentialsId,
+                            listRequestDTO.getCertificates(),
+                            listRequestDTO.getCertInfo(),
+                            listRequestDTO.getAuthInfo());
+                credentialsListResponse.setCredentialInfos(ci);
+            }
         }
-        return clr;
+        catch (Exception e){
+            e.printStackTrace();
+        }
+        return credentialsListResponse;
     }
 
     @PostMapping(value = "/info", consumes = "application/json", produces = "application/json")
     public CredentialsInfoResponse info(@RequestBody CredentialsInfoRequest infoRequestDTO) {
         System.out.println(infoRequestDTO.toString());
+        CredentialsInfoResponse credentialsInfoResponse = new CredentialsInfoResponse();
+        try {
+            credentialsInfoResponse = credentialsService.getCredentialInfoFromSingleCredential(
+                  infoRequestDTO.getCredentialID(),
+                  infoRequestDTO.getCertificates(),
+                  infoRequestDTO.getCertInfo(),
+                  infoRequestDTO.getAuthInfo());
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return credentialsInfoResponse;
+    }
 
-        CredentialsInfoResponse cir = new CredentialsInfoResponse();
-        CredentialsListResponse.CredentialInfo ci =
-                credentialsService.getCredentialInfoFromSingleCredential(
-                        infoRequestDTO.getCredentialID(),
-                        infoRequestDTO.getCertificates(),
-                        infoRequestDTO.getCertInfo(),
-                        infoRequestDTO.getAuthInfo());
-
-        cir.setDescription(ci.getDescription());
-        cir.setSignatureQualifier(ci.getSignatureQualifier());
-        cir.setSCAL(ci.getSCAL());
-        cir.setMultisign(ci.getMultisign());
-        cir.setKey(ci.getKey());
-        cir.setCert(ci.getCert());
-        cir.setAuth(ci.getAuth());
-        return cir;
+    // for tests, to be removed
+    @GetMapping(value = "/createCredentials")
+    public ResponseEntity<?> createCredentials(){
+        try{
+            this.credentialsService.createCredential();
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        }
+        catch (Exception e){
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

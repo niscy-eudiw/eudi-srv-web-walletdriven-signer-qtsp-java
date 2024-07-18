@@ -1,8 +1,9 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoAuth;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoCert;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoKey;
 import jakarta.validation.constraints.NotBlank;
-
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfoAuth;
 
 public class CredentialsInfoResponse {
     private String description;
@@ -11,7 +12,7 @@ public class CredentialsInfoResponse {
     private CredentialsInfoCert cert;
     private CredentialsInfoAuth auth;
     // 1 | 2
-    private String SCAL;
+    private String SCAL = "1";
     // >= 1
     @NotBlank
     private int multisign;

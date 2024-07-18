@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.Model;
+package eu.europa.ec.eudi.signer.r3.qtsp.model;
 
 import org.springframework.stereotype.Service;
 

@@ -1,30 +1,17 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.Controllers;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.controllers;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
-import eu.europa.ec.eudi.signer.r3.qtsp.Model.SignaturesService;
+import eu.europa.ec.eudi.signer.r3.qtsp.model.SignaturesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.SignaturesSignHashRequest;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.SignaturesSignHashResponse;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.SignaturesSignHashRequest;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.SignaturesSignHashResponse;
 
 @RestController
 @RequestMapping(value = "/csc/v2/signatures")
