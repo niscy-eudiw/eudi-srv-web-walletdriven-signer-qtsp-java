@@ -33,17 +33,21 @@ public class SignaturesController {
             System.out.println("Currently Asynchronous responses are not supported");
             return new SignaturesSignHashResponse();
         }
-
         SignaturesSignHashResponse response = new SignaturesSignHashResponse();
-        List<String> signatures =
-                signaturesService.signHash(
+        try {
+            List<String> signatures =
+                  signaturesService.signHash(
                         signHashRequest.getCredentialID(),
                         signHashRequest.getHashes(),
                         signHashRequest.getHashAlgorithmOID(),
                         signHashRequest.getSignAlgo(),
                         signHashRequest.getSignAlgoParams());
 
-        response.setSignatures(signatures);
+            response.setSignatures(signatures);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
         return response;
     }
 }

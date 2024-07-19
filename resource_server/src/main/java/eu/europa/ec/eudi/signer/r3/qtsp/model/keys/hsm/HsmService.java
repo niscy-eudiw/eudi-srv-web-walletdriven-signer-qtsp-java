@@ -1,35 +1,103 @@
 package eu.europa.ec.eudi.signer.r3.qtsp.model.keys.hsm;
 
+import java.nio.ByteBuffer;
+import java.security.Key;
 import java.security.KeyFactory;
+import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
+import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
+import java.util.List;
+
+import eu.europa.ec.eudi.signer.r3.qtsp.config.AuthConfig;
+import eu.europa.ec.eudi.signer.r3.qtsp.model.database.entities.SecretKey;
+import eu.europa.ec.eudi.signer.r3.qtsp.model.database.repositories.SecretKeyRepository;
 import org.pkcs11.jacknji11.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 @Component
 public class HsmService {
 
     private byte[] secretKey;
     private HsmInformation hsmInfo;
+    private static final int IVLENGTH = 12;
 
-    public HsmService() {
+    public HsmService(
+          @Autowired SecretKeyRepository secretKeyRepositoryLoaded,
+          @Autowired AuthConfig authProperties
+    ) throws Exception {
 
         // Load test_slot from global variable
         long slot = 0;
         String testSlotEnv = System.getenv("JACKNJI11_TEST_TESTSLOT");
-        if (testSlotEnv != null && testSlotEnv.length() > 0) {
+        if (testSlotEnv != null && !testSlotEnv.isEmpty()) {
             slot = Long.parseLong(testSlotEnv);
         }
 
         // Load user_pin from global variable
         byte[] pin = "userpin".getBytes();
         String userPinEnv = System.getenv("JACKNJI11_TEST_USER_PIN");
-        if (userPinEnv != null && userPinEnv.length() > 0) {
+        if (userPinEnv != null && !userPinEnv.isEmpty()) {
             pin = userPinEnv.getBytes();
         }
 
         this.hsmInfo = new HsmInformation(slot, pin);
         CE.Initialize();
+
+        char[] passphrase = authProperties.getDbEncryptionPassphrase().toCharArray();
+        byte[] saltBytes = Base64.getDecoder().decode(authProperties.getDbEncryptionSalt());
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec encryptionKeySpec = new PBEKeySpec(passphrase, saltBytes, 65536, 256);
+        Key encryptionKey = new SecretKeySpec(factory.generateSecret(encryptionKeySpec).getEncoded(), "AES");
+
+        // init Secret Key or loads it from the database
+        List<SecretKey> secretKeys = secretKeyRepositoryLoaded.findAll();
+        if (secretKeys.isEmpty()) {
+            // generates a secret key to wrap the private keys from the HSM
+            byte[] secretKeyBytes = initSecretKey();
+
+            byte[] iv = new byte[IVLENGTH];
+            SecureRandom secureRandom = new SecureRandom();
+            secureRandom.nextBytes(iv);
+
+            // encrypts the secret key before saving it in the db
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec algSpec = new GCMParameterSpec(128, iv);
+            c.init(Cipher.ENCRYPT_MODE, encryptionKey, algSpec);
+            byte[] encryptedSecretKeyBytes = c.doFinal(secretKeyBytes);
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedSecretKeyBytes.length);
+            byteBuffer.put(iv);
+            byteBuffer.put(encryptedSecretKeyBytes);
+
+            SecretKey secretKey = new SecretKey(byteBuffer.array());
+            secretKeyRepositoryLoaded.save(secretKey);
+        } else {
+            SecretKey sk = secretKeys.get(0);
+            byte[] encryptedSecretKeyBytes = sk.getSecretKey();
+
+            ByteBuffer byteBuffer = ByteBuffer.wrap(encryptedSecretKeyBytes);
+            byte[] iv = new byte[IVLENGTH];
+            byteBuffer.get(iv);
+            byte[] encryptedSecretKey = new byte[byteBuffer.remaining()];
+            byteBuffer.get(encryptedSecretKey);
+
+            // decrypts the secret key
+            Cipher c = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec algSpec = new GCMParameterSpec(128, iv);
+            c.init(Cipher.DECRYPT_MODE, encryptionKey, algSpec);
+            byte[] secretKeyBytes = c.doFinal(encryptedSecretKey);
+
+            setSecretKey(secretKeyBytes);
+        }
     }
 
     // Creates a new Secret Key that will be use for the operation of wrap and

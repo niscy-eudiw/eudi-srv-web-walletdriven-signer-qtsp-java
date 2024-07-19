@@ -35,13 +35,6 @@ public class KeysService {
         return keyFactory.generatePublic(pKeySpec);
     }
 
-    public void savePublicKeyHSM(Credentials credential, BigInteger modulus, BigInteger public_exponent) throws Exception {
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        RSAPublicKeySpec pKeySpec = new RSAPublicKeySpec(modulus, public_exponent);
-        RSAPublicKey pk = (RSAPublicKey) keyFactory.generatePublic(pKeySpec);
-        credential.setPublicKey(pk.getEncoded());
-    }
-
     private static KeyPair keyPairGeneration() throws Exception {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         keyPairGenerator.initialize(1024, new SecureRandom());

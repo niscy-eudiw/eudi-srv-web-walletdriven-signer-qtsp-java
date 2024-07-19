@@ -1,11 +1,11 @@
 package eu.europa.ec.eudi.signer.r3.qtsp.model.database.entities;
 
+import jakarta.persistence.*;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import jakarta.persistence.*;
 
 @Entity
 @Table(name="credentials")
@@ -21,25 +21,22 @@ public class Credentials {
     private String SCAL;
     private int multisign;
     private String lang;
-
+    // private key wrapped in the HSM base 64 encoded
     @Column(length = 2000)
-    private byte[] privateKey;
-
+    private String privateKey;
+    // public key base 64 encoded
     @Column(length = 2000)
-    private byte[] publicKey;
+    private String publicKey;
     private String keyStatus;
     private List<String> keyAlgo;
     private int keyLen;
     private String keyCurve;
-
     @Column(length = 2000)
     private String certificate;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "credential", cascade = CascadeType.ALL)
     private List<CertificateChain> certificateChain;
-
     private String certStatus;
-
     private String authMode;
     private String authExpression;
     private List<Object> authObjects;
@@ -51,7 +48,6 @@ public class Credentials {
     public boolean isValid(){
         return this.keyStatus.equals("enabled") && this.certStatus.equals("valid");
     }
-
 
     public String getUserID() {
         return userID;
@@ -109,19 +105,19 @@ public class Credentials {
         this.lang = lang;
     }
 
-    public byte[] getPrivateKey() {
+    public String getPrivateKey() {
         return privateKey;
     }
 
-    public void setPrivateKey(byte[] privateKey) {
+    public void setPrivateKey(String privateKey) {
         this.privateKey = privateKey;
     }
 
-    public byte[] getPublicKey() {
+    public String getPublicKey() {
         return publicKey;
     }
 
-    public void setPublicKey(byte[] publicKey) {
+    public void setPublicKey(String publicKey) {
         this.publicKey = publicKey;
     }
 
@@ -226,4 +222,20 @@ public class Credentials {
                 ", authObjects='" + authObjects + '\'' +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Credentials)) return false;
+        Credentials that = (Credentials) o;
+        return multisign == that.multisign && keyLen == that.keyLen && Objects.equals(userID, that.userID) &&
+              Objects.equals(signatureQualifier, that.signatureQualifier) && Objects.equals(SCAL, that.SCAL) &&
+              Objects.equals(lang, that.lang) && Objects.deepEquals(privateKey, that.privateKey) &&
+              Objects.deepEquals(publicKey, that.publicKey) && Objects.equals(keyStatus, that.keyStatus) &&
+              Objects.equals(keyAlgo, that.keyAlgo) && Objects.equals(keyCurve, that.keyCurve) &&
+              Objects.equals(certificate, that.certificate) && Objects.equals(certificateChain, that.certificateChain)
+              && Objects.equals(certStatus, that.certStatus) && Objects.equals(authMode, that.authMode);
+    }
+
+
 }
