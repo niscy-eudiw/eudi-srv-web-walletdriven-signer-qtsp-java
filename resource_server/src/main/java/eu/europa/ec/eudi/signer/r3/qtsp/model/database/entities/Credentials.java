@@ -1,34 +1,54 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.Model;
+package eu.europa.ec.eudi.signer.r3.qtsp.model.database.entities;
 
-import java.security.KeyPair;
-import java.security.cert.X509Certificate;
+import jakarta.persistence.*;
+
+import java.security.PublicKey;
 import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
+@Entity
+@Table(name="credentials")
 public class Credentials {
 
     private String userID;
     // private String alias;?
 
+    @Id
     private String id;
     private String description;
     private String signatureQualifier;
     private String SCAL;
     private int multisign;
     private String lang;
-
-    private KeyPair keyPair;
+    // private key wrapped in the HSM base 64 encoded
+    @Column(length = 2000)
+    private String privateKey;
+    // public key base 64 encoded
+    @Column(length = 2000)
+    private String publicKey;
     private String keyStatus;
-    private String keyAlgo;
-    private String keyLen;
+    private List<String> keyAlgo;
+    private int keyLen;
     private String keyCurve;
+    @Column(length = 2000)
+    private String certificate;
 
-    private X509Certificate certificate;
-    private List<X509Certificate> certificateChain;
+    @OneToMany(fetch = FetchType.LAZY, mappedBy = "credential", cascade = CascadeType.ALL)
+    private List<CertificateChain> certificateChain;
     private String certStatus;
-
     private String authMode;
     private String authExpression;
-    private String authObjects;
+    private List<Object> authObjects;
+
+    public Credentials(){
+        this.id = UUID.randomUUID().toString();
+    }
+
+    public boolean isValid(){
+        return this.keyStatus.equals("enabled") && this.certStatus.equals("valid");
+    }
 
     public String getUserID() {
         return userID;
@@ -86,12 +106,20 @@ public class Credentials {
         this.lang = lang;
     }
 
-    public KeyPair getKeyPair() {
-        return keyPair;
+    public String getPrivateKey() {
+        return privateKey;
     }
 
-    public void setKeyPair(KeyPair keyPair) {
-        this.keyPair = keyPair;
+    public void setPrivateKey(String privateKey) {
+        this.privateKey = privateKey;
+    }
+
+    public String getPublicKey() {
+        return publicKey;
+    }
+
+    public void setPublicKey(String publicKey) {
+        this.publicKey = publicKey;
     }
 
     public String getKeyStatus() {
@@ -102,19 +130,19 @@ public class Credentials {
         this.keyStatus = keyStatus;
     }
 
-    public String getKeyAlgo() {
+    public List<String> getKeyAlgo() {
         return keyAlgo;
     }
 
-    public void setKeyAlgo(String keyAlgo) {
+    public void setKeyAlgo(List<String> keyAlgo) {
         this.keyAlgo = keyAlgo;
     }
 
-    public String getKeyLen() {
+    public int getKeyLen() {
         return keyLen;
     }
 
-    public void setKeyLen(String keyLen) {
+    public void setKeyLen(int keyLen) {
         this.keyLen = keyLen;
     }
 
@@ -126,19 +154,19 @@ public class Credentials {
         this.keyCurve = keyCurve;
     }
 
-    public X509Certificate getCertificate() {
+    public String getCertificate() {
         return certificate;
     }
 
-    public void setCertificate(X509Certificate certificate) {
+    public void setCertificate(String certificate) {
         this.certificate = certificate;
     }
 
-    public List<X509Certificate> getCertificateChain() {
-        return certificateChain;
+    public List<String> getCertificateChain() {
+        return this.certificateChain.stream().map(CertificateChain::getCertificate).collect(Collectors.toList());
     }
 
-    public void setCertificateChain(List<X509Certificate> certificateChain) {
+    public void setCertificateChain(List<CertificateChain> certificateChain) {
         this.certificateChain = certificateChain;
     }
 
@@ -166,11 +194,11 @@ public class Credentials {
         this.authExpression = authExpression;
     }
 
-    public String getAuthObjects() {
+    public List<Object> getAuthObjects() {
         return authObjects;
     }
 
-    public void setAuthObjects(String authObjects) {
+    public void setAuthObjects(List<Object> authObjects) {
         this.authObjects = authObjects;
     }
 
@@ -183,7 +211,6 @@ public class Credentials {
                 ", SCAL2='" + SCAL + '\'' +
                 ", multisign=" + multisign +
                 ", lang='" + lang + '\'' +
-                ", keyPair=" + keyPair +
                 ", keyStatus='" + keyStatus + '\'' +
                 ", keyAlgo='" + keyAlgo + '\'' +
                 ", keyLen='" + keyLen + '\'' +
@@ -196,4 +223,20 @@ public class Credentials {
                 ", authObjects='" + authObjects + '\'' +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Credentials)) return false;
+        Credentials that = (Credentials) o;
+        return multisign == that.multisign && keyLen == that.keyLen && Objects.equals(userID, that.userID) &&
+              Objects.equals(signatureQualifier, that.signatureQualifier) && Objects.equals(SCAL, that.SCAL) &&
+              Objects.equals(lang, that.lang) && Objects.deepEquals(privateKey, that.privateKey) &&
+              Objects.deepEquals(publicKey, that.publicKey) && Objects.equals(keyStatus, that.keyStatus) &&
+              Objects.equals(keyAlgo, that.keyAlgo) && Objects.equals(keyCurve, that.keyCurve) &&
+              Objects.equals(certificate, that.certificate) && Objects.equals(certificateChain, that.certificateChain)
+              && Objects.equals(certStatus, that.certStatus) && Objects.equals(authMode, that.authMode);
+    }
+
+
 }

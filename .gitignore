@@ -5,6 +5,8 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+resource_server/src/main/resources/application-auth.yml
+
 ### STS ###
 .apt_generated
 .classpath

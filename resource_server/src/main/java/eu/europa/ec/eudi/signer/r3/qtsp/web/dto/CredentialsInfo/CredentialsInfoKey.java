@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo;
 
 import java.util.List;
 import jakarta.validation.constraints.NotBlank;

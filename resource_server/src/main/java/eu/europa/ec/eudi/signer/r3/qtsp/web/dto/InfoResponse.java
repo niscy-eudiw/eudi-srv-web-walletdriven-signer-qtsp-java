@@ -1,9 +1,9 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.json.JSONObject;
+import eu.europa.ec.eudi.signer.r3.qtsp.config.InfoConfig;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -24,19 +24,12 @@ public class InfoResponse {
     private List<String> authType;
     private String oauth2;
     private String oauth2Issuer;
-    private Boolean asynchronousOperationMode;
+    private boolean asynchronousOperationMode;
     @NotBlank
     private List<String> methods;
-    private Boolean validationInfo;
-
-    /**
-     * {
-     * algos:List<String>
-     * algoParams: List<String>
-     * }
-     */
+    private boolean validationInfo;
     @NotBlank
-    private JSONObject signAlgorithms;
+    private InfoConfig.SignAlgorithms signAlgorithms;
 
     /**
      * {
@@ -45,135 +38,67 @@ public class InfoResponse {
      * }
      */
     @NotBlank
-    private JSONObject signature_formats;
+    private SignatureFormats signature_formats;
+
+    private static class SignatureFormats{
+        private List<String> formats;
+        private List<List<String>> envelope_properties;
+
+        public SignatureFormats(){
+            this.formats = new ArrayList<>();
+            this.envelope_properties = new ArrayList<>();
+        }
+
+        public SignatureFormats(List<String> formats, List<List<String>> envelope_properties) {
+            this.formats = formats;
+            this.envelope_properties = envelope_properties;
+        }
+
+        public List<String> getFormats() {
+            return formats;
+        }
+
+        public void setFormats(List<String> formats) {
+            this.formats = formats;
+        }
+
+        public List<List<String>> getEnvelope_properties() {
+            return envelope_properties;
+        }
+
+        public void setEnvelope_properties(List<List<String>> envelope_properties) {
+            this.envelope_properties = envelope_properties;
+        }
+    }
+
     @NotBlank
     private List<String> conformance_levels;
 
     public InfoResponse() {
         this.authType = new ArrayList<>();
         this.methods = new ArrayList<>();
-        this.signAlgorithms = new JSONObject();
-        this.signature_formats = new JSONObject();
+        this.signAlgorithms = new InfoConfig.SignAlgorithms();
+        this.signature_formats = new SignatureFormats();
         this.conformance_levels = new ArrayList<>();
     }
 
-    public String getSpecs() {
-        return specs;
-    }
-
-    public void setSpecs(String specs) {
+    public InfoResponse(String specs, String name, String logo, String region, String lang, String description,
+                        List<String> authType, String oauth2, boolean asynchronousOperationMode, List<String> methods,
+                        boolean validationInfo, InfoConfig.SignAlgorithms signAlgorithms, List<String> signature_formats_formats,
+                        List<List<String>> signature_formats_envelope_properties, List<String> conformance_levels) {
         this.specs = specs;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
         this.name = name;
-    }
-
-    public String getLogo() {
-        return logo;
-    }
-
-    public void setLogo(String logo) {
         this.logo = logo;
-    }
-
-    public String getRegion() {
-        return region;
-    }
-
-    public void setRegion(String region) {
         this.region = region;
-    }
-
-    public String getLang() {
-        return lang;
-    }
-
-    public void setLang(String lang) {
         this.lang = lang;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
         this.description = description;
-    }
-
-    public List<String> getAuthType() {
-        return authType;
-    }
-
-    public void setAuthType(List<String> authType) {
         this.authType = authType;
-    }
-
-    public String getOauth2() {
-        return oauth2;
-    }
-
-    public void setOauth2(String oauth2) {
         this.oauth2 = oauth2;
-    }
-
-    public String getOauth2Issuer() {
-        return oauth2Issuer;
-    }
-
-    public void setOauth2Issuer(String oauth2Issuer) {
-        this.oauth2Issuer = oauth2Issuer;
-    }
-
-    public Boolean getAsynchronousOperationMode() {
-        return asynchronousOperationMode;
-    }
-
-    public void setAsynchronousOperationMode(Boolean asynchronousOperationMode) {
         this.asynchronousOperationMode = asynchronousOperationMode;
-    }
-
-    public List<String> getMethods() {
-        return methods;
-    }
-
-    public void setMethods(List<String> methods) {
         this.methods = methods;
-    }
-
-    public Boolean getValidationInfo() {
-        return validationInfo;
-    }
-
-    public void setValidationInfo(Boolean validationInfo) {
         this.validationInfo = validationInfo;
-    }
-
-    public JSONObject getSignAlgorithms() {
-        return signAlgorithms;
-    }
-
-    public void setSignAlgorithms(JSONObject signAlgorithms) {
         this.signAlgorithms = signAlgorithms;
-    }
-
-    public JSONObject getSignature_formats() {
-        return signature_formats;
-    }
-
-    public void setSignature_formats(JSONObject signature_formats) {
-        this.signature_formats = signature_formats;
-    }
-
-    public List<String> getConformance_levels() {
-        return conformance_levels;
-    }
-
-    public void setConformance_levels(List<String> conformance_levels) {
+        this.signature_formats = new SignatureFormats(signature_formats_formats, signature_formats_envelope_properties);
         this.conformance_levels = conformance_levels;
     }
 
@@ -196,5 +121,125 @@ public class InfoResponse {
                 ", signature_formats=" + signature_formats +
                 ", conformance_levels=" + conformance_levels +
                 '}';
+    }
+
+    public @NotBlank List<String> getConformance_levels() {
+        return conformance_levels;
+    }
+
+    public void setConformance_levels(@NotBlank List<String> conformance_levels) {
+        this.conformance_levels = conformance_levels;
+    }
+
+    public @NotBlank SignatureFormats getSignature_formats() {
+        return signature_formats;
+    }
+
+    public void setSignature_formats(@NotBlank SignatureFormats signature_formats) {
+        this.signature_formats = signature_formats;
+    }
+
+    public @NotBlank InfoConfig.SignAlgorithms getSignAlgorithms() {
+        return signAlgorithms;
+    }
+
+    public void setSignAlgorithms(@NotBlank InfoConfig.SignAlgorithms signAlgorithms) {
+        this.signAlgorithms = signAlgorithms;
+    }
+
+    public boolean isValidationInfo() {
+        return validationInfo;
+    }
+
+    public void setValidationInfo(boolean validationInfo) {
+        this.validationInfo = validationInfo;
+    }
+
+    public @NotBlank List<String> getMethods() {
+        return methods;
+    }
+
+    public void setMethods(@NotBlank List<String> methods) {
+        this.methods = methods;
+    }
+
+    public boolean isAsynchronousOperationMode() {
+        return asynchronousOperationMode;
+    }
+
+    public void setAsynchronousOperationMode(boolean asynchronousOperationMode) {
+        this.asynchronousOperationMode = asynchronousOperationMode;
+    }
+
+    public String getOauth2Issuer() {
+        return oauth2Issuer;
+    }
+
+    public void setOauth2Issuer(String oauth2Issuer) {
+        this.oauth2Issuer = oauth2Issuer;
+    }
+
+    public String getOauth2() {
+        return oauth2;
+    }
+
+    public void setOauth2(String oauth2) {
+        this.oauth2 = oauth2;
+    }
+
+    public @NotBlank List<String> getAuthType() {
+        return authType;
+    }
+
+    public void setAuthType(@NotBlank List<String> authType) {
+        this.authType = authType;
+    }
+
+    public @NotBlank String getDescription() {
+        return description;
+    }
+
+    public void setDescription(@NotBlank String description) {
+        this.description = description;
+    }
+
+    public @NotBlank String getLang() {
+        return lang;
+    }
+
+    public void setLang(@NotBlank String lang) {
+        this.lang = lang;
+    }
+
+    public @NotBlank String getRegion() {
+        return region;
+    }
+
+    public void setRegion(@NotBlank String region) {
+        this.region = region;
+    }
+
+    public @NotBlank String getLogo() {
+        return logo;
+    }
+
+    public void setLogo(@NotBlank String logo) {
+        this.logo = logo;
+    }
+
+    public @NotBlank String getName() {
+        return name;
+    }
+
+    public void setName(@NotBlank String name) {
+        this.name = name;
+    }
+
+    public @NotBlank String getSpecs() {
+        return specs;
+    }
+
+    public void setSpecs(@NotBlank String specs) {
+        this.specs = specs;
     }
 }

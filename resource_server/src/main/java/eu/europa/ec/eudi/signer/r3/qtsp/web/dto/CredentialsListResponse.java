@@ -1,11 +1,11 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoCert;
-import eu.europa.ec.eudi.signer.r3.qtsp.DTO.CredentialsInfo.CredentialsInfoKey;
-import org.json.JSONObject;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoAuth;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoCert;
+import eu.europa.ec.eudi.signer.r3.qtsp.web.dto.CredentialsInfo.CredentialsInfoKey;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -69,7 +69,6 @@ public class CredentialsListResponse {
         private String signatureQualifier;
         private CredentialsInfoKey key;
         private CredentialsInfoCert cert;
-        // explicit | oauth2code
         private CredentialsInfoAuth auth;
         // 1 | 2
         private String SCAL = "1";

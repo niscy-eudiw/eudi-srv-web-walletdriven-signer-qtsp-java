@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.qtsp.DTO;
+package eu.europa.ec.eudi.signer.r3.qtsp.web.dto;
 
 import java.util.List;
 
@@ -7,13 +7,19 @@ import jakarta.validation.constraints.NotBlank;
 public class SignaturesSignHashRequest {
     @NotBlank
     private String credentialID;
+    // the signature activation data returned by the Credential Authorization methods
     private String SAD;
     @NotBlank
+    // one or more hash values to be signed. This parameter SHALL contain the Base64-encoded raw message digests
     private List<String> hashes;
+    // the OID of the algorithm used to calculate the hash value.
     private String hashAlgorithmOID;
     @NotBlank
+    // the OID of the algorithm to use for signing
     private String signAlgo;
+    // the Base64-encoded DER-encoded ASN.1 signature parameters, if required by the signature algorithm
     private String signAlgoParams;
+    // A or S
     private String operationMode;
     private int validity_period;
     private String response_uri;
