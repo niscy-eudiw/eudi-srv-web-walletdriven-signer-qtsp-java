@@ -2,6 +2,7 @@ package eu.europa.ec.eudi.signer.r3.qtsp.model.database.entities;
 
 import jakarta.persistence.*;
 
+import java.security.PublicKey;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;

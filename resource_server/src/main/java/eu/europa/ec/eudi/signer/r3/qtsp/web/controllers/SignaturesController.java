@@ -24,30 +24,37 @@ public class SignaturesController {
     public SignaturesSignHashResponse signHash(@RequestBody SignaturesSignHashRequest signHashRequest) {
         System.out.println(signHashRequest.toString());
 
-        if(!signaturesService.validateSAD(signHashRequest.getSAD(), signHashRequest.getCredentialID())){
+        SignaturesSignHashResponse signaturesSignHashResponse = new SignaturesSignHashResponse();
+
+        if(!signaturesService.validateSAD(
+              signHashRequest.getSAD(),
+              signHashRequest.getCredentialID(),
+              signHashRequest.getHashes())){
             System.out.println("SAD invalid");
-            return new SignaturesSignHashResponse();
+            return signaturesSignHashResponse;
         }
 
         if(Objects.equals(signHashRequest.getOperationMode(), "A")){
-            System.out.println("Currently Asynchronous responses are not supported");
-            return new SignaturesSignHashResponse();
+            String responseID = signaturesService.asynchronousSignHash(signHashRequest.getValidity_period(), signHashRequest.getResponse_uri());
+            signaturesSignHashResponse.setResponseID(responseID);
+            return signaturesSignHashResponse;
         }
-        SignaturesSignHashResponse response = new SignaturesSignHashResponse();
-        try {
-            List<String> signatures =
-                  signaturesService.signHash(
-                        signHashRequest.getCredentialID(),
-                        signHashRequest.getHashes(),
-                        signHashRequest.getHashAlgorithmOID(),
-                        signHashRequest.getSignAlgo(),
-                        signHashRequest.getSignAlgoParams());
+        else if(Objects.equals(signHashRequest.getOperationMode(), "S")){
+            try {
+                List<String> signatures = signaturesService.signHash(
+                      signHashRequest.getCredentialID(),
+                      signHashRequest.getHashes(),
+                      signHashRequest.getHashAlgorithmOID(),
+                      signHashRequest.getSignAlgo(),
+                      signHashRequest.getSignAlgoParams());
+                signaturesSignHashResponse.setSignatures(signatures);
+                return signaturesSignHashResponse;
+            }
+            catch (Exception e){
+                e.printStackTrace();
+            }
+        }
 
-            response.setSignatures(signatures);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-        return response;
+        return new SignaturesSignHashResponse();
     }
 }

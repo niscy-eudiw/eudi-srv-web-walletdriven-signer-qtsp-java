@@ -76,11 +76,12 @@ public class DefaultVariables {
                 credential.setMultisign(1);
                 credential.setLang("en-US");
 
-                credential.setPrivateKey(publicKeyBase64);
-                credential.setPublicKey(privateKeyBase64);
+                credential.setPrivateKey(privateKeyBase64);
+                credential.setPublicKey(publicKeyBase64);
                 credential.setKeyStatus("enabled");
                 List<String> keyAlgo = new ArrayList<>();
                 keyAlgo.add("1.2.840.113549.1.1.1");
+                keyAlgo.add("1.2.840.113549.1.1.11");
                 credential.setKeyAlgo(keyAlgo);
                 credential.setKeyLen(1024);
 

@@ -1,5 +1,7 @@
 package eu.europa.ec.eudi.signer.r3.qtsp.model.keys.hsm;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.security.Key;
 import java.security.KeyFactory;
@@ -8,7 +10,9 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import eu.europa.ec.eudi.signer.r3.qtsp.config.AuthConfig;
 import eu.europa.ec.eudi.signer.r3.qtsp.model.database.entities.SecretKey;
@@ -282,6 +286,27 @@ public class HsmService {
         return signed;
     }
 
+    public byte[] signWithSomeAlgorithm(byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception {
+        // init session
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+
+        long secretKeyObj = loadSecretKey(session, this.secretKey);
+
+        // Unwrap private key
+        long privateKey = UnwrapKey(session, secretKeyObj, wrappedPrivateKey);
+        // Get Long value for signature
+        long signatureAlgLong = determineLongValueForAlgorithm(signatureAlgorithm);
+
+        // Sign bytes
+        CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
+        byte[] signed = CE.Sign(session, DTBSR);
+
+        CE.DestroyObject(session, secretKeyObj);
+        this.hsmInfo.releaseSession(sessionRef);
+        return signed;
+    }
+
     public long SetAttributePublicKey(long session, byte[] publicKey) throws Exception {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         X509EncodedKeySpec pKeySpec = new X509EncodedKeySpec(publicKey);
@@ -315,6 +340,17 @@ public class HsmService {
         CE.Verify(session, DTBSR, signature);
 
         this.hsmInfo.CloseSession(sessionRef);
+    }
+
+
+    public long determineLongValueForAlgorithm(String signatureAlgorithm){
+        if(signatureAlgorithm.equals("SHA256WITHRSA"))
+            return 64L;
+        if(signatureAlgorithm.equals("SHA384WITHRSA"))
+            return 65L;
+        if(signatureAlgorithm.equals("SHA512WITHRSA"))
+            return 66L;
+        else return 64L;
     }
 
 }

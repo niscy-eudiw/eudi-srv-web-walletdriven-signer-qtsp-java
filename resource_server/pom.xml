@@ -68,6 +68,13 @@
             <artifactId>spring-security-web</artifactId>
             <version>6.3.0</version>
         </dependency>-->
+
+       <dependency>
+            <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+            <artifactId>dss-enumerations</artifactId>
+            <version>6.0</version>
+        </dependency>
+
     </dependencies>
 
 </project>
