@@ -1,78 +1,100 @@
-/*
- * Copyright 2020-2023 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package eu.europa.ec.eudi.signer.r3.web;
 
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Enumeration;
+
 
 @RestController
 public class DefaultController {
 
 	@GetMapping("/")
-	public void root() {
+	public void root() throws Exception {
 		System.out.println("first call");
-		WebClient webClient = WebClient.builder()
-				.baseUrl("http://localhost:9000")
-				.build();
 
-		webClient.get()
-				.uri("/oauth2/authorize?response_type=code&client_id=sca-client&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fsca-client-oidc&scope=service&code_challenge=some_nonce&code_challenge_method=S256&lang=pt-PT&state=12345678")
-				.retrieve();
+		try(CloseableHttpClient httpClient = HttpClients.createDefault() ) {
+			HttpGet request = new HttpGet(
+				"http://localhost:9000/oauth2/authorize?response_type=code&client_id=sca-client&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fsca-client&scope=service&code_challenge=some_nonce&code_challenge_method=S256&lang=pt-PT&state=12345678"
+			);
 
-		System.out.println("end first call");
+			// Send Post Request
+			HttpResponse response = httpClient.execute(request);
+
+			if(response.getStatusLine().getStatusCode() == 302) {
+				HttpEntity entity = response.getEntity();
+				if (entity == null) {
+					throw new Exception("Presentation Response from Verifier is empty.");
+				}
+				InputStream inStream = entity.getContent();
+				String message = convertStreamToString(inStream);
+
+				System.out.println(response.getStatusLine().getStatusCode());
+				System.out.println(message);
+			}
+		}
 	}
 
-	@GetMapping("/login/oauth2/code/sca-client-oidc")
-	public void callback(HttpServletRequest request) {
-		System.out.println("second call");
-		if(request.getParameter("code")== null){
-			System.out.println("error: no code");
-			return;
+	private static String convertStreamToString(InputStream is) throws Exception {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+		StringBuilder sb = new StringBuilder();
+		String line;
+		while ((line = reader.readLine()) != null) {
+			sb.append(line).append("\n");
 		}
-		String code = request.getParameter("code");
-		System.out.println(code);
-		if(request.getParameter("state") == null){
-			System.out.println("error: no state");
-			return;
+		is.close();
+		return sb.toString();
+	}
+
+	@GetMapping("/login/oauth2/code/sca-client")
+	public void callback(HttpServletRequest request) throws Exception {
+
+		System.out.println(request.getRequestURL());
+		System.out.println(request.getQueryString());
+
+		if(request.getParameter("code") != null){
+			String code = request.getParameter("code");
+			System.out.println(code);
+			String state = request.getParameter("state");
+			System.out.println(state);
+
+			try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+				String url = "http://localhost:9000/oauth2/token?grant_type=authorization_code&code=" + code + "&client_id=sca-client&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Flogin%2Foauth2%2Fcode%2Fsca-client";
+				System.out.println(url);
+
+				HttpPost post = new HttpPost(url);
+				post.setHeader("Authorization", "Basic c2NhLWNsaWVudDpzZWNyZXQ=");
+
+				// Send Post Request
+				HttpResponse response = httpClient.execute(post);
+
+				System.out.println(response.getStatusLine().getStatusCode());
+
+				HttpEntity entity = response.getEntity();
+				if (entity == null) {
+					throw new Exception("Presentation Response from Verifier is empty.");
+				}
+				InputStream inStream = entity.getContent();
+				String message = convertStreamToString(inStream);
+
+				System.out.println(message);
+			}
 		}
-		String state = request.getParameter("state");
-		System.out.println(state);
-		/*WebClient webClient = WebClient.builder()
-				.baseUrl("http://localhost:9000")
-				.build();
-
-		webClient.post()
-				.uri("/oauth2/token?grant_type=code&code="+code+"&client_id=sca-client&client_secret=secret&redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fauthorized")
-				.retrieve();*/
-
 		System.out.println("end second call");
 	}
-
-	@GetMapping("/authorized")
-	public void final_function(HttpServletRequest request){
-		System.out.println("third call");
-		Enumeration<String> params = request.getParameterNames();
-		while(params.hasMoreElements()){
-			System.out.println(params.nextElement());
-		}
-		System.out.println("end third call");
-	}
-
 }
