@@ -4,13 +4,13 @@ import java.security.MessageDigest;
 import java.util.Base64;
 
 public class User {
-    private String id;
-    private String givenName;
-    private String surname;
-    private String birthdate;
-    private String hash;
-    private String issuingCountry;
-    private String issuanceAuthority;
+    private final String id;
+    private final String givenName;
+    private final String surname;
+    private final String birthdate;
+    private final String hash;
+    private final String issuingCountry;
+    private final String issuanceAuthority;
 
     public User() throws Exception{
         this.id = "user_id";

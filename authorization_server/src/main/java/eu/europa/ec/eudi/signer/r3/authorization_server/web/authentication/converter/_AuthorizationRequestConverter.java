@@ -51,7 +51,7 @@ public class _AuthorizationRequestConverter implements AuthenticationConverter {
 
         AuthorizationServerContext serverContext = AuthorizationServerContextHolder.getContext();
         System.out.println(serverContext.getAuthorizationServerSettings());
-        System.out.println(serverContext.getIssuer());
+        System.out.println(serverContext.issuer());
 
         System.out.println(request.getRequestURL().toString());
         if(!this.authenticationServiceRequestMatcher.matches(request) && !this.authorizationCredentialRequestMatcher.matches(request)){

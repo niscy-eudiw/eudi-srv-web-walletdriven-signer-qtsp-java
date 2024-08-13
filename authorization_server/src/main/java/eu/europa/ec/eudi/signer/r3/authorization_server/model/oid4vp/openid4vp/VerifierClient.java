@@ -8,7 +8,6 @@ import java.util.*;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OID4VPService;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
