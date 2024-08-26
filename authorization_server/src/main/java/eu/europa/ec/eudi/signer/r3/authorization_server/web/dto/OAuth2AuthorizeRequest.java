@@ -14,7 +14,7 @@ public class OAuth2AuthorizeRequest {
     @NotBlank
     private String client_id;
     private String redirect_uri;
-    private String scope = "service";
+    private String scope;
 
     /*
      * Authorization_details:
@@ -258,13 +258,18 @@ public class OAuth2AuthorizeRequest {
 
     public static RequestMatcher requestMatcherForCredential(){
         return request ->
-              request.getParameter("client_id") != null
-              && Objects.equals(request.getParameter("response_type"), "code")
-              && Objects.equals(request.getParameter("scope"), "credential")
-              && request.getParameter("code_challenge") != null
-              && (request.getParameter("credentialID") != null
-                    || request.getParameter("signatureQualifier") != null)
-              && request.getParameter("numSignatures") != null
-              && request.getParameter("hashes") != null;
+              request.getParameter("client_id") != null &&
+                    Objects.equals(request.getParameter("response_type"), "code") &&
+                    (
+                          (
+                                Objects.equals(request.getParameter("scope"), "credential")
+                                && (request.getParameter("credentialID") != null || request.getParameter("signatureQualifier") != null)
+                                && request.getParameter("hashes") != null
+                                && request.getParameter("hashAlgorithmOID") != null
+                                && request.getParameter("numSignatures") != null
+                          )
+                          || request.getParameter("authorization_details") != null
+                    )
+                    && request.getParameter("code_challenge") != null;
     }
 }

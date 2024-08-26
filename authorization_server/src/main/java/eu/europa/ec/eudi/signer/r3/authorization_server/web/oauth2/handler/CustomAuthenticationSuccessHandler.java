@@ -1,12 +1,12 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.handler;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.tokens.Oid4vpAuthorizationResponseToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -28,17 +28,17 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        Oid4vpAuthorizationResponseToken authorizationResponseToken = (Oid4vpAuthorizationResponseToken) authentication;
-
+                OAuth2AuthorizationCodeRequestAuthenticationToken authorizationCodeRequestAuthentication = (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
         UriComponentsBuilder uriBuilder = UriComponentsBuilder
-              .fromUriString(authorizationResponseToken.getRedirectUri())
+              .fromUriString(authorizationCodeRequestAuthentication.getRedirectUri())
               .queryParam(OAuth2ParameterNames.CODE,
-                    authorizationResponseToken.getAuthorizationCode().getTokenValue());
-        if (StringUtils.hasText(authorizationResponseToken.getState())) {
+                    authorizationCodeRequestAuthentication.getAuthorizationCode().getTokenValue());
+        if (StringUtils.hasText(authorizationCodeRequestAuthentication.getState())) {
             uriBuilder.queryParam(OAuth2ParameterNames.STATE,
-                  UriUtils.encode(authorizationResponseToken.getState(), StandardCharsets.UTF_8));
+                  UriUtils.encode(authorizationCodeRequestAuthentication.getState(), StandardCharsets.UTF_8));
         }
         String redirectUri = uriBuilder.build(true).toUriString();
         this.redirectStrategy.sendRedirect(request, response, redirectUri);
     }
+
 }

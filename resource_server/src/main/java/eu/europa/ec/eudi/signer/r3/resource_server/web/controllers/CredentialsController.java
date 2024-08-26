@@ -1,10 +1,15 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.CredentialsConfig;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.CredentialsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -14,13 +19,14 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoReques
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/csc/v2/credentials")
 public class CredentialsController {
 
-    private CredentialsService credentialsService;
-    private CredentialsConfig credentialsConfig;
+    private final CredentialsService credentialsService;
+    private final CredentialsConfig credentialsConfig;
 
     public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig){
         this.credentialsService = credentialsService;
@@ -28,9 +34,19 @@ public class CredentialsController {
     }
 
     @PostMapping(value = "/list", consumes = "application/json", produces = "application/json")
-    public CredentialsListResponse list(@RequestBody CredentialsListRequest listRequestDTO) {
+    public CredentialsListResponse list(@AuthenticationPrincipal UserPrincipal user, @RequestBody CredentialsListRequest listRequestDTO) {
         System.out.println(listRequestDTO.toString());
+        System.out.println("User: "+user);
         CredentialsListResponse credentialsListResponse = new CredentialsListResponse();
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+        Map<String, Object> claims = ((Jwt) principal).getClaims();
+        for(Map.Entry<String, Object> c : claims.entrySet()){
+            System.out.println(c.getKey()+": "+c.getValue());
+        }
+        String user_hash = claims.get("sub").toString();
+        System.out.println("User Hash: "+user_hash);
 
         try {
             // onlyValid requested && onlyValid supported by the QTSP

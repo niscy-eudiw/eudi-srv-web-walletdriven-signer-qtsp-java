@@ -5,29 +5,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalid;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.TrustedIssuersCertificates;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
-
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oid4vp.OpenId4VPAuthenticationToken;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.AuthenticationManagerToken;
+import id.walt.mdoc.doc.MDoc;
+import id.walt.mdoc.issuersigned.IssuerSignedItem;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-
-
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oid4vp.UserAuthenticationTokenProvider;
-
-import id.walt.mdoc.doc.MDoc;
-import id.walt.mdoc.issuersigned.IssuerSignedItem;
 
 @Service
 public class OpenId4VPService {
@@ -35,47 +27,25 @@ public class OpenId4VPService {
     private static final Logger log = LoggerFactory.getLogger(OpenId4VPService.class);
 
     private final UserRepository repository;
-    private final UserAuthenticationTokenProvider tokenProvider;
+    // private final UserAuthenticationTokenProvider tokenProvider;
     private final TrustedIssuersCertificates trustedIssuersCertificate;
 
     @Autowired
     public OpenId4VPService(UserRepository repository,
-                            UserAuthenticationTokenProvider tokenProvider,
                             TrustedIssuersCertificates trustedIssuersCertificate) {
         this.repository = repository;
-        this.tokenProvider = tokenProvider;
         this.trustedIssuersCertificate = trustedIssuersCertificate;
     }
 
-    public static class UserOIDTemporaryInfo {
-        private final User user;
-        private final String givenName;
-        private final String familyName;
-
-        public UserOIDTemporaryInfo(User user, String givenName, String familyName) {
-            this.user = user;
-            this.givenName = givenName;
-            this.familyName = familyName;
-        }
-
-        public User getUser() {
-            return this.user;
-        }
-
-        public String getGivenName() {
-            return this.givenName;
-        }
-
-        public String getFamilyName() {
-            return this.familyName;
-        }
+    public record UserOIDTemporaryInfo(User user, String givenName, String familyName) {
 
         public String getFullName() {
-            return givenName + " " + familyName;
-        }
+                return givenName + " " + familyName;
+            }
+
     }
 
-    public OpenId4VPAuthenticationToken loadUserFromVerifierResponseAndGetJWTToken(String messageFromVerifier)
+    public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier)
             throws VerifiablePresentationVerificationException, VPTokenInvalid, NoSuchAlgorithmException, Exception {
 
         JSONObject vp;
@@ -93,7 +63,8 @@ public class OpenId4VPService {
         Map<Integer, String> logsMap = new HashMap<>();
         MDoc document = validator.loadAndVerifyDocumentForVP(logsMap);
         UserOIDTemporaryInfo user = loadUserFromDocument(document);
-        return addToDBandCreateAuthentication(user.getUser(), user.getGivenName(), user.getFamilyName());
+        addToDB(user.user());
+        return AuthenticationManagerToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
     public UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalid, NoSuchAlgorithmException {
@@ -134,11 +105,8 @@ public class OpenId4VPService {
         return new UserOIDTemporaryInfo(user, givenName, familyName);
     }
 
-    private OpenId4VPAuthenticationToken addToDBandCreateAuthentication(User userFromVerifierResponse, String givenName, String surname) {
+    private void addToDB(User userFromVerifierResponse) {
         Optional<User> userInDatabase = repository.findByHash(userFromVerifierResponse.getHash());
-        if (userInDatabase.isEmpty()) {
-            repository.save(userFromVerifierResponse);
-        }
-        return new OpenId4VPAuthenticationToken(userFromVerifierResponse.getHash(), givenName, surname);
+        if (userInDatabase.isEmpty()) repository.save(userFromVerifierResponse);
     }
 }

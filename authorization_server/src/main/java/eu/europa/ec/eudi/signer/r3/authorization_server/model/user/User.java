@@ -14,9 +14,6 @@ public class User {
     @Id
     private String id;
 
-    private String oauth2_client_id;
-    private String oauth2_client_secret;
-
     @NotNull
     private String role;
 

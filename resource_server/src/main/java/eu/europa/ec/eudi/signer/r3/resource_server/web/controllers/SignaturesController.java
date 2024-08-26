@@ -14,7 +14,7 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashReq
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashResponse;
 
 @RestController
-@RequestMapping(value = "/csc/v2/signatures")
+    @RequestMapping(value = "/csc/v2/signatures")
 public class SignaturesController {
 
     @Autowired

@@ -1,35 +1,38 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OID4VPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.*;
-
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import java.util.UUID;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.converter._AuthorizationRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.converter._TokenRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.provider.AuthorizationRequestProvider;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.provider.AuthorizationRequestProviderAfterAuthentication;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.provider._TokenRequestProvider;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OID4VPService;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.*;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter.AuthorizationRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter.TokenRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.handler.CustomAuthenticationSuccessHandler;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.AuthorizationRequestProvider;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.TokenRequestProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabase;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
-import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2Token;
@@ -41,12 +44,13 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
+import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -58,13 +62,10 @@ public class AuthorizationServerConfig {
 	}
 
 	// private static final String CUSTOM_CONSENT_PAGE_URI = "/oauth2/consent";
-
 	// OAuth2AuthorizationServerConfiguration is a configuration that provides the minimal default configuration
 	// OAuth2AuthorizationServerConfiguration provides a convenient method to apply the minimal default configuration for an OAuth2 authorization server
 	// This uses a OAuth2AuthorizationServerConfigurer
-
 	// "applyDefaultSecurity" is a convinence utility method that applies the default security configuration to HttpSecurity
-
 	// OAuth2AuthorizationServerConfigurer provides the ability to fully customize the security configuration for an OAuth2 authorization server
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
@@ -72,17 +73,18 @@ public class AuthorizationServerConfig {
 		HttpSecurity http,
 		RegisteredClientRepository registeredClientRepository,
 		JdbcOAuth2AuthorizationService authorizationService,
-		OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator) throws Exception {
+		OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
+		OID4VPAuthenticationFilter authenticationFilter) throws Exception {
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 
-		_AuthorizationRequestConverter authorizationRequestConverter = new _AuthorizationRequestConverter();
-		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, oid4VPService);
-		CustomAuthenticationSuccessSecondHandler authenticationSuccessHandler = new CustomAuthenticationSuccessSecondHandler();
+		AuthorizationRequestConverter authorizationRequestConverter = new AuthorizationRequestConverter();
+		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService);
+		CustomAuthenticationSuccessHandler authenticationSuccessHandler = new CustomAuthenticationSuccessHandler();
 
-		_TokenRequestConverter tokenRequestConverter = new _TokenRequestConverter();
-		_TokenRequestProvider tokenRequestProvider = new _TokenRequestProvider(authorizationService, tokenGenerator);
+		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
+		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
 
 		authorizationServerConfigurer
 			.authorizationEndpoint(authorizationEndpoint ->
@@ -96,6 +98,13 @@ public class AuthorizationServerConfig {
 					.authenticationProvider(tokenRequestProvider));
 
 		http
+			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			.exceptionHandling((exceptions) -> {
+					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(oid4VPService);
+					RequestMatcher requestMatcher = request -> true;
+					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
+				}
+			)
 			.oauth2ResourceServer(oauth2ResourceServer ->
 				oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		return http.build();
@@ -112,7 +121,6 @@ public class AuthorizationServerConfig {
 				.authorizationGrantType(new AuthorizationGrantType("code"))
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.redirectUri("http://localhost:8080/login/oauth2/code/sca-client")
-				.redirectUri("http://localhost:8080/authorized")
 				.scope("service")
 				.scope("credential")
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
@@ -120,13 +128,35 @@ public class AuthorizationServerConfig {
 
 		// Save registered client's in db as if in-memory
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
-		registeredClientRepository.save(scaClient);
+		if(registeredClientRepository.findByClientId("sca-client") == null)
+			registeredClientRepository.save(scaClient);
 		return registeredClientRepository;
 	}
 
 	@Bean
+	public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig){
+		return new JdbcTemplate(dataSourceConfig.getDataSource());
+	}
+
+	@Bean
 	public JdbcOAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
-		return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+		JdbcOAuth2AuthorizationService authorizationService = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+		JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
+		JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper oAuth2AuthorizationParametersMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper();
+
+		ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
+		List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
+		ObjectMapper objectMapper = new ObjectMapper();
+		objectMapper.registerModules(securityModules);
+		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+		objectMapper.addMixIn(AuthenticationManagerToken.class, AuthenticationManagerTokenMixIn.class);
+		objectMapper.addMixIn(UserPrincipal.class, UserPrincipalMixIn.class);
+
+		rowMapper.setObjectMapper(objectMapper);
+		oAuth2AuthorizationParametersMapper.setObjectMapper(objectMapper);
+		authorizationService.setAuthorizationRowMapper(rowMapper);
+		authorizationService.setAuthorizationParametersMapper(oAuth2AuthorizationParametersMapper);
+		return authorizationService;
 	}
 
 	// the JWK Set endpoint is configured only if a JWKSource<SecurityContext> @Bean is registered
@@ -165,49 +195,5 @@ public class AuthorizationServerConfig {
 	@Bean
 	public AuthorizationServerSettings authorizationServerSettings() {
 		return AuthorizationServerSettings.builder().build();
-	}
-
-	@Bean
-	public EmbeddedDatabase embeddedDatabase() {
-		return new EmbeddedDatabaseBuilder()
-				.generateUniqueName(true)
-				.setType(EmbeddedDatabaseType.H2)
-				.setScriptEncoding("UTF-8")
-				.addScript("org/springframework/security/oauth2/server/authorization/oauth2-authorization-schema.sql")
-				.addScript("org/springframework/security/oauth2/server/authorization/oauth2-authorization-consent-schema.sql")
-				.addScript("org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql")
-				.build();
-	}
-
-	@Bean
-	public AuthorizationRequestProviderAfterAuthentication getProviderForAfterAuthentication(
-		RegisteredClientRepository registeredClientRepository,
-		JdbcOAuth2AuthorizationService authorizationService,
-		AuthorizationServerSettings serverSettings){
-
-		AuthorizationServerContext context = new CustomAuthorizationServerContext("http://localhost:9000", serverSettings);
-
-		return new AuthorizationRequestProviderAfterAuthentication(
-			registeredClientRepository,
-			authorizationService,
-			context);
-	}
-
-	private static final class CustomAuthorizationServerContext implements AuthorizationServerContext {
-		private final String issuer;
-		private final AuthorizationServerSettings authorizationServerSettings;
-
-		private CustomAuthorizationServerContext(String issuer, AuthorizationServerSettings authorizationServerSettings) {
-			this.issuer = issuer;
-			this.authorizationServerSettings = authorizationServerSettings;
-		}
-
-		public String getIssuer() {
-			return this.issuer;
-		}
-
-		public AuthorizationServerSettings getAuthorizationServerSettings() {
-			return this.authorizationServerSettings;
-		}
 	}
 }

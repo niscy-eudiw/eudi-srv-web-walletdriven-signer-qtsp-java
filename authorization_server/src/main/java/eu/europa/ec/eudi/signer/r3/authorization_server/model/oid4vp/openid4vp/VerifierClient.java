@@ -11,6 +11,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.bouncycastle.util.encoders.UrlBase64Encoder;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ public class VerifierClient {
      * @return the deep link that redirects the user to the EUDI Wallet
      * @throws Exception
      */
-    public AuthorizationRequestVariables initPresentationTransaction(String user, String type, String service_url) throws Exception {
+    public AuthorizationRequestVariables initPresentationTransaction(String user, String type, String service_url, String return_to) throws Exception {
         AuthorizationRequestVariables variables = new AuthorizationRequestVariables();
 
         if (operationTypeIsInvalid(type))
@@ -88,7 +89,8 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
-        String redirect_uri = service_url+"/oid4vp/callback?response_code={RESPONSE_CODE}";
+        String encoded_return_to = URLEncoder.encode(return_to, StandardCharsets.UTF_8);
+        String redirect_uri = service_url+"/oid4vp/callback?response_code={RESPONSE_CODE}&session_id="+encoded_return_to;
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirect_uri);
         System.out.println(jsonBodyToInitPresentation);
 

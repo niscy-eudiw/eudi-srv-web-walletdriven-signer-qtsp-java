@@ -16,7 +16,9 @@ public class WebSecurity {
         http
               .securityMatcher("/**")
               .authorizeHttpRequests(authorize ->
-                    authorize.requestMatchers("/**").hasAuthority("SCOPE_service")
+                    authorize
+                          .requestMatchers("/csc/v2/signatures/signHash").hasAuthority("SCOPE_credential")
+                          .requestMatchers("/**").hasAuthority("SCOPE_service")
               )
               .oauth2ResourceServer(oauth2ResourceServer ->
                     oauth2ResourceServer.jwt(Customizer.withDefaults())

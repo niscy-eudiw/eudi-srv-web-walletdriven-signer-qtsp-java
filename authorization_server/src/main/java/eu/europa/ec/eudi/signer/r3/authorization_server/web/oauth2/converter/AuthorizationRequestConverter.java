@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.authentication.converter;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,13 +24,13 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * A Pre-processor used when attempting to extract an OAuth2 Authorization Request
  * from a HttpServletRequest to an instance of OAuth2AuthorizationCodeRequestAuthenticationToken.
  */
-public class _AuthorizationRequestConverter implements AuthenticationConverter {
+public class AuthorizationRequestConverter implements AuthenticationConverter {
 
     private final RequestMatcher authenticationServiceRequestMatcher;
     private final RequestMatcher authorizationCredentialRequestMatcher;
     private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
 
-    public _AuthorizationRequestConverter(){
+    public AuthorizationRequestConverter(){
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();
         this.authenticationServiceRequestMatcher = new AndRequestMatcher(
             new AntPathRequestMatcher(
@@ -48,12 +48,7 @@ public class _AuthorizationRequestConverter implements AuthenticationConverter {
 
     @Override
     public Authentication convert(HttpServletRequest request){
-
-        AuthorizationServerContext serverContext = AuthorizationServerContextHolder.getContext();
-        System.out.println(serverContext.getAuthorizationServerSettings());
-        System.out.println(serverContext.issuer());
-
-        System.out.println(request.getRequestURL().toString());
+        System.out.println("Request @"+request.getRequestURL().toString());
         if(!this.authenticationServiceRequestMatcher.matches(request) && !this.authorizationCredentialRequestMatcher.matches(request)){
             String errorType = "invalid_request";
             String error_description = "The request doesn't match the requests supported. Possible parameters missing.";
@@ -64,10 +59,16 @@ public class _AuthorizationRequestConverter implements AuthenticationConverter {
 
         try{
             OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.from(request);
+            System.out.println("authorization_details: "+authorizeRequest.getAuthorization_details());
             Map<String, Object> additionalParameters = getAdditionalParameters(authorizeRequest);
             Set<String> scopes = new HashSet<>();
-            scopes.add(authorizeRequest.getScope());
+            if(authorizeRequest.getScope() == null && authorizeRequest.getAuthorization_details() != null)
+                scopes.add("credential");
+            else
+                scopes.add(authorizeRequest.getScope());
 
+            System.out.println(Thread.currentThread().getName());
+            System.out.println(SecurityContextHolder.getContext());
             Authentication principal = SecurityContextHolder.getContext().getAuthentication();
             if (principal == null) {
                 principal = ANONYMOUS_AUTHENTICATION;
@@ -88,13 +89,19 @@ public class _AuthorizationRequestConverter implements AuthenticationConverter {
     private static Map<String, Object> getAdditionalParameters(OAuth2AuthorizeRequest authorizeRequest) {
         Map<String, Object> additionalParameters = new HashMap<>();
 
+        additionalParameters.put("authorization_details", authorizeRequest.getAuthorization_details());
         additionalParameters.put("code_challenge", authorizeRequest.getCode_challenge());
         additionalParameters.put("code_challenge_method", authorizeRequest.getCode_challenge_method());
+        additionalParameters.put("lang", authorizeRequest.getLang());
         additionalParameters.put("credentialID", authorizeRequest.getCredentialID());
         additionalParameters.put("signatureQualifier", authorizeRequest.getSignatureQualifier());
         additionalParameters.put("numSignatures", authorizeRequest.getNumSignatures());
         additionalParameters.put("hashes", authorizeRequest.getHashes());
         additionalParameters.put("hashAlgorithmOID", authorizeRequest.getHashAlgorithmOID());
+        additionalParameters.put("description", authorizeRequest.getDescription());
+        additionalParameters.put("account_token", authorizeRequest.getAccount_token());
+        additionalParameters.put("clientData", authorizeRequest.getClientData());
+
         return additionalParameters;
     }
 }

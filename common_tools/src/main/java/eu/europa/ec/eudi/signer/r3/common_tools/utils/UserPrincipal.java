@@ -1,16 +1,17 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.common_tools.utils;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class UserPrincipal implements OAuth2User {
+public class UserPrincipal implements OAuth2User, UserDetails, Serializable {
     private final String id;
     private final String givenName;
     private final String surname;
@@ -28,9 +29,9 @@ public class UserPrincipal implements OAuth2User {
         this.authorities = authorities;
     }
 
-    public static UserPrincipal create(User user, String givenName, String surname) {
-        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole()));
-        return new UserPrincipal( user.getId(), user.getHash(), givenName, surname, authorities);
+    public static UserPrincipal create(String id, String hash, String role, String givenName, String surname) {
+        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
+        return new UserPrincipal(id, hash, givenName, surname, authorities);
     }
 
     public String getId() {
@@ -42,8 +43,28 @@ public class UserPrincipal implements OAuth2User {
     }
 
     @Override
+    public boolean isAccountNonExpired() {
+        return UserDetails.super.isAccountNonExpired();
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return UserDetails.super.isAccountNonLocked();
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return UserDetails.super.isCredentialsNonExpired();
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return UserDetails.super.isEnabled();
+    }
+
+    @Override
     public String getName() {
-        return this.fullName;
+        return this.getUsername();
     }
 
     public String getGivenName() {
@@ -59,11 +80,29 @@ public class UserPrincipal implements OAuth2User {
     }
 
     @Override
+    public String getPassword() {
+        return null;
+    }
+
+    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     public void setAttributes(Map<String, Object> attributes) {
         this.attributes = attributes;
+    }
+
+    @Override
+    public String toString() {
+        return "UserPrincipal{" +
+              "id='" + id + '\'' +
+              ", givenName='" + givenName + '\'' +
+              ", surname='" + surname + '\'' +
+              ", fullName='" + fullName + '\'' +
+              ", hash='" + hash + '\'' +
+              ", authorities=" + authorities +
+              ", attributes=" + attributes +
+              '}';
     }
 }
