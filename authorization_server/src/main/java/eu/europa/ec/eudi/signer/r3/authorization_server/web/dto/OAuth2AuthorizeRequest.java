@@ -6,6 +6,8 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class OAuth2AuthorizeRequest {
@@ -233,7 +235,6 @@ public class OAuth2AuthorizeRequest {
         authRequest.setDescription(request.getParameter("description"));
         authRequest.setAccount_token(request.getParameter("account_token"));
         authRequest.setClientData(request.getParameter("clientData"));
-
         return authRequest;
     }
 

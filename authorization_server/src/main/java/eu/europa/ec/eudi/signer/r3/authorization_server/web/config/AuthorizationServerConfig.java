@@ -7,11 +7,15 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
@@ -24,6 +28,8 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter.Tok
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.handler.CustomAuthenticationSuccessHandler;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.TokenRequestProvider;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,6 +42,9 @@ import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2Token;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.*;
@@ -181,13 +190,13 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource) {
+	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
 		JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
 		JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
+		jwtGenerator.setJwtCustomizer(jwtCustomizer);
 		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
 		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-		return new DelegatingOAuth2TokenGenerator(
-			jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
+		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
 	}
 
 	// Defines the authorizationServerSetting used by OAuth2AuthorizationServerConfigurer
@@ -195,5 +204,51 @@ public class AuthorizationServerConfig {
 	@Bean
 	public AuthorizationServerSettings authorizationServerSettings() {
 		return AuthorizationServerSettings.builder().build();
+	}
+
+	@Bean
+	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+		return context -> {
+			JwsHeader.Builder headers = context.getJwsHeader();
+			JwtClaimsSet.Builder claims = context.getClaims();
+
+			System.out.println(context.getPrincipal().getPrincipal().getClass());
+			System.out.println(context.getClass().getName());
+
+			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
+
+				OAuth2Authorization authorization = context.getAuthorization();
+				OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+
+				// Customize headers/claims for access_token
+				claims.claim("credentialID", "some_credential_id");
+
+				if (authorization.getAuthorizedScopes().contains("credential")) {
+					System.out.println("here");
+
+					if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+						JSONObject authDetailsAuthorizationJSON = new JSONObject(authDetailsAuthorization);
+						claims.claim("credentialID", authDetailsAuthorizationJSON.get("credentialID"));
+						claims.claim("hashAlgorithmOID", authDetailsAuthorizationJSON.get("hashAlgorithmOID"));
+						JSONArray documentDigests = authDetailsAuthorizationJSON.getJSONArray("documentDigests");
+						List<String> hashesList = new ArrayList<>();
+						for (int i = 0; i < documentDigests.length(); i++) {
+							JSONObject document = documentDigests.getJSONObject(i);
+							String hashValue = document.getString("hash");
+							hashesList.add(hashValue);
+						}
+						String hashes = String.join(",", hashesList);
+						claims.claim("numSignatures", documentDigests.length());
+						claims.claim("hashes", hashes);
+					} else {
+						claims.claim("credentialID", authorizationRequest.getAdditionalParameters().get("credentialID").toString());
+						claims.claim("numSignatures", authorizationRequest.getAdditionalParameters().get("numSignatures").toString());
+						claims.claim("hashes", authorizationRequest.getAdditionalParameters().get("hashes").toString());
+						claims.claim("hashAlgorithmOID", authorizationRequest.getAdditionalParameters().get("hashAlgorithmOID").toString());
+					}
+				}
+			}
+		};
 	}
 }

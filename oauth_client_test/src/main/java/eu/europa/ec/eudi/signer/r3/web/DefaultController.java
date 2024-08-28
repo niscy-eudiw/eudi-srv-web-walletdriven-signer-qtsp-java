@@ -88,7 +88,7 @@ public class DefaultController {
 
 			uriBuilder.setParameter("credentialID", URLEncoder.encode(credentialID, StandardCharsets.UTF_8));
 			uriBuilder.setParameter("numSignatures", Integer.toString(1));
-			uriBuilder.setParameter("hashes", "some_document_hash");
+			uriBuilder.setParameter("hashes", "some_document_hash,some_second_document_hash");
 			uriBuilder.setParameter("hashAlgorithmOID", "2.16.840.1.101.3.4.2.1");
 
 			URI url = uriBuilder.build();

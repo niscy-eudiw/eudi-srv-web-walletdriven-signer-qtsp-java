@@ -51,8 +51,11 @@ public class TokenRequestConverter implements AuthenticationConverter {
         logger.info("The Token Request match the 'request matcher'.");
 
         Authentication clientPrincipal = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println(clientPrincipal.getClass());
 
         OAuth2TokenRequest tokenRequest = OAuth2TokenRequest.from(request);
+        System.out.println(tokenRequest.toString());
+        System.out.println(tokenRequest.getCode_verifier());
 
         // grant_type (REQUIRED)
         String grantType = tokenRequest.getGrant_type();
@@ -85,14 +88,15 @@ public class TokenRequestConverter implements AuthenticationConverter {
         logger.info("Redirect Uri: "+redirectUri);
 
         Map<String, Object> additionalParameters = new HashMap<>();
-        Enumeration<String> params = request.getParameterNames();
-        while (params.hasMoreElements()){
-            String param = params.nextElement();
-            if(!Objects.equals(param, "code")
-                  && !Objects.equals(param, "grant_type")
-                  && !Objects.equals(param, "redirect_uri"))
-                additionalParameters.put(param, request.getParameter(param));
-        }
+        additionalParameters.put("refresh_token", tokenRequest.getRefresh_token());
+        additionalParameters.put("client_id", tokenRequest.getClient_id());
+        additionalParameters.put("client_secret", tokenRequest.getClient_secret());
+        additionalParameters.put("code_verifier", tokenRequest.getCode_verifier());
+        additionalParameters.put("client_assertion", tokenRequest.getClient_assertion());
+        additionalParameters.put("client_assertion_type", tokenRequest.getClient_assertion_type());
+        additionalParameters.put("authorization_details", tokenRequest.getAuthorization_details());
+        additionalParameters.put("clientData", tokenRequest.getClientData());
+
         return new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
     }
 }

@@ -59,6 +59,7 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
 
         try{
             OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.from(request);
+            System.out.println(authorizeRequest.toString());
             System.out.println("authorization_details: "+authorizeRequest.getAuthorization_details());
             Map<String, Object> additionalParameters = getAdditionalParameters(authorizeRequest);
             Set<String> scopes = new HashSet<>();
