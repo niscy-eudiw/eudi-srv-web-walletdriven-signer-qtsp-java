@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import java.util.Collection;
 
@@ -33,9 +33,8 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
     public AuthenticationManagerToken(Object userPrincipal, Collection<? extends GrantedAuthority> authorities) {
         super(authorities);
         UserPrincipal user = (UserPrincipal) userPrincipal;
-        String username = hash + ";" + user.getGivenName() + ";" + user.getSurname();
         this.hash = user.getUsername();
-        this.username = username;
+        this.username = user.getUsername() + ";" + user.getGivenName() + ";" + user.getSurname();
         this.principal = user;
         this.credentials = user.getPassword();
         super.setAuthenticated(true);

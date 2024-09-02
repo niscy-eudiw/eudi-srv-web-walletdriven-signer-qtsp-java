@@ -5,6 +5,12 @@ public class AuthorizationRequestVariables {
     private String nonce;
     private String presentation_id;
 
+    public AuthorizationRequestVariables(String redirectLink, String nonce, String presentation_id) {
+        this.redirectLink = redirectLink;
+        this.nonce = nonce;
+        this.presentation_id = presentation_id;
+    }
+
     public String getRedirectLink() {
         return redirectLink;
     }

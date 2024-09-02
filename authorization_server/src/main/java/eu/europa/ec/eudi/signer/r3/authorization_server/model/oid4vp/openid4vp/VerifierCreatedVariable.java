@@ -3,22 +3,12 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
 import java.util.Objects;
 
 public class VerifierCreatedVariable {
-    private String type;
     private String nonce;
     private String presentation_id;
 
-    public VerifierCreatedVariable(String type, String nonce, String presentation_id) {
-        this.type = type;
+    public VerifierCreatedVariable(String nonce, String presentation_id) {
         this.nonce = nonce;
         this.presentation_id = presentation_id;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public String getNonce() {
@@ -44,13 +34,12 @@ public class VerifierCreatedVariable {
         if (o == null || getClass() != o.getClass())
             return false;
         VerifierCreatedVariable that = (VerifierCreatedVariable) o;
-        return Objects.equals(type, that.type) &&
-                Objects.equals(nonce, that.nonce) &&
+        return Objects.equals(nonce, that.nonce) &&
                 Objects.equals(presentation_id, that.presentation_id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, nonce, presentation_id);
+        return Objects.hash(nonce, presentation_id);
     }
 }

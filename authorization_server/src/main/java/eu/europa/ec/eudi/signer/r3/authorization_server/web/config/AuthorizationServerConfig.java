@@ -15,19 +15,22 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.UUID;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerTokenMixIn;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationEntryPoint;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationFilter;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OID4VPService;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.*;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter.AuthorizationRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter.TokenRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.handler.CustomAuthenticationSuccessHandler;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.AuthorizationRequestProvider;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider.TokenRequestProvider;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +46,6 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2Token;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
-import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -64,10 +66,10 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
-	private final OID4VPService oid4VPService;
+	private final VerifierClient verifierClient;
 
-	public AuthorizationServerConfig(@Autowired OID4VPService oid4VPService){
-		this.oid4VPService = oid4VPService;
+	public AuthorizationServerConfig(@Autowired VerifierClient verifierClient){
+		this.verifierClient = verifierClient;
 	}
 
 	// private static final String CUSTOM_CONSENT_PAGE_URI = "/oauth2/consent";
@@ -78,11 +80,8 @@ public class AuthorizationServerConfig {
 	// OAuth2AuthorizationServerConfigurer provides the ability to fully customize the security configuration for an OAuth2 authorization server
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(
-		HttpSecurity http,
-		RegisteredClientRepository registeredClientRepository,
-		JdbcOAuth2AuthorizationService authorizationService,
-		OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
+	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
+		JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
 		OID4VPAuthenticationFilter authenticationFilter) throws Exception {
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
@@ -90,7 +89,6 @@ public class AuthorizationServerConfig {
 
 		AuthorizationRequestConverter authorizationRequestConverter = new AuthorizationRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService);
-		CustomAuthenticationSuccessHandler authenticationSuccessHandler = new CustomAuthenticationSuccessHandler();
 
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
@@ -99,8 +97,7 @@ public class AuthorizationServerConfig {
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.authorizationRequestConverter(authorizationRequestConverter)
-					.authenticationProvider(authorizationRequestProvider)
-					.authorizationResponseHandler(authenticationSuccessHandler))
+					.authenticationProvider(authorizationRequestProvider))
 			.tokenEndpoint(tokenEndpoint ->
 				tokenEndpoint
 					.accessTokenRequestConverter(tokenRequestConverter)
@@ -109,36 +106,42 @@ public class AuthorizationServerConfig {
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(oid4VPService);
+					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(this.verifierClient);
 					RequestMatcher requestMatcher = request -> true;
 					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
 				}
 			)
-			.oauth2ResourceServer(oauth2ResourceServer ->
-				oauth2ResourceServer.jwt(Customizer.withDefaults()));
+			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		return http.build();
 	}
 
 	// Defines the RegisteredClientRepository used by the OAuth2AuthorizationServerConfigurer
 	// for managing new and existing clients
 	@Bean
-	public JdbcRegisteredClientRepository registeredClientRepository(JdbcTemplate jdbcTemplate) {
-		RegisteredClient scaClient = RegisteredClient.withId(UUID.randomUUID().toString())
-				.clientId("sca-client")
-				.clientSecret("{noop}secret")
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-				.authorizationGrantType(new AuthorizationGrantType("code"))
-				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-				.redirectUri("http://localhost:8080/login/oauth2/code/sca-client")
-				.scope("service")
-				.scope("credential")
-				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
-				.build();
-
+	public JdbcRegisteredClientRepository registeredClientRepository(
+		OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate) {
 		// Save registered client's in db as if in-memory
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
-		if(registeredClientRepository.findByClientId("sca-client") == null)
-			registeredClientRepository.save(scaClient);
+
+		for (Map.Entry<String, OAuth2ClientRegistrationConfig.Client> e : config.getClient().entrySet()) {
+			System.out.println(e.getKey());
+			OAuth2ClientRegistrationConfig.Registration registration = e.getValue().getRegistration();
+			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
+				.clientId(registration.getClientId())
+				.clientSecret(registration.getClientSecret())
+				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
+
+			for (String redirectUri : registration.getRedirectUris())
+				clientBuilder.redirectUri(redirectUri);
+
+			for (String scope : registration.getScopes())
+				clientBuilder.scope(scope);
+			RegisteredClient client = clientBuilder.build();
+			registeredClientRepository.save(client);
+		}
+
 		return registeredClientRepository;
 	}
 
@@ -209,23 +212,15 @@ public class AuthorizationServerConfig {
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
 		return context -> {
-			JwsHeader.Builder headers = context.getJwsHeader();
 			JwtClaimsSet.Builder claims = context.getClaims();
 
-			System.out.println(context.getPrincipal().getPrincipal().getClass());
-			System.out.println(context.getClass().getName());
-
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
-
 				OAuth2Authorization authorization = context.getAuthorization();
 				OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
 
-				// Customize headers/claims for access_token
-				claims.claim("credentialID", "some_credential_id");
-
 				if (authorization.getAuthorizedScopes().contains("credential")) {
-					System.out.println("here");
 
+					// Customize headers/claims for access_token
 					if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
 						JSONObject authDetailsAuthorizationJSON = new JSONObject(authDetailsAuthorization);

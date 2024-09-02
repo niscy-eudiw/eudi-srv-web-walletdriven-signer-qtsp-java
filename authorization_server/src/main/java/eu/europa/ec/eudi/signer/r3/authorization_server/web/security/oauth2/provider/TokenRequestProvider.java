@@ -1,13 +1,10 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

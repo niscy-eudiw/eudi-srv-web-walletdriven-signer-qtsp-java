@@ -45,13 +45,15 @@ public class DefaultController {
 			URIBuilder uriBuilder = new URIBuilder("http://localhost:9000/oauth2/authorize");
 			uriBuilder.setParameter("response_type", "code");
 			uriBuilder.setParameter("client_id", "sca-client");
-			uriBuilder.setParameter("redirect_uri", "http://localhost:8080/login/oauth2/code/sca-client");
+			uriBuilder.setParameter("redirect_uri", "http://localhost:8082/credential/oauth/login/code");
 			uriBuilder.setParameter("scope", "service");
 			uriBuilder.setParameter("code_challenge", code_challenge);
 			uriBuilder.setParameter("code_challenge_method", "S256");
 			uriBuilder.setParameter("lang", "pt-PT");
 			uriBuilder.setParameter("state", "12345678");
-			HttpGet request = new HttpGet(uriBuilder.build());
+			String uri = uriBuilder.build().toString();
+			System.out.println("URI: "+ uri);
+			HttpGet request = new HttpGet(uri);
 
 			HttpResponse response = httpClient.execute(request);
 			System.out.println(response.getStatusLine().getStatusCode());
@@ -171,7 +173,6 @@ public class DefaultController {
 
 			// Send Post Request
 			HttpResponse followResponse = httpClient.execute(followRequest);
-
 			System.out.println(followResponse.getStatusLine().getStatusCode());
 
 			for(Header h: followResponse.getAllHeaders()){
@@ -181,7 +182,6 @@ public class DefaultController {
 			if(followResponse.getStatusLine().getStatusCode() == 302) {
 				location_redirect = followResponse.getLastHeader("Location").getValue();
 				System.out.println(location_redirect);
-
 				new_session_id = followResponse.getLastHeader("Set-Cookie").getElements()[0].toString();
 				System.out.println(new_session_id);
 			}
@@ -202,20 +202,6 @@ public class DefaultController {
 			for(Header h: followResponse.getAllHeaders()){
 				System.out.println(h.getName()+": "+h.getValue());
 			}
-
-			/*if(followResponse.getStatusLine().getStatusCode() == 302) {
-
-				String location = followResponse.getLastHeader("Location").getValue();
-				System.out.println(location);
-
-				HttpEntity entity = followResponse.getEntity();
-				if (entity == null) {
-					throw new Exception("Presentation Response from Verifier is empty.");
-				}
-				InputStream inStream = entity.getContent();
-				String message = convertStreamToString(inStream);
-				System.out.println(message);
-			}*/
 		}
 	}
 

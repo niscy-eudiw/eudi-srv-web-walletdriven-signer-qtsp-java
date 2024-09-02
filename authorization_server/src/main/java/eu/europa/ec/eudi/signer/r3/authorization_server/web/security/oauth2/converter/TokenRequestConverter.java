@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2TokenRequest;
 import org.apache.logging.log4j.LogManager;

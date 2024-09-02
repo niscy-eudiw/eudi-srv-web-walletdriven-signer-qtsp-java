@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;

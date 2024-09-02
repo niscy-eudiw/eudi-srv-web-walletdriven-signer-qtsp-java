@@ -1,12 +1,13 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.OpenId4VPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.*;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -35,17 +36,14 @@ public class DefaultSecurityConfig {
 
 	@Bean
 	public OID4VPAuthenticationFilter authenticationFilter(
-			AuthenticationManager authenticationManager,
-			OID4VPAuthenticationSuccessHandler authenticationSuccessHandler){
-		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager);
+		AuthenticationManager authenticationManager,
+		OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
+		VerifierClient verifierClient,
+		OpenId4VPService oid4vpService){
+		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		return filter;
-	}
-
-	@Bean
-	public OID4VPAuthenticationTokenFilter authenticationTokenFilter(){
-		return new OID4VPAuthenticationTokenFilter();
 	}
 
 	@Bean

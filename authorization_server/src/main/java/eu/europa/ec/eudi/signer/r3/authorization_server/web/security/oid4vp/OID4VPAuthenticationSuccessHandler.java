@@ -1,16 +1,13 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Enumeration;
 
-import jakarta.servlet.http.HttpSession;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,23 +32,8 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        System.out.println("here");
-
-        Collection<String> headers = response.getHeaderNames();
-        for(String h: headers){
-            System.out.println(h+ ": "+request.getSession().getAttribute(h));
-        }
-
-        Enumeration<String> att = request.getSession().getAttributeNames();
-        while(att.hasMoreElements()){
-            String a = att.nextElement();
-            System.out.println(a+ ": "+request.getSession().getAttribute(a));
-        }
-        
         Authentication a1 = SecurityContextHolder.getContext().getAuthentication();
-        if(a1 == null)
-            System.out.println("AuthenticationManagerToken is null");
-        System.out.println(a1.getPrincipal());
+        if(a1 == null) System.out.println("AuthenticationManagerToken is null");
 
         SecurityContext context = securityContextHolderStrategy.createEmptyContext();
         context.setAuthentication(authentication);
@@ -59,12 +41,6 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         securityContextRepository.saveContext(context, request, response);
 
         String session_id = request.getParameter("session_id");
-        System.out.println(session_id);
-        // String authorize_request = URLDecoder.decode(session_id, StandardCharsets.UTF_8);
-        // System.out.println("Authorization URL: "+authorize_request);
-        
         this.redirectStrategy.sendRedirect(request, response, session_id);
-
-        
     }
 }

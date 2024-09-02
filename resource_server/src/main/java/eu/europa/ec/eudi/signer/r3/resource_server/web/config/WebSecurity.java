@@ -17,6 +17,7 @@ public class WebSecurity {
               .securityMatcher("/**")
               .authorizeHttpRequests(authorize ->
                     authorize
+                          .requestMatchers("/csc/v2/info").permitAll()
                           .requestMatchers("/csc/v2/signatures/signHash").hasAuthority("SCOPE_credential")
                           .requestMatchers("/**").hasAuthority("SCOPE_service")
               )

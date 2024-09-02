@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
@@ -16,6 +16,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Loads the user with a given username if it is present in the database
+     * This class expects the username to be composed by "hash";"givenname";"surname"
+     * */
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {

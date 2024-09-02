@@ -1,6 +1,6 @@
 // https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/java/org/springframework/security/oauth2/server/authorization/authentication/OAuth2AuthorizationCodeRequestAuthenticationProvider.java
 
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.provider;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -134,7 +134,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
         // The request is valid - ensure the resource owner is authenticated
         Authentication principal = (Authentication) authenticationToken.getPrincipal();
-        if (!isPrincipalAuthenticated(principal)) {
+        if (!isPrincipalAuthenticated(principal, requestedScopes)) {
             logger.info("Did not authenticate authorization code request since principal not authenticated");
             return authenticationToken;
         }
@@ -154,10 +154,6 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               .additionalParameters(authenticationToken.getAdditionalParameters())
               .build();
 
-        for (Map.Entry<String, Object> s: authenticationToken.getAdditionalParameters().entrySet()){
-            System.out.println(s.getKey()+": "+s.getValue());
-        }
-
         OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal, requestedScopes, authenticationToken);
         logger.info("Generated authorization code: {}", authorizationCode.getTokenValue());
 
@@ -176,7 +172,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               authorizationRequest.getState(), requestedScopes);
     }
 
-    private static boolean isPrincipalAuthenticated(Authentication principal) {
+    private static boolean isPrincipalAuthenticated(Authentication principal, Set<String> scope) {
         return principal != null && !AnonymousAuthenticationToken.class.isAssignableFrom(principal.getClass()) && principal.isAuthenticated();
     }
 

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 // @SessionScope
 public class VerifierCreatedVariables {
-    private volatile ConcurrentMap<String, VerifierCreatedVariable> allVariables;
+    private final ConcurrentMap<String, VerifierCreatedVariable> allVariables;
 
     public VerifierCreatedVariables() {
         this.allVariables = new ConcurrentHashMap<>();
@@ -23,18 +23,17 @@ public class VerifierCreatedVariables {
         return allVariables.containsKey(user);
     }
 
-    public synchronized VerifierCreatedVariable getUsersVerifierCreatedVariable(String user, String typeOperation) {
+    public synchronized VerifierCreatedVariable getUsersVerifierCreatedVariable(String user) {
         VerifierCreatedVariable vcv = allVariables.get(user);
-        if (vcv != null && vcv.getType().equals(typeOperation)) {
+        if (vcv != null) {
             allVariables.remove(user);
             return vcv;
         } else
             return null;
     }
 
-    public synchronized void addUsersVerifierCreatedVariable(String user, String typeOperation, String nonce,
-            String presentation_id) {
-        allVariables.put(user, new VerifierCreatedVariable(typeOperation, nonce, presentation_id));
+    public synchronized void addUsersVerifierCreatedVariable(String user, String nonce, String presentation_id) {
+        allVariables.put(user, new VerifierCreatedVariable(nonce, presentation_id));
     }
 
     /*

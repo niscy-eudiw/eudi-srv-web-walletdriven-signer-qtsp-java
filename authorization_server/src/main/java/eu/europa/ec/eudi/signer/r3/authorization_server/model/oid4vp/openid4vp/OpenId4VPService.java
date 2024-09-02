@@ -11,7 +11,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.Verifiab
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.TrustedIssuersCertificates;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.AuthenticationManagerToken;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
 import id.walt.mdoc.doc.MDoc;
 import id.walt.mdoc.issuersigned.IssuerSignedItem;
 import org.json.JSONException;
@@ -27,7 +27,6 @@ public class OpenId4VPService {
     private static final Logger log = LoggerFactory.getLogger(OpenId4VPService.class);
 
     private final UserRepository repository;
-    // private final UserAuthenticationTokenProvider tokenProvider;
     private final TrustedIssuersCertificates trustedIssuersCertificate;
 
     @Autowired

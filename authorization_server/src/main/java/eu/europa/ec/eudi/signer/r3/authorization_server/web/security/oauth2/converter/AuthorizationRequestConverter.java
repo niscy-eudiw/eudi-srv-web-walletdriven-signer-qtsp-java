@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.oauth2.converter;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,6 +74,10 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
             if (principal == null) {
                 principal = ANONYMOUS_AUTHENTICATION;
                 System.out.println("Authentication Principal not defined.");
+            }
+            else {
+                System.out.println(principal.getClass());
+                System.out.println(principal.getPrincipal().getClass());
             }
 
             return new OAuth2AuthorizationCodeRequestAuthenticationToken(request.getRequestURL().toString(),
