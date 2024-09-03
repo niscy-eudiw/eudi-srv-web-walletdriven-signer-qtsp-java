@@ -11,8 +11,14 @@ import java.util.Optional;
 
 @Repository
 public interface CredentialsRepository extends JpaRepository<Credentials, String> {
+
     List<Credentials> findByUserID(String userID);
+
     Optional<Credentials> findById(String id);
+
+    @Query(value="SELECT c FROM credentials c WHERE c.userID = ?1 and c.id = ?2", nativeQuery=true)
+    Optional<Credentials> findByUserIDAndId(String userID, String id);
+
     @Query(value="SELECT c.id FROM credentials c WHERE c.privateKey = ?1 and c.publicKey = ?2 and c.certificate = ?3", nativeQuery=true)
     Optional<String> existsByPrivateKeyAndPublicKeyAndCertificate(String privateKey, String publicKey, String certificate);
 }

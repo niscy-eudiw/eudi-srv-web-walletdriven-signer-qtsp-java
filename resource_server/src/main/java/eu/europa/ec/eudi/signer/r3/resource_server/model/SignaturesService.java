@@ -2,10 +2,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
@@ -43,6 +40,30 @@ public class SignaturesService {
     // to be implemented: probably will also need information about the document to be signed, to verify if it was the same requested
     public boolean validateSAD(String SAD, String credentialID, List<String> hashes){
         return true;
+    }
+
+    public boolean validateSignatureRequest(
+          String userHash,
+          String credentialIDRequest, String credentialIDAuthorized,
+          int numSignaturesRequest, int numSignaturesAuthorized,
+          String hashAlgorithmOIDRequest, String hashAlgorithmOIDAuthorized,
+          List<String> hashesRequest, List<String> hashesAuthorized
+    ){
+        if(!credentialIDRequest.equals(credentialIDAuthorized)) return false;
+        if(numSignaturesRequest != numSignaturesAuthorized) return false;
+        if(!hashAlgorithmOIDRequest.equals(hashAlgorithmOIDAuthorized)) return false;
+
+        Optional<Credentials> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequest);
+        if(credentials.isEmpty()) return false;
+
+        if (hashesRequest == null || hashesAuthorized == null) return false;
+        if (hashesRequest.size() != hashesAuthorized.size()) return false;
+        if (hashesRequest.size() != numSignaturesRequest) return false;
+
+        Collections.sort(hashesRequest);
+        Collections.sort(hashesAuthorized);
+
+        return hashesRequest.equals(hashesAuthorized);
     }
 
     // to be implemented

@@ -53,6 +53,8 @@ public class VerifierClient {
      * @throws Exception
      */
     public AuthorizationRequestVariables initPresentationTransaction(String user, String service_url, String return_to) throws Exception {
+        System.out.println("init user: "+user);
+
         Map<String, String> headers = getHeaders();
         String nonce = generateNonce();
         String body = getBody(return_to, service_url, nonce);
@@ -177,6 +179,8 @@ public class VerifierClient {
      * get authorization response from the oid4vp verifier
      */
     public String getVPTokenFromVerifier(String user, String code) throws Exception {
+        System.out.println("get user: "+user);
+
         VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
         if (variables == null) throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
 

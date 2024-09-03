@@ -1,5 +1,6 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,19 +34,33 @@ public class SignaturesController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
         Map<String, Object> claims = ((Jwt) principal).getClaims();
-        for(Map.Entry<String, Object> c : claims.entrySet()){
-            System.out.println(c.getKey()+": "+c.getValue());
-        }
-        String user_hash = claims.get("sub").toString();
-        System.out.println("User Hash: "+user_hash);
 
-        if(!signaturesService.validateSAD(
+        String userHash = claims.get("sub").toString();
+        String credentialIDAuthorized = claims.get("credentialID").toString();
+        int numSignaturesAuthorized = Integer.parseInt(claims.get("numSignatures").toString());
+        String hashAlgorithmOIDAuthorized = claims.get("hashAlgorithmOID").toString();
+        String hashesString = claims.get("hashes").toString();
+        List<String> hashesAuthorized = Arrays.stream(hashesString.split(";")).toList();
+
+
+        if(!signaturesService.validateSignatureRequest(
+              userHash,
+              signHashRequest.getCredentialID(), credentialIDAuthorized,
+              signHashRequest.getHashes().size(), numSignaturesAuthorized,
+              signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized,
+              signHashRequest.getHashes(), hashesAuthorized
+        )){
+            System.out.println("SAD invalid");
+            return signaturesSignHashResponse;
+        }
+
+        /*if(!signaturesService.validateSAD(
               signHashRequest.getSAD(),
               signHashRequest.getCredentialID(),
               signHashRequest.getHashes())){
             System.out.println("SAD invalid");
             return signaturesSignHashResponse;
-        }
+        }*/
 
         if(Objects.equals(signHashRequest.getOperationMode(), "A")){
             String responseID = signaturesService.asynchronousSignHash(signHashRequest.getValidity_period(), signHashRequest.getResponse_uri());

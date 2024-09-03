@@ -4,7 +4,6 @@ import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.Certificat
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.CertificateChain;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.User;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeysService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
@@ -13,15 +12,12 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.Crede
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.math.BigInteger;
+import java.util.*;
 import java.security.*;
 import java.security.cert.X509Certificate;
-
-import java.util.*;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class CredentialsService {
@@ -29,7 +25,6 @@ public class CredentialsService {
     private final CertificatesService certificatesService;
     private final CredentialsRepository credentialsRepository;
     private final KeysService keysService;
-    private final User user_for_tests;
 
     public CredentialsService(
           @Autowired HsmService hsmService,
@@ -39,7 +34,6 @@ public class CredentialsService {
         this.credentialsRepository = credentialsRepository;
         this.keysService = new KeysService(hsmService);
         this.certificatesService = new CertificatesService(hsmService, ejbcaService);
-        this.user_for_tests = new User();
 
         DefaultVariables defaultVariables = new DefaultVariables(this.credentialsRepository, this.certificatesService);
         defaultVariables.addDefaultCredentials();
@@ -47,7 +41,7 @@ public class CredentialsService {
 
     /**
      * Function that returns the list of the credentials id available to the user
-     * @param userID the user that made the request and that owns the credentials
+     * @param userID the user that made the request and that owns the credentials (userHash)
      * @param onlyValid a parameter that defines if the credentials returned are valid and can be used to sign
      * @return the list of the credentials id
      */
@@ -70,7 +64,7 @@ public class CredentialsService {
      * @return a list with information of the credentials in the available credentials list
      * @throws Exception
      */
-    public List<CredentialsListResponse.CredentialInfo> getCredentialInfo( List<String> listAvailableCredentials, String certificates, boolean certInfo, boolean authInfo ) throws Exception{
+    public List<CredentialsListResponse.CredentialInfo> getCredentialInfo(List<String> listAvailableCredentials, String certificates, boolean certInfo, boolean authInfo ) throws Exception{
         List<CredentialsListResponse.CredentialInfo> listOfCredentialInfo = new ArrayList<>();
 
         for (String credentialId: listAvailableCredentials){
@@ -175,7 +169,7 @@ public class CredentialsService {
         return infoAuth;
     }
 
-    public void createCredential() throws Exception{
+    public void createCredential(String userHash, String givenName, String surname, String name, String issuingCountry) throws Exception{
         Credentials credential = new Credentials();
 
         byte[][] keysValues = this.keysService.RSAKeyPairGeneration();
@@ -187,7 +181,7 @@ public class CredentialsService {
         BigInteger PublicExponentBI = new BigInteger(1, public_exponent);
         PublicKey publicKey = this.keysService.getRSAPublicKeyFromSpecs(ModulusBI, PublicExponentBI);
 
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateCertificates(publicKey, this.user_for_tests.getGivenName(), this.user_for_tests.getSurname(), this.user_for_tests.getName(), this.user_for_tests.getIssuingCountry(), privKeyValues);
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateCertificates(publicKey, givenName, surname, name, issuingCountry, privKeyValues);
         X509Certificate ejbcaCert = EJBCACertificates.get(0);
         List<CertificateChain> certs = new ArrayList<>();
         if (EJBCACertificates.size() > 1) {
@@ -200,7 +194,7 @@ public class CredentialsService {
             }
         }
 
-        credential.setUserID(this.user_for_tests.getId());
+        credential.setUserID(userHash);
         credential.setDescription("This is a credential for tests");
         credential.setSignatureQualifier("eu_eidas_qes");
         credential.setSCAL("2");
@@ -224,5 +218,10 @@ public class CredentialsService {
 
         credential.setAuthMode("oauth2code");
         this.credentialsRepository.save(credential);
+    }
+
+    public boolean credentialBelongsToUser(String userHash, String credentialID){
+        Optional<Credentials> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialID);
+        return credentials.isPresent();
     }
 }
