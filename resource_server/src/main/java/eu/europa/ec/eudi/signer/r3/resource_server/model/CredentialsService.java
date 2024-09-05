@@ -221,7 +221,7 @@ public class CredentialsService {
     }
 
     public boolean credentialBelongsToUser(String userHash, String credentialID){
-        Optional<Credentials> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialID);
+        Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialID);
         return credentials.isPresent();
     }
 }

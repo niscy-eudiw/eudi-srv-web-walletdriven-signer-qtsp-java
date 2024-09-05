@@ -78,6 +78,7 @@ public class CredentialsController {
 
     @PostMapping(value = "/info", consumes = "application/json", produces = "application/json")
     public CredentialsInfoResponse info(@RequestBody CredentialsInfoRequest infoRequestDTO) {
+        System.out.println("start info request");
         System.out.println(infoRequestDTO.toString());
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

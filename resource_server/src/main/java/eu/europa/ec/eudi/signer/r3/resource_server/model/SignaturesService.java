@@ -53,7 +53,7 @@ public class SignaturesService {
         if(numSignaturesRequest != numSignaturesAuthorized) return false;
         if(!hashAlgorithmOIDRequest.equals(hashAlgorithmOIDAuthorized)) return false;
 
-        Optional<Credentials> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequest);
+        Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequest);
         if(credentials.isEmpty()) return false;
 
         if (hashesRequest == null || hashesAuthorized == null) return false;
