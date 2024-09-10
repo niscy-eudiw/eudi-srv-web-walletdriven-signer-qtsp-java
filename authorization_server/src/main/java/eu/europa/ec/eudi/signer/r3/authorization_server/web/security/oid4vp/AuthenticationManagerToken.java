@@ -1,8 +1,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import java.util.Collection;
-
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
+import java.util.Collection;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -11,6 +10,7 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
     private String username;
     private Object principal;
     private Object credentials;
+    private String scope;
 
     public AuthenticationManagerToken(String hash, String username){
         super(null);
@@ -85,5 +85,13 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
     }
 }

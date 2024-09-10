@@ -17,7 +17,7 @@ public class TrustedIssuersCertificateConfig {
     private final String folder;
     private final Map<String, X509Certificate> trustIssuersCertificates;
 
-    public TrustedIssuersCertificateConfig(String folder) throws Exception{
+    public TrustedIssuersCertificateConfig(String folder) throws Exception {
         this.folder = folder;
         this.trustIssuersCertificates = new HashMap<>();
 

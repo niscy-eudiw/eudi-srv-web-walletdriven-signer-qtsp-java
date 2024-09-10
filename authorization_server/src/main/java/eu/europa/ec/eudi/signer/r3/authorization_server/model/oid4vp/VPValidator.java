@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -9,8 +9,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.TrustedIssuersCertificates;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 
@@ -36,9 +36,9 @@ public class VPValidator {
     private final String presentationDefinitionInputDescriptorsId;
     private final String presentationDefinitionId;
     private final String keyID;
-    private final TrustedIssuersCertificates trustedIssuersCertificate;
+    private final TrustedIssuersCertificateConfig trustedIssuersCertificate;
 
-    public VPValidator(JSONObject vp, String presentation_definition_id, String presentation_definition_input_descriptors_id, TrustedIssuersCertificates trustedIssuersCertificate) {
+    public VPValidator(JSONObject vp, String presentation_definition_id, String presentation_definition_input_descriptors_id, TrustedIssuersCertificateConfig trustedIssuersCertificate) {
         this.verifiablePresentation = vp;
         this.presentationDefinitionId = presentation_definition_id;
         this.presentationDefinitionInputDescriptorsId = presentation_definition_input_descriptors_id;
@@ -143,7 +143,7 @@ public class VPValidator {
         InputStream in = new ByteArrayInputStream(Objects.requireNonNull(issuerAuth.getX5Chain()));
         X509Certificate cert = (X509Certificate) factory.generateCertificate(in);
 
-        X509Certificate issuerCertificate = this.trustedIssuersCertificate.searchForIssuerCertificate(cert.getIssuerX500Principal());
+        X509Certificate issuerCertificate = this.trustedIssuersCertificate.getTrustIssuersCertificates().get(cert.getIssuerX500Principal().toString());
         if (issuerCertificate == null)
             throw new Exception("Issuer ("+cert.getIssuerX500Principal().getName()+") of the VPToken is not trustworthy.");
 

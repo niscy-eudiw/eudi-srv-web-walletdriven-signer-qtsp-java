@@ -1,17 +1,15 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.*;
-
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.bouncycastle.util.encoders.UrlBase64Encoder;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -25,8 +23,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class VerifierClient {
 
-    public static String Authentication = "Authentication";
-    public static String Authorization = "Authorization";
     public static String PresentationDefinitionId = "32f54163-7166-48f1-93d8-ff217bdb0653";
     public static String PresentationDefinitionInputDescriptorsId = "eu.europa.ec.eudi.pid.1";
 
@@ -43,7 +39,6 @@ public class VerifierClient {
     /**
      * Function that allows to make a Presentation Request, following the OpenID for
      * Verifiable Presentations - draft 20, to the verifier
-     *
      * This function already writes the logs for the ApiException. The message in
      * that exceptions can also be used to display info to the user.
      *

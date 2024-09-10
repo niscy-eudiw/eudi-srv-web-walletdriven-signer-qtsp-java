@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 public class AuthorizationRequestVariables {
     private String redirectLink;

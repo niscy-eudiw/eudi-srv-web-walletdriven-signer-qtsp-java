@@ -1,7 +1,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.OpenId4VPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenId4VPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import org.springframework.context.annotation.Bean;
@@ -29,36 +29,8 @@ public class DefaultSecurityConfig {
 					.requestMatchers("/oid4vp/callback").permitAll()
 					.anyRequest().authenticated()
 			)
-			.sessionManagement(session ->
-				session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
+			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
 		return http.build();
-	}
-
-	@Bean
-	public OID4VPAuthenticationFilter authenticationFilter(
-		AuthenticationManager authenticationManager,
-		OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
-		VerifierClient verifierClient,
-		OpenId4VPService oid4vpService){
-		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService);
-		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
-		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
-		return filter;
-	}
-
-	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationManagerProvider authenticationManagerProvider) throws Exception {
-        return new ProviderManager(authenticationManagerProvider);
-	}
-
-	@Bean
-	public OID4VPAuthenticationSuccessHandler myAuthenticationSuccessHandler(){
-		return new OID4VPAuthenticationSuccessHandler();
-	}
-
-	@Bean
-	public CustomUserDetailsService userDetailsService(UserRepository userRepository){
-		return new CustomUserDetailsService(userRepository);
 	}
 
 	@Bean
@@ -69,5 +41,29 @@ public class DefaultSecurityConfig {
 	@Bean
 	public HttpSessionEventPublisher httpSessionEventPublisher() {
 		return new HttpSessionEventPublisher();
+	}
+
+	@Bean
+	public CustomUserDetailsService userDetailsService(UserRepository userRepository){
+		return new CustomUserDetailsService(userRepository);
+	}
+
+	@Bean
+	public AuthenticationManager authenticationManager(AuthenticationManagerProvider authenticationManagerProvider) throws Exception {
+		return new ProviderManager(authenticationManagerProvider);
+	}
+
+	@Bean
+	public OID4VPAuthenticationSuccessHandler myAuthenticationSuccessHandler(){
+		return new OID4VPAuthenticationSuccessHandler();
+	}
+
+	@Bean
+	public OID4VPAuthenticationFilter authenticationFilter(AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
+														   VerifierClient verifierClient, OpenId4VPService oid4vpService){
+		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService);
+		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
+		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
+		return filter;
 	}
 }

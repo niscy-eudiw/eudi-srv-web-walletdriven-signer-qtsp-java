@@ -47,6 +47,7 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
 
         String hash = readJsonNode(root, "hash").asText();
         String username = readJsonNode(root, "username").asText();
+        String scope = readJsonNode(root, "scope").asText();
 
         JsonNode principalNode = readJsonNode(root, "principal");
         Object principal = getPrincipal(mapper, principalNode);
@@ -60,6 +61,7 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
               ? AuthenticationManagerToken.unauthenticated(hash, username)
               : AuthenticationManagerToken.authenticated(principal, authorities);
 
+        token.setScope(scope);
         JsonNode detailsNode = readJsonNode(root, "details");
         if (detailsNode.isNull() || detailsNode.isMissingNode()) {
             token.setDetails(null);
@@ -69,7 +71,6 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
             token.setDetails(details);
         }
         return token;
-
     }
 
     private JsonNode readJsonNode(JsonNode jsonNode, String field) {

@@ -1,8 +1,11 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -12,8 +15,6 @@ import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContext;
-import org.springframework.security.oauth2.server.authorization.context.AuthorizationServerContextHolder;
 import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -29,6 +30,7 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
     private final RequestMatcher authenticationServiceRequestMatcher;
     private final RequestMatcher authorizationCredentialRequestMatcher;
     private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+    private final Logger logger = LogManager.getLogger(AuthorizationRequestConverter.class);
 
     public AuthorizationRequestConverter(){
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();
@@ -46,54 +48,62 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
         );
     }
 
+    private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
+        logger.error(errorDescription);
+        return new OAuth2Error(errorCode, null, null);
+    }
+
     @Override
     public Authentication convert(HttpServletRequest request){
-        System.out.println("Request @"+request.getRequestURL().toString());
+        logger.info("Request received at {}", request.getRequestURL().toString());
+
         if(!this.authenticationServiceRequestMatcher.matches(request) && !this.authorizationCredentialRequestMatcher.matches(request)){
             String errorType = "invalid_request";
             String error_description = "The request doesn't match the requests supported. Possible parameters missing.";
-            System.out.println(error_description);
-            OAuth2Error error = new OAuth2Error(errorType, error_description, null);
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(errorType, error_description), null);
         }
+        logger.info("Request received match the supported requests.");
 
-        try{
-            OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.from(request);
-            System.out.println(authorizeRequest.toString());
-            System.out.println("authorization_details: "+authorizeRequest.getAuthorization_details());
-            Map<String, Object> additionalParameters = getAdditionalParameters(authorizeRequest);
-            Set<String> scopes = new HashSet<>();
-            if(authorizeRequest.getScope() == null && authorizeRequest.getAuthorization_details() != null)
-                scopes.add("credential");
-            else
-                scopes.add(authorizeRequest.getScope());
+        OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.from(request);
+        logger.info("Request received: {}", authorizeRequest);
 
-            System.out.println(Thread.currentThread().getName());
-            System.out.println(SecurityContextHolder.getContext());
-            Authentication principal = SecurityContextHolder.getContext().getAuthentication();
-            if (principal == null) {
+        Map<String, Object> additionalParameters = getAdditionalParameters(authorizeRequest);
+        Set<String> scopes = new HashSet<>();
+        if(authorizeRequest.getScope() == null && authorizeRequest.getAuthorization_details() != null)
+            scopes.add("credential");
+        else
+            scopes.add(authorizeRequest.getScope());
+
+        Authentication principal = SecurityContextHolder.getContext().getAuthentication();
+        if (principal == null) {
+            principal = ANONYMOUS_AUTHENTICATION;
+            logger.warn("Authentication is not present. The user is not authenticated.");
+        }
+        else if (!principal.getClass().equals(AuthenticationManagerToken.class)) {
+            principal = ANONYMOUS_AUTHENTICATION;
+            logger.warn("Authentication present is not valid. The authentication mechanism is not the supported.");
+        }
+        else{
+            logger.info("Authentication Principal is a AuthenticationManagerToken.");
+            AuthenticationManagerToken token = (AuthenticationManagerToken) principal;
+            if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")){
+                logger.warn("For the credential scope, the Authentication should have been performed for an credential scope.");
                 principal = ANONYMOUS_AUTHENTICATION;
-                System.out.println("Authentication Principal not defined.");
             }
-            else {
-                System.out.println(principal.getClass());
-                System.out.println(principal.getPrincipal().getClass());
-            }
+        }
+        logger.info("Principal present: {}", principal);
 
-            return new OAuth2AuthorizationCodeRequestAuthenticationToken(request.getRequestURL().toString(),
-                  authorizeRequest.getClient_id(), principal, authorizeRequest.getRedirect_uri(),
-                  authorizeRequest.getState(), scopes, additionalParameters);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-            OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Unexpected Error", null);
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
-        }
+        OAuth2AuthorizationCodeRequestAuthenticationToken authorizationCodeRequestAuthenticationToken =
+              new OAuth2AuthorizationCodeRequestAuthenticationToken(request.getRequestURL().toString(),
+                    authorizeRequest.getClient_id(), principal, authorizeRequest.getRedirect_uri(),
+                    authorizeRequest.getState(), scopes, additionalParameters);
+
+        logger.info("OAuth2AuthorizationCodeRequestAuthenticationToken is generated.");
+        return authorizationCodeRequestAuthenticationToken;
     }
 
     private static Map<String, Object> getAdditionalParameters(OAuth2AuthorizeRequest authorizeRequest) {
         Map<String, Object> additionalParameters = new HashMap<>();
-
         additionalParameters.put("authorization_details", authorizeRequest.getAuthorization_details());
         additionalParameters.put("code_challenge", authorizeRequest.getCode_challenge());
         additionalParameters.put("code_challenge_method", authorizeRequest.getCode_challenge_method());

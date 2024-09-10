@@ -5,9 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Enumeration;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +22,7 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
-
+    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationSuccessHandler.class);
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) throws IOException, ServletException {
@@ -32,15 +31,15 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        Authentication a1 = SecurityContextHolder.getContext().getAuthentication();
-        if(a1 == null) System.out.println("AuthenticationManagerToken is null");
-
         SecurityContext context = securityContextHolderStrategy.createEmptyContext();
         context.setAuthentication(authentication);
         securityContextHolderStrategy.setContext(context);
         securityContextRepository.saveContext(context, request, response);
+        logger.info("Save Authentication in the Context associated to the JSessionID.");
 
-        String session_id = request.getParameter("session_id");
-        this.redirectStrategy.sendRedirect(request, response, session_id);
+        String sessionId = request.getParameter("session_id");
+        System.out.println(sessionId);
+        logger.info("Returning to: {}", sessionId);
+        this.redirectStrategy.sendRedirect(request, response, sessionId);
     }
 }

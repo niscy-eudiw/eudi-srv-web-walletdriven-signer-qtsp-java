@@ -1,17 +1,14 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2TokenRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.web.authentication.AuthenticationConverter;
-
-import java.util.*;
-
-import jakarta.servlet.http.HttpServletRequest;
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -37,55 +34,54 @@ public class TokenRequestConverter implements AuthenticationConverter {
         );
     }
 
+    private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
+        logger.error(errorDescription);
+        return new OAuth2Error(errorCode, null, null);
+    }
+
     @Override
     public Authentication convert(HttpServletRequest request) {
-        System.out.println("Request @"+request.getRequestURL().toString());
+        logger.info("Request received at {}", request.getRequestURL().toString());
 
         if(!this.tokenRequestMatcher.matches(request)){
             String errorType = "invalid_request";
             String error_description = "The request doesn't match the requests supported. Possible parameters missing.";
-            logger.warn(error_description);
-            OAuth2Error error = new OAuth2Error(errorType, error_description, null);
-            throw new OAuth2AuthenticationException(error);
+            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
         }
-        logger.info("The Token Request match the 'request matcher'.");
-
-        Authentication clientPrincipal = SecurityContextHolder.getContext().getAuthentication();
-        System.out.println(clientPrincipal.getClass());
+        logger.info("Request received match the supported requests.");
 
         OAuth2TokenRequest tokenRequest = OAuth2TokenRequest.from(request);
-        System.out.println(tokenRequest.toString());
-        System.out.println(tokenRequest.getCode_verifier());
+        logger.info("Request received: {}", tokenRequest);
+
+        Authentication clientPrincipal = SecurityContextHolder.getContext().getAuthentication();
+        logger.info("Client Principal present: {}", clientPrincipal);
 
         // grant_type (REQUIRED)
         String grantType = tokenRequest.getGrant_type();
         if (!AuthorizationGrantType.AUTHORIZATION_CODE.getValue().equals(grantType)) {
             String errorType = "invalid_request";
-            String error_description = "The grant type requested is not supported.";
-            logger.warn(error_description + "{"+grantType+"}");
-            OAuth2Error error = new OAuth2Error(errorType, error_description, null);
-            throw new OAuth2AuthenticationException(error);
+            String error_description = "The grant type requested is not supported. ("+grantType+")";
+            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
         }
-        logger.info("Grant_type: "+grantType);
+        logger.info("Grant_type ({}) is supported.", grantType);
 
         // code (REQUIRED)
         String code = tokenRequest.getCode();
         if (!StringUtils.hasText(code) || request.getParameterValues("code").length != 1) {
             String errorType = "invalid_request";
             String error_description = "The code parameter is required.";
-            logger.warn(error_description);
-            OAuth2Error error = new OAuth2Error(errorType, error_description, null);
-            throw new OAuth2AuthenticationException(error);
+            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
         }
-        logger.info("Code: "+ code);
+        logger.info("Code parameter required is present ({}).", code);
 
         // redirect_uri (REQUIRED)
         String redirectUri = tokenRequest.getRedirect_uri();
         if (StringUtils.hasText(redirectUri) && request.getParameterValues(OAuth2ParameterNames.REDIRECT_URI).length != 1) {
-            OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "OAuth 2.0 Parameter: " +  OAuth2ParameterNames.REDIRECT_URI,  "https://datatracker.ietf.org/doc/html/rfc6749#section-5.2");
-            throw new OAuth2AuthenticationException(error);
+            String errorType = OAuth2ErrorCodes.INVALID_REQUEST;
+            String error_description = "OAuth 2.0 Parameter: " +  OAuth2ParameterNames.REDIRECT_URI;
+            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
         }
-        logger.info("Redirect Uri: "+redirectUri);
+        logger.info("Redirect Uri required is present ({}).", redirectUri);
 
         Map<String, Object> additionalParameters = new HashMap<>();
         additionalParameters.put("refresh_token", tokenRequest.getRefresh_token());
@@ -97,6 +93,10 @@ public class TokenRequestConverter implements AuthenticationConverter {
         additionalParameters.put("authorization_details", tokenRequest.getAuthorization_details());
         additionalParameters.put("clientData", tokenRequest.getClientData());
 
-        return new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
+        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthenticationToken =
+              new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
+
+        logger.info("OAuth2AuthorizationCodeAuthenticationToken is generated.");
+        return authorizationCodeAuthenticationToken;
     }
 }

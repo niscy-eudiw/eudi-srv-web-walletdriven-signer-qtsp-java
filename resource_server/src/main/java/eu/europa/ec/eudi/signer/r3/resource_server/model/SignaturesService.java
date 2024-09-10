@@ -1,67 +1,69 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
-import java.security.*;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.*;
-
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
-
 import eu.europa.esig.dss.enumerations.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.*;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-
 @Service
 public class SignaturesService {
-
-    private final CertificatesService certificatesService;
     private final CredentialsRepository credentialsRepository;
     private final HsmService hsmService;
 
-    public SignaturesService(
-          @Autowired HsmService hsmService,
-          @Autowired EjbcaService ejbcaService,
-          @Autowired CredentialsRepository credentialsRepository
-    ) throws Exception{
+    public SignaturesService(@Autowired HsmService hsmService,
+                             @Autowired CredentialsRepository credentialsRepository){
         this.credentialsRepository = credentialsRepository;
-        this.certificatesService = new CertificatesService(hsmService, ejbcaService);
         this.hsmService = hsmService;
-        DefaultVariables defaultVariables = new DefaultVariables(this.credentialsRepository, this.certificatesService);
-        defaultVariables.addDefaultCredentials();
     }
 
-    // to be implemented: probably will also need information about the document to be signed, to verify if it was the same requested
-    public boolean validateSAD(String SAD, String credentialID, List<String> hashes){
-        return true;
-    }
-
-    public boolean validateSignatureRequest(
-          String userHash,
-          String credentialIDRequest, String credentialIDAuthorized,
-          int numSignaturesRequest, int numSignaturesAuthorized,
-          String hashAlgorithmOIDRequest, String hashAlgorithmOIDAuthorized,
-          List<String> hashesRequest, List<String> hashesAuthorized
-    ){
-        if(!credentialIDRequest.equals(credentialIDAuthorized)) return false;
-        if(numSignaturesRequest != numSignaturesAuthorized) return false;
-        if(!hashAlgorithmOIDRequest.equals(hashAlgorithmOIDAuthorized)) return false;
+    public boolean validateSignatureRequest(String userHash, String credentialIDRequest, String credentialIDAuthorized,
+                                            int numSignaturesRequest, int numSignaturesAuthorized, String hashAlgorithmOIDRequest,
+                                            String hashAlgorithmOIDAuthorized, List<String> hashesRequest, List<String> hashesAuthorized){
+        if(!credentialIDRequest.equals(credentialIDAuthorized)){
+            System.out.println(credentialIDRequest+"="+credentialIDAuthorized);
+            return false;
+        }
+        if(numSignaturesRequest != numSignaturesAuthorized) {
+            System.out.println(numSignaturesRequest+"="+numSignaturesAuthorized);
+            return false;
+        }
+        if(!hashAlgorithmOIDRequest.equals(hashAlgorithmOIDAuthorized)){
+            System.out.println(hashAlgorithmOIDRequest+"="+hashAlgorithmOIDAuthorized);
+            return false;
+        }
 
         Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequest);
-        if(credentials.isEmpty()) return false;
+        if(credentials.isEmpty()){
+            System.out.println("CredentialID does not bellong to user.");
+            return false;
+        }
 
         if (hashesRequest == null || hashesAuthorized == null) return false;
         if (hashesRequest.size() != hashesAuthorized.size()) return false;
-        if (hashesRequest.size() != numSignaturesRequest) return false;
+        if (hashesRequest.size() != numSignaturesRequest){
+            System.out.println(hashesRequest.size()+"="+numSignaturesRequest);
+            return false;
+        }
 
-        Collections.sort(hashesRequest);
-        Collections.sort(hashesAuthorized);
+        //Collections.sort(hashesRequest);
+        //Collections.sort(hashesAuthorized);
+
+        for (String s1: hashesRequest){
+            System.out.println(s1);
+        }
+        for (String s2: hashesAuthorized){
+            System.out.println(s2);
+        }
 
         return hashesRequest.equals(hashesAuthorized);
     }
@@ -72,14 +74,7 @@ public class SignaturesService {
         return "responseID";
     }
 
-
-    // to be implemented
-    public List<String> signHash(
-          String credentialID,
-          List<String> hashes,
-          String hashAlgorithmID,
-          String signAlgo,
-          String signAlgoParams) throws Exception {
+    public List<String> signHash(String credentialID, List<String> hashes, String hashAlgorithmID, String signAlgo, String signAlgoParams) throws Exception {
 
         Optional<Credentials> credentialsOptional = this.credentialsRepository.findById(credentialID);
         if(credentialsOptional.isEmpty()) return new ArrayList<>();
@@ -102,7 +97,8 @@ public class SignaturesService {
             List<String> signatures = new ArrayList<>();
             for (String dtbs : hashes) {
                 try {
-                    byte[] dtbs_bytes = Base64.getDecoder().decode(dtbs);
+                    String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
+                    byte[] dtbs_bytes = Base64.getDecoder().decode(dtbsDecoded);
                     Signature sig = Signature.getInstance(signatureAlgorithm);
                     sig.initSign(sKey);
                     sig.update(dtbs_bytes);
@@ -121,7 +117,8 @@ public class SignaturesService {
 
             List<String> signatures = new ArrayList<>();
             for (String dtbs : hashes) {
-                byte[] dtbsBytes = Base64.getDecoder().decode(dtbs);
+                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
+                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
                 byte[] signatureBytes = this.hsmService.signWithSomeAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
                 signatures.add(signature);

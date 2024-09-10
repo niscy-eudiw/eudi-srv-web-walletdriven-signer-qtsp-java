@@ -2,13 +2,9 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import java.util.Objects;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
 
 public class OAuth2AuthorizeRequest {
     @NotBlank

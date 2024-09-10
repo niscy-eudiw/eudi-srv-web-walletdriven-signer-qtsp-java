@@ -1,14 +1,15 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalid;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.TrustedIssuersCertificates;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
@@ -25,23 +26,21 @@ import org.springframework.stereotype.Service;
 public class OpenId4VPService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenId4VPService.class);
-
     private final UserRepository repository;
-    private final TrustedIssuersCertificates trustedIssuersCertificate;
+    private final TrustedIssuersCertificateConfig trustedIssuersCertificatesConfig;
+
 
     @Autowired
     public OpenId4VPService(UserRepository repository,
-                            TrustedIssuersCertificates trustedIssuersCertificate) {
+                            TrustedIssuersCertificateConfig trustedIssuersCertificateConfig) {
         this.repository = repository;
-        this.trustedIssuersCertificate = trustedIssuersCertificate;
+        this.trustedIssuersCertificatesConfig = trustedIssuersCertificateConfig;
     }
 
     public record UserOIDTemporaryInfo(User user, String givenName, String familyName) {
-
         public String getFullName() {
                 return givenName + " " + familyName;
             }
-
     }
 
     public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier)
@@ -58,7 +57,7 @@ public class OpenId4VPService {
                     vp,
                     VerifierClient.PresentationDefinitionId,
                     VerifierClient.PresentationDefinitionInputDescriptorsId,
-                    this.trustedIssuersCertificate);
+                    this.trustedIssuersCertificatesConfig);
         Map<Integer, String> logsMap = new HashMap<>();
         MDoc document = validator.loadAndVerifyDocumentForVP(logsMap);
         UserOIDTemporaryInfo user = loadUserFromDocument(document);
@@ -106,6 +105,8 @@ public class OpenId4VPService {
 
     private void addToDB(User userFromVerifierResponse) {
         Optional<User> userInDatabase = repository.findByHash(userFromVerifierResponse.getHash());
-        if (userInDatabase.isEmpty()) repository.save(userFromVerifierResponse);
+        if (userInDatabase.isEmpty()){
+            repository.save(userFromVerifierResponse);
+        }
     }
 }

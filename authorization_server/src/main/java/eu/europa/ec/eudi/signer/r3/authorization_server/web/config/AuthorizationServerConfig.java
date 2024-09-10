@@ -6,7 +6,18 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
@@ -17,20 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp.VerifierClient;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerTokenMixIn;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationEntryPoint;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationFilter;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +38,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -86,6 +84,8 @@ public class AuthorizationServerConfig {
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
+		authorizationServerConfigurer.oidc(Customizer.withDefaults());
+
 
 		AuthorizationRequestConverter authorizationRequestConverter = new AuthorizationRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService);
@@ -115,11 +115,22 @@ public class AuthorizationServerConfig {
 		return http.build();
 	}
 
+	// Defines the authorizationServerSetting used by OAuth2AuthorizationServerConfigurer
+	// customizing configuration settings for the OAuth2 authorization server
+	@Bean
+	public AuthorizationServerSettings authorizationServerSettings() {
+		return AuthorizationServerSettings.builder().build();
+	}
+
+	@Bean
+	public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig){
+		return new JdbcTemplate(dataSourceConfig.getDataSource());
+	}
+
 	// Defines the RegisteredClientRepository used by the OAuth2AuthorizationServerConfigurer
 	// for managing new and existing clients
 	@Bean
-	public JdbcRegisteredClientRepository registeredClientRepository(
-		OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate) {
+	public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate) {
 		// Save registered client's in db as if in-memory
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
@@ -143,11 +154,6 @@ public class AuthorizationServerConfig {
 		}
 
 		return registeredClientRepository;
-	}
-
-	@Bean
-	public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig){
-		return new JdbcTemplate(dataSourceConfig.getDataSource());
 	}
 
 	@Bean
@@ -193,33 +199,30 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
-		JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
-		JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
-		jwtGenerator.setJwtCustomizer(jwtCustomizer);
-		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
-		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
-	}
-
-	// Defines the authorizationServerSetting used by OAuth2AuthorizationServerConfigurer
-	// customizing configuration settings for the OAuth2 authorization server
-	@Bean
-	public AuthorizationServerSettings authorizationServerSettings() {
-		return AuthorizationServerSettings.builder().build();
-	}
-
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
 		return context -> {
 			JwtClaimsSet.Builder claims = context.getClaims();
 
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
+
+				if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
+					AuthenticationManagerToken token = (AuthenticationManagerToken) context.getPrincipal();
+					System.out.println(token.getPrincipal().getClass());
+					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+						UserPrincipal up = (UserPrincipal) token.getPrincipal();
+						System.out.println(up);
+						claims.claim("givenName", up.getGivenName());
+						claims.claim("surname", up.getSurname());
+
+						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+						claims.claim("issuingCountry", u.getIssuingCountry());
+					}
+				}
+
 				OAuth2Authorization authorization = context.getAuthorization();
 				OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
 
 				if (authorization.getAuthorizedScopes().contains("credential")) {
-
 					// Customize headers/claims for access_token
 					if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
@@ -245,5 +248,15 @@ public class AuthorizationServerConfig {
 				}
 			}
 		};
+	}
+
+	@Bean
+	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
+		JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
+		JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
+		jwtGenerator.setJwtCustomizer(jwtCustomizer);
+		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
+		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
 	}
 }

@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.openid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

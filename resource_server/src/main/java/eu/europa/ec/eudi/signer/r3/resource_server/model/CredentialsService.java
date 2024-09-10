@@ -34,9 +34,6 @@ public class CredentialsService {
         this.credentialsRepository = credentialsRepository;
         this.keysService = new KeysService(hsmService);
         this.certificatesService = new CertificatesService(hsmService, ejbcaService);
-
-        DefaultVariables defaultVariables = new DefaultVariables(this.credentialsRepository, this.certificatesService);
-        defaultVariables.addDefaultCredentials();
     }
 
     /**
