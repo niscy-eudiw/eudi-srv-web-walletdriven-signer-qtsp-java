@@ -20,7 +20,7 @@ public class WebSecurity {
                           .requestMatchers("/csc/v2/info").permitAll()
                           .requestMatchers("/csc/v2/signatures/signHash").hasAnyAuthority("SCOPE_credential")
                           .requestMatchers("/csc/v2/credentials/info").hasAnyAuthority("SCOPE_credential", "SCOPE_service")
-                          .requestMatchers("/**").hasAuthority("SCOPE_service")
+                          .anyRequest().hasAuthority("SCOPE_service")
               )
               .oauth2ResourceServer(oauth2ResourceServer ->
                     oauth2ResourceServer.jwt(Customizer.withDefaults())

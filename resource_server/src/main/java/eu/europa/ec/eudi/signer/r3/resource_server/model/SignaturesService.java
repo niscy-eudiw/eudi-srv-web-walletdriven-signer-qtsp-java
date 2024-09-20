@@ -139,6 +139,7 @@ public class SignaturesService {
             return algFinder.getAlgorithmName(a);
         }
         catch (IllegalArgumentException e){
+            System.out.println(e.getMessage());
             EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.forOID(signAlgo);
             System.out.println(encryptionAlgorithm.getName());
 

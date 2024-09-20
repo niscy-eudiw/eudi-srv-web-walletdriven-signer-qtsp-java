@@ -3,11 +3,13 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenId4VPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
@@ -52,6 +54,8 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             if (messageFromVerifier == null) throw new Exception("Error when trying to obtain the vp_token from Verifier.");
             logger.info("Recover message from the OID4VP Verifier.");
 
+            System.out.println(messageFromVerifier);
+
             AuthenticationManagerToken unauthenticatedToken = oid4vpService.loadUserFromVerifierResponse(messageFromVerifier);
             unauthenticatedToken.setScope(scope);
             logger.info("Generated unauthenticated AuthenticationManagerToken: {}", unauthenticatedToken.getHash());
@@ -74,8 +78,8 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
         String[] pairs = query.split("&");
         for (String pair : pairs) {
             int idx = pair.indexOf("=");
-            String key = URLDecoder.decode(pair.substring(0, idx), java.nio.charset.StandardCharsets.UTF_8);
-            String value = URLDecoder.decode(pair.substring(idx + 1), java.nio.charset.StandardCharsets.UTF_8);
+            String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+            String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
             queryPairs.put(key, value);
         }
         return queryPairs.get("scope");

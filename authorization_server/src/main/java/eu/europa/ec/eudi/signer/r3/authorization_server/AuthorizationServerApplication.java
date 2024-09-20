@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
-@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class })
+@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class, OAuth2IssuerConfig.class})
 public class AuthorizationServerApplication {
 
     public static void main(String[] args) {

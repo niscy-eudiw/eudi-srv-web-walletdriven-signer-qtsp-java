@@ -42,8 +42,7 @@ public class VerifierClient {
      * This function already writes the logs for the ApiException. The message in
      * that exceptions can also be used to display info to the user.
      *
-     * @param user an identifier of the user that made the request (ex: a cookie or
-     *             an id)
+     * @param user an identifier of the user that made the request (ex: a cookie or an id)
      * @return the deep link that redirects the user to the EUDI Wallet
      * @throws Exception
      */
@@ -83,9 +82,6 @@ public class VerifierClient {
     private Map<String, String> getHeaders() {
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
-        // headers.put("Cookie",
-        // "SERVERUSED=server1;
-        // TS010b9524=01eb1053a0beaccfef181704d8d63c0d7987f347a2ec9fb8e7523c06298d62ad3dd30e17c3aa0a3535482f38f21aad94d3c37023fd39b9b7250ee76b594cb67c5aa2f212de");
         return headers;
     }
 

@@ -1,5 +1,5 @@
 server:
-  port: 9443
+  port: 8484
   ssl:
     bundle: demo-authorizationserver
     client-auth: want
@@ -7,6 +7,9 @@ server:
 verifier:
   url: https://dev.verifier-backend.eudiw.dev/ui/presentations
   address: dev.verifier-backend.eudiw.dev
+
+oauth2Issuer:
+  url: https://walletcentric.signer.eudiw.dev
 
 trusted-issuers:
   folder: certificate_of_issuers

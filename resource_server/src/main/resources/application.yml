@@ -1,5 +1,5 @@
 server:
-  port: 8443
+  port: 8485
   ssl:
     bundle: resource_server
     client-auth: need
@@ -49,8 +49,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:9000/oauth2/jwks
-          issuer-uri: http://localhost:9000
+          jwk-set-uri: https://walletcentric.signer.eudiw.dev/oauth2/jwks
+          issuer-uri: https://walletcentric.signer.eudiw.dev
 
 info:
   specs: "2.0.0.0"
@@ -61,7 +61,7 @@ info:
   description: "This is a test Qualified Trust Service Provider"
   authType:
     - "oauth2code"
-  oauth2: "http://localhost:9000"
+  oauth2: "https://walletcentric.signer.eudiw.dev"
   asynchronousOperationMode: false
   methods:
     - "oauth2/authorize"
@@ -85,3 +85,10 @@ info:
 
 credentials:
   onlyValidSupport: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO

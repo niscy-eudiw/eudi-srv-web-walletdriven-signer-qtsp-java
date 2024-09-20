@@ -3,6 +3,8 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.SignaturesService;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashRequest;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashResponse;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +40,7 @@ public class SignaturesController {
 
         StringBuilder stringBuilder = new StringBuilder();
         for(Map.Entry<String, Object> c: claims.entrySet()){
-            stringBuilder.append(c.getKey()).append(": ").append(c.getValue()).append("/n");
+            stringBuilder.append(c.getKey()).append(": ").append(c.getValue());
         }
         logger.trace("Access Token Claims: {}", stringBuilder.toString());
 
@@ -52,19 +54,26 @@ public class SignaturesController {
         logger.trace("hashesString: {}", hashesString);
         String[] hashesAuthorizedArray = hashesString.split(",");
         Arrays.sort(hashesAuthorizedArray);
-        List<String> hashesAuthorized = List.of(hashesAuthorizedArray);
+        List<String> hashesAuthorized = new ArrayList<>();
+        for(String s: hashesAuthorizedArray){
+            logger.trace(s);
+            hashesAuthorized.add(s);
+        }
 
         try {
-            List<String> hashesRequested = signHashRequest.getHashes();
-            Collections.sort(hashesRequested);
-            for(String s: hashesRequested){
+            List<String> hashesRequestedEncoded = signHashRequest.getHashes();
+            Collections.sort(hashesRequestedEncoded);
+            List<String> hashesRequested = new ArrayList<>();
+            for(String s: hashesRequestedEncoded){
                 logger.trace(s);
+                hashesRequested.add(URLDecoder.decode(s, StandardCharsets.UTF_8));
             }
 
             if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(), credentialIDAuthorized, signHashRequest.getHashes().size(), numSignaturesAuthorized, signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized, hashesRequested, hashesAuthorized)){
                 logger.error("The Authorization Header doesn't authorize the current Signature Request.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the authorization header doesn't authorize the signature request.");
             }
+            logger.info("Validated that the Authorization Header authorizes the current Signature Request.");
 
             if(Objects.equals(signHashRequest.getOperationMode(), "A")){
                 logger.error("Currently Asynchronous responses are not supported");

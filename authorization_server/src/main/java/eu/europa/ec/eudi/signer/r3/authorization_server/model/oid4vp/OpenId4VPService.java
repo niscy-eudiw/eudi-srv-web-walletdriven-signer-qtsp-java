@@ -53,6 +53,9 @@ public class OpenId4VPService {
         catch (JSONException e){
             throw new Exception("The response from the Verifier doesn't contain a correctly formatted JSON string.");
         }
+
+        System.out.println(vp);
+
         VPValidator validator = new VPValidator(
                     vp,
                     VerifierClient.PresentationDefinitionId,

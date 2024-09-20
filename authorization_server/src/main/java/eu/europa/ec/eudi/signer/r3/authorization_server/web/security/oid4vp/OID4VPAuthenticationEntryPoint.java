@@ -3,6 +3,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.AuthorizationRequestVariables;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

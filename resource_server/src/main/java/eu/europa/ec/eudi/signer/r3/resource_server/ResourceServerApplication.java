@@ -10,10 +10,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @SpringBootApplication
 @EnableConfigurationProperties({ InfoConfig.class, EjbcaProperties.class, AuthConfig.class, CredentialsConfig.class })
-public class QtspApplication {
+public class ResourceServerApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(QtspApplication.class, args);
+		SpringApplication.run(ResourceServerApplication.class, args);
 	}
 
 }

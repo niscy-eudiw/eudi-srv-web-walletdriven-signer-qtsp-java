@@ -86,6 +86,9 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+
+
+
         OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken = (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
         logger.info("Authenticate OAuth2AuthorizationCodeRequestAuthenticationToken from clientID: {}", authenticationToken.getClientId());
 
@@ -177,6 +180,8 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
               .authorizationGrant(authenticationToken);
         OAuth2TokenContext tokenContext = tokenContextBuilder.build();
+
+        System.out.println("Equals Access_token?: "+ tokenContext.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN));
 
         OAuth2AuthorizationCode authorizationCode = this.authorizationCodeGenerator.generate(tokenContext);
         if (authorizationCode == null)

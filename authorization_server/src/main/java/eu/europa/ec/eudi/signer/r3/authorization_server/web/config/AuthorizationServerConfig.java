@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
@@ -24,6 +25,8 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -118,8 +121,8 @@ public class AuthorizationServerConfig {
 	// Defines the authorizationServerSetting used by OAuth2AuthorizationServerConfigurer
 	// customizing configuration settings for the OAuth2 authorization server
 	@Bean
-	public AuthorizationServerSettings authorizationServerSettings() {
-		return AuthorizationServerSettings.builder().build();
+	public AuthorizationServerSettings authorizationServerSettings(OAuth2IssuerConfig issuerConfig) {
+		return AuthorizationServerSettings.builder().issuer(issuerConfig.getUrl()).build();
 	}
 
 	@Bean
@@ -140,6 +143,8 @@ public class AuthorizationServerConfig {
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
 				.clientSecret(registration.getClientSecret())
+				.clientSecretExpiresAt(null)
+				.clientSecretExpiresAt(Instant.now().plus(Duration.ofDays(7)))
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
@@ -201,12 +206,13 @@ public class AuthorizationServerConfig {
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
 		return context -> {
-			JwtClaimsSet.Builder claims = context.getClaims();
-
+			System.out.println(context.getAuthorizationGrantType().getValue());
+			System.out.println(context.getTokenType().getValue());
+			System.out.println(context.getAuthorization().getAuthorizationGrantType());
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
-
+				JwtClaimsSet.Builder claims = context.getClaims();
 				if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
-					AuthenticationManagerToken token = (AuthenticationManagerToken) context.getPrincipal();
+					AuthenticationManagerToken token = context.getPrincipal();
 					System.out.println(token.getPrincipal().getClass());
 					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 						UserPrincipal up = (UserPrincipal) token.getPrincipal();
