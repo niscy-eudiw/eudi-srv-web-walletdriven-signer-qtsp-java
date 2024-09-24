@@ -13,8 +13,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
@@ -41,11 +39,6 @@ public class DefaultSecurityConfig {
 	}
 
 	@Bean
-	public PasswordEncoder passwordEncoder(){
-		return NoOpPasswordEncoder.getInstance();
-	}
-
-	@Bean
 	public HttpSessionEventPublisher httpSessionEventPublisher() {
 		return new HttpSessionEventPublisher();
 	}
@@ -61,14 +54,14 @@ public class DefaultSecurityConfig {
 	}
 
 	@Bean
-	public OID4VPAuthenticationSuccessHandler myAuthenticationSuccessHandler(){
-		return new OID4VPAuthenticationSuccessHandler();
+	public OID4VPAuthenticationSuccessHandler myAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){
+		return new OID4VPAuthenticationSuccessHandler(sessionUrlRelationList);
 	}
 
 	@Bean
 	public OID4VPAuthenticationFilter authenticationFilter(AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
-														   VerifierClient verifierClient, OpenId4VPService oid4vpService){
-		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService);
+														   VerifierClient verifierClient, OpenId4VPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
+		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		return filter;

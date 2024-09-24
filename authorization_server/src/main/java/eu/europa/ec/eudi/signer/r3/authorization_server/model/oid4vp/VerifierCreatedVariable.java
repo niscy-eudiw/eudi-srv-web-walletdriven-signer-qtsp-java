@@ -29,13 +29,9 @@ public class VerifierCreatedVariable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        VerifierCreatedVariable that = (VerifierCreatedVariable) o;
-        return Objects.equals(nonce, that.nonce) &&
-                Objects.equals(presentation_id, that.presentation_id);
+        if (this == o) return true;
+        if (!(o instanceof VerifierCreatedVariable that)) return false;
+        return Objects.equals(nonce, that.nonce) && Objects.equals(presentation_id, that.presentation_id);
     }
 
     @Override

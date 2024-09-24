@@ -207,7 +207,7 @@ public class CredentialsService {
         keyAlgo.add("1.2.840.113549.1.1.1");
         keyAlgo.add("1.2.840.113549.1.1.11");
         credential.setKeyAlgo(keyAlgo);
-        credential.setKeyLen(1024);
+        credential.setKeyLen(2048);
 
         credential.setCertStatus("valid");
         credential.setCertificate(this.certificatesService.base64EncodeCertificate(ejbcaCert));

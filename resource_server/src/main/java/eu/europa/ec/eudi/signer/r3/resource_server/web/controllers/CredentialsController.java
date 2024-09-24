@@ -82,6 +82,7 @@ public class CredentialsController {
             return credentialsListResponse;
         }
         catch (Exception e){
+            e.printStackTrace();
             logger.error(e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request");
         }

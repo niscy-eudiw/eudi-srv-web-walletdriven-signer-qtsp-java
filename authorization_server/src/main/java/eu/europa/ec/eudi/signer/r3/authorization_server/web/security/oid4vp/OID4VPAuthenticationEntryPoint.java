@@ -1,5 +1,6 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.AuthorizationRequestVariables;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import jakarta.servlet.ServletException;
@@ -13,8 +14,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 import org.springframework.util.Assert;
@@ -24,41 +23,60 @@ import org.springframework.util.Assert;
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
 public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint, InitializingBean {
-
     private String realmName;
 
-    private final AuthenticationSuccessHandler delegate = new SavedRequestAwareAuthenticationSuccessHandler();
     private final VerifierClient verifierClient;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final Logger logger = LogManager.getLogger(OID4VPAuthenticationEntryPoint.class);
+    private final OAuth2IssuerConfig issuerConfig;
+    private final SessionUrlRelationList sessionUrlRelationList;
 
-    public OID4VPAuthenticationEntryPoint(@Autowired VerifierClient service){
+    public OID4VPAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
         this.verifierClient = service;
+        this.issuerConfig = issuerConfig;
+        this.sessionUrlRelationList = sessionUrlRelationList;
     }
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
-        logger.info("Obtain Link for OID4VP Authentication");
-
         try{
-            String returnTo = request.getRequestURL()+"?"+request.getQueryString();
-            logger.info("Link to return to after authentication: {}", returnTo);
-
-            String scheme = request.getScheme();             // "http"
-            String serverName = request.getServerName();     // "localhost"
-            int serverPort = request.getServerPort();        // 9000
-            String contextPath = request.getContextPath();   // ""
-            String serviceUrl = scheme + "://" + serverName + ":" + serverPort + contextPath;
+            String serviceUrl = this.issuerConfig.getUrl();
             logger.info("Authorization Server Url: {}", serviceUrl);
 
-            String cookieSession = response.getHeader("Set-Cookie");
+            String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();
+            logger.info("Link to return to after authentication: {}", returnTo);
+
+            Cookie[] cookies = request.getCookies();
+            String cookieSession = null;
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if ("JSESSIONID".equals(cookie.getName())) {
+                        cookieSession = cookie.getValue();
+                        break;
+                    }
+                }
+            }
+            if(cookieSession == null) {
+                String cookieHeader = response.getHeader("Set-Cookie");
+                if (cookieHeader != null) {
+                    String[] cookiesArray = cookieHeader.split(";");
+                    for (String c : cookiesArray) {
+                        if (c.trim().startsWith("JSESSIONID=")) {
+                            cookieSession = c.trim().substring("JSESSIONID=".length());
+                            break;
+                        }
+                    }
+                }
+            }
             logger.info("Current Cookie Session: {}", cookieSession);
 
-            AuthorizationRequestVariables variables = this.verifierClient.initPresentationTransaction(cookieSession, serviceUrl, returnTo);
+            AuthorizationRequestVariables variables = this.verifierClient.initPresentationTransaction(cookieSession, serviceUrl);
+            this.sessionUrlRelationList.addSessionUrlRelation(cookieSession, returnTo);
             this.redirectStrategy.sendRedirect(request, response, variables.getRedirectLink());
         }
         catch (Exception e){
             logger.error(e.getMessage());
+            throw new IOException(e.getMessage());
         }
     }
 

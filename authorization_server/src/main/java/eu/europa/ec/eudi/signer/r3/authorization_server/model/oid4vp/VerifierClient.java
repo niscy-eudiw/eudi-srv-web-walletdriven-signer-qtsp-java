@@ -46,14 +46,12 @@ public class VerifierClient {
      * @return the deep link that redirects the user to the EUDI Wallet
      * @throws Exception
      */
-    public AuthorizationRequestVariables initPresentationTransaction(String user, String service_url, String return_to) throws Exception {
+    public AuthorizationRequestVariables initPresentationTransaction(String user, String service_url) throws Exception {
         System.out.println("init user: "+user);
-
         Map<String, String> headers = getHeaders();
         String nonce = generateNonce();
-        String body = getBody(return_to, service_url, nonce);
+        String body = getBody(service_url, nonce, user);
 
-        // Send HTTP Post Request & Receives the Response
         JSONObject responseFromVerifierAfterInitPresentation;
         try {
             responseFromVerifierAfterInitPresentation = httpRequestToInitPresentation(body, headers);
@@ -72,9 +70,8 @@ public class VerifierClient {
         String presentation_id = responseFromVerifierAfterInitPresentation.getString("presentation_id");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
 
-        // Generates a deepLink to the EUDIW App
         String deepLink = redirectUriDeepLink(encoded_request_uri, client_id);
-
+        // String encoded_return_to = URLEncoder.encode(return_to, StandardCharsets.UTF_8);
         this.verifierVariables.addUsersVerifierCreatedVariable(user, nonce, presentation_id);
         return new AuthorizationRequestVariables(deepLink, nonce, presentation_id);
     }
@@ -93,7 +90,7 @@ public class VerifierClient {
         return Base64.getUrlEncoder().encodeToString(result);
     }
 
-    private String getBody(String return_to, String service_url, String nonce) throws Exception{
+    private String getBody(String service_url, String nonce, String userCookieSession) throws Exception{
         String presentationDefinition = "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
               "'input_descriptors': [{" +
@@ -113,8 +110,7 @@ public class VerifierClient {
               "]}}]}";
         JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
 
-        String encoded_return_to = URLEncoder.encode(return_to, StandardCharsets.UTF_8);
-        String redirect_uri = service_url+"/oid4vp/callback?response_code={RESPONSE_CODE}&session_id="+encoded_return_to;
+        String redirect_uri = service_url+"/oid4vp/callback?&session_id="+userCookieSession+"&response_code={RESPONSE_CODE}";
         System.out.println(redirect_uri);
 
         // Set JSON Body
@@ -166,19 +162,23 @@ public class VerifierClient {
                 request_uri;
     }
 
+    public VerifierCreatedVariable getVerifierVariables(String user) throws Exception{
+        System.out.println("get user: "+user);
+        VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
+        if (variables == null) throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+        return variables;
+    }
+
     /**
      * get authorization response from the oid4vp verifier
      */
-    public String getVPTokenFromVerifier(String user, String code) throws Exception {
+    public String getVPTokenFromVerifier(String user, String code, VerifierCreatedVariable variables) throws Exception {
         System.out.println("get user: "+user);
-
-        VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
-        if (variables == null) throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
 
         String nonce = variables.getNonce();
         String presentation_id = variables.getPresentation_id();
-        log.info("Current Verifier Variables State: " + verifierVariables);
-        log.info("User " + user +". Nonce: " + nonce + " & Presentation_id: " + presentation_id);
+        log.info("Current Verifier Variables State: {}", verifierVariables);
+        log.info("User {}: Nonce: {} & Presentation_id: {}", user, nonce, presentation_id);
 
         Map<String, String> headers = getHeaders();
         String url = uriToRequestWalletPID(presentation_id, nonce, code);
@@ -188,7 +188,6 @@ public class VerifierClient {
         WebUtils.StatusAndMessage response;
         try {
             response = WebUtils.httpGetRequests(url, headers);
-            System.out.println(response);
         } catch (Exception e) {
             throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
         }

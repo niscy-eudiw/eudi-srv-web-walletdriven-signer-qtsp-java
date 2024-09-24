@@ -16,6 +16,7 @@ import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
@@ -23,6 +24,11 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final Logger logger = LogManager.getLogger(OID4VPAuthenticationSuccessHandler.class);
+    private final SessionUrlRelationList sessionUrlRelationList;
+
+    public OID4VPAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){
+        this.sessionUrlRelationList = sessionUrlRelationList;
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) throws IOException, ServletException {
@@ -38,8 +44,9 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         logger.info("Save Authentication in the Context associated to the JSessionID.");
 
         String sessionId = request.getParameter("session_id");
-        System.out.println(sessionId);
-        logger.info("Returning to: {}", sessionId);
-        this.redirectStrategy.sendRedirect(request, response, sessionId);
+        String url = sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
+
+        logger.info("Returning to: {}", url);
+        this.redirectStrategy.sendRedirect(request, response, url);
     }
 }

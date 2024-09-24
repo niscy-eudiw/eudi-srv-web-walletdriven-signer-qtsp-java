@@ -49,8 +49,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: https://walletcentric.signer.eudiw.dev/oauth2/jwks
-          issuer-uri: https://walletcentric.signer.eudiw.dev
+          jwk-set-uri: http://localhost:8084/oauth2/jwks
+          issuer-uri: http://localhost:8084
 
 info:
   specs: "2.0.0.0"

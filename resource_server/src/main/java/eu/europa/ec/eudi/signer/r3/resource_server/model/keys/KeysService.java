@@ -24,7 +24,7 @@ public class KeysService {
      * The third position of the array contains the public key public_exponent bytes.
      */
     public byte[][] RSAKeyPairGeneration() throws Exception{
-        return this.hsmService.generateRSAKeyPair(1024);
+        return this.hsmService.generateRSAKeyPair(2048);
     }
 
     public PublicKey getRSAPublicKeyFromSpecs(BigInteger modulus, BigInteger public_exponent) throws Exception{
@@ -35,7 +35,7 @@ public class KeysService {
 
     private static KeyPair keyPairGeneration() throws Exception {
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-        keyPairGenerator.initialize(1024, new SecureRandom());
+        keyPairGenerator.initialize(2048, new SecureRandom());
         return keyPairGenerator.generateKeyPair();
     }
 

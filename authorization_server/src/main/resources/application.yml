@@ -5,11 +5,11 @@ server:
     client-auth: want
 
 verifier:
-  url: https://dev.verifier-backend.eudiw.dev/ui/presentations
-  address: dev.verifier-backend.eudiw.dev
+  url: https://verifier-backend.eudiw.dev/ui/presentations
+  address: verifier-backend.eudiw.dev
 
-oauth2Issuer:
-  url: https://walletcentric.signer.eudiw.dev
+oauth2-issuer-url:
+  url: http://localhost:8084
 
 trusted-issuers:
   folder: certificate_of_issuers
@@ -55,6 +55,6 @@ spring:
 logging:
   level:
     root: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
+    org.springframework.web: TRACE
+    org.springframework.security: TRACE
     org.springframework.security.oauth2: INFO

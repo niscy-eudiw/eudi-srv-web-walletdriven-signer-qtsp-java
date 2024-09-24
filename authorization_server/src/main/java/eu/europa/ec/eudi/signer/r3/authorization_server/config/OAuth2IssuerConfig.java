@@ -2,7 +2,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "oauth2Issuer")
+@ConfigurationProperties(prefix = "oauth2-issuer-url")
 public class OAuth2IssuerConfig {
     private String url;
 

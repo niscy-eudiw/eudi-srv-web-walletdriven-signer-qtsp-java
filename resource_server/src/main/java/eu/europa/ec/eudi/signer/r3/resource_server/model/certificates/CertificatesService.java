@@ -2,13 +2,11 @@ package eu.europa.ec.eudi.signer.r3.resource_server.model.certificates;
 
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Set;
-import org.bouncycastle.asn1.DERBitString;
-import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.pkcs.CertificationRequest;
 import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
@@ -17,21 +15,17 @@ import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-import org.bouncycastle.operator.ContentSigner;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 
 import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -43,8 +37,8 @@ import java.util.*;
  */
 public class CertificatesService {
 
-    private HsmService hsmService;
-    private EjbcaService ejbcaService;
+    private final HsmService hsmService;
+    private final EjbcaService ejbcaService;
 
     public CertificatesService(HsmService hsmService, EjbcaService ejbcaService){
         this.hsmService = hsmService;
@@ -108,10 +102,7 @@ public class CertificatesService {
               .addRDN(BCStyle.O, organizationName)
               .build();
 
-        ASN1Set attributes = new DERSet();
-
-        // CertificationRequestInfo cri = new CertificationRequestInfo(subjectDN, pki, attributes);
-        CertificationRequestInfo cri = new CertificationRequestInfo(subjectDN, pki, attributes);
+        CertificationRequestInfo cri = new CertificationRequestInfo(subjectDN, pki, new DERSet());
         return cri.getEncoded();
     }
 
@@ -166,38 +157,10 @@ public class CertificatesService {
         return true;
     }
 
-    private static X509Certificate createSelfSignedCert(KeyPair keyPair) throws OperatorCreationException, CertificateException, IOException {
-        Provider bcProvider = new BouncyCastleProvider();
-        Security.addProvider(bcProvider);
-
-        long now = System.currentTimeMillis();
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        Date startDate = calendar.getTime();
-
-        X500Name subjectDN = new X500Name("CN=subject_test");
-        X500Name issuerDN = new X500Name("CN=issuer_test");
-
-        BigInteger certSerialNumber = new BigInteger(Long.toString(now)); // <-- Using the current timestamp as the
-        // certificate serial number
-
-        // calculate the timestamp for the end date
-        calendar.setTime(startDate);
-        calendar.add(Calendar.MONTH, 12);
-        Date endDate = calendar.getTime();
-
-        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.getPrivate());
-
-        // Use X509v3 Certificates per the CSC Standard
-        JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(issuerDN, certSerialNumber, startDate,
-              endDate,
-              subjectDN, keyPair.getPublic());
-
-        BasicConstraints basicConstraints = new BasicConstraints(true); // <-- true for CA, false for EndEntity
-        certBuilder.addExtension(new ASN1ObjectIdentifier("2.5.29.19"), true, basicConstraints); // Basic Constraints is
-        // usually marked as
-        // critical.
-
-        return new JcaX509CertificateConverter().setProvider(bcProvider).getCertificate(certBuilder.build(contentSigner));
+    private static DistributionPoint[] createDistributionPoints(String crlURL) throws Exception {
+        GeneralName crlName = new GeneralName(GeneralName.uniformResourceIdentifier, crlURL);
+        DistributionPointName dpn = new DistributionPointName(new GeneralNames(crlName));
+        return new DistributionPoint[] {  new DistributionPoint(dpn, null, null)
+        };
     }
-
 }

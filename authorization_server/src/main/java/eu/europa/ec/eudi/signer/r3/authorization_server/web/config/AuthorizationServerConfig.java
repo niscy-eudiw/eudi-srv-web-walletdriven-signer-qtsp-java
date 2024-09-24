@@ -83,7 +83,7 @@ public class AuthorizationServerConfig {
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
 		JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
-		OID4VPAuthenticationFilter authenticationFilter) throws Exception {
+		OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList) throws Exception {
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
@@ -109,7 +109,7 @@ public class AuthorizationServerConfig {
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(this.verifierClient);
+					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(this.verifierClient, issuerConfig, sessionUrlRelationList);
 					RequestMatcher requestMatcher = request -> true;
 					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
 				}
@@ -143,7 +143,6 @@ public class AuthorizationServerConfig {
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
 				.clientSecret(registration.getClientSecret())
-				.clientSecretExpiresAt(null)
 				.clientSecretExpiresAt(Instant.now().plus(Duration.ofDays(7)))
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
