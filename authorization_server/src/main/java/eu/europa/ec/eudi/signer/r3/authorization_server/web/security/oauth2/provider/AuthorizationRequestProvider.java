@@ -2,6 +2,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.h2.security.SHA256;
@@ -52,6 +53,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
     private final Logger logger = LogManager.getLogger(AuthorizationRequestProvider.class);
     private final OAuth2TokenGenerator<OAuth2AuthorizationCode> authorizationCodeGenerator = new OAuth2AuthorizationCodeGenerator();
     private final OAuth2AuthorizationService authorizationService;
+    private final ManageOAuth2Authorization manageOAuth2Authorization;
 
     private static class OAuth2AuthorizationCodeGenerator implements OAuth2TokenGenerator<OAuth2AuthorizationCode> {
 
@@ -69,9 +71,10 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         }
     }
 
-    public AuthorizationRequestProvider(RegisteredClientRepository registeredClientRepository, OAuth2AuthorizationService authorizationService) {
+    public AuthorizationRequestProvider(RegisteredClientRepository registeredClientRepository, OAuth2AuthorizationService authorizationService, ManageOAuth2Authorization manageOAuth2Authorization) {
         this.registeredClientRepository = registeredClientRepository;
         this.authorizationService = authorizationService;
+        this.manageOAuth2Authorization = manageOAuth2Authorization;
     }
 
     @Override
@@ -86,9 +89,6 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-
-
-
         OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken = (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
         logger.info("Authenticate OAuth2AuthorizationCodeRequestAuthenticationToken from clientID: {}", authenticationToken.getClientId());
 
@@ -147,6 +147,9 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal, requestedScopes, authenticationToken);
         logger.info("Generated OAuth2AuthorizationCode: {}", authorizationCode.getTokenValue());
 
+        System.out.println(principal.getName());
+        this.manageOAuth2Authorization.removePreviousOAuth2AuthorizationOfUser(principal.getName(), requestedScopes);
+
         OAuth2Authorization authorization = OAuth2Authorization.withRegisteredClient(registeredClient)
               .principalName(principal.getName())
               .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
@@ -157,6 +160,8 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               .build();
         this.authorizationService.save(authorization);
         logger.info("Generated and Saved OAuth2Authorization: {}.", authorization.getId());
+        logger.info("Access Token: {}.", authorization.getAccessToken());
+        logger.info("Authorization Code: {}.", authorization.getToken(OAuth2AuthorizationCode.class));
 
         return new OAuth2AuthorizationCodeRequestAuthenticationToken(authorizationRequest.getAuthorizationUri(),
               registeredClient.getClientId(), principal, authorizationCode, redirectUri,

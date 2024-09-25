@@ -76,7 +76,7 @@ public class CertificatesService {
 
     public List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privKeyValues) throws Exception {
         // Create a certificate Signing Request for the keys
-        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode, "Trust Provider Signer EUDIW");
+        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
         byte[] signature = hsmService.signDTBSwithRSAPKCS11(privKeyValues, csrInfo);
         PKCS10CertificationRequest certificateHSM = generateCertificateRequest(csrInfo, signature);
         String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
@@ -89,7 +89,7 @@ public class CertificatesService {
         return certificateAndCertificateChain;
     }
 
-    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName, String countryName, String organizationName)
+    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName, String countryName)
           throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         SubjectPublicKeyInfo pki = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
@@ -99,7 +99,6 @@ public class CertificatesService {
               .addRDN(BCStyle.SURNAME, surname)
               .addRDN(BCStyle.GIVENNAME, givenName)
               .addRDN(BCStyle.C, countryName)
-              .addRDN(BCStyle.O, organizationName)
               .build();
 
         CertificationRequestInfo cri = new CertificationRequestInfo(subjectDN, pki, new DERSet());

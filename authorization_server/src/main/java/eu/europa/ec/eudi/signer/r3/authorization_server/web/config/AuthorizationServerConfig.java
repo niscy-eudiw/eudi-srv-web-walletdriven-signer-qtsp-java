@@ -11,6 +11,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfi
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
@@ -33,7 +34,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -41,7 +41,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -67,36 +66,27 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
-	private final VerifierClient verifierClient;
-
-	public AuthorizationServerConfig(@Autowired VerifierClient verifierClient){
-		this.verifierClient = verifierClient;
-	}
-
-	// private static final String CUSTOM_CONSENT_PAGE_URI = "/oauth2/consent";
-	// OAuth2AuthorizationServerConfiguration is a configuration that provides the minimal default configuration
-	// OAuth2AuthorizationServerConfiguration provides a convenient method to apply the minimal default configuration for an OAuth2 authorization server
-	// This uses a OAuth2AuthorizationServerConfigurer
-	// "applyDefaultSecurity" is a convinence utility method that applies the default security configuration to HttpSecurity
-	// OAuth2AuthorizationServerConfigurer provides the ability to fully customize the security configuration for an OAuth2 authorization server
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
-		JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
-		OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList) throws Exception {
+	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
+		JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
+		OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
+	{
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 		authorizationServerConfigurer.oidc(Customizer.withDefaults());
 
-
 		AuthorizationRequestConverter authorizationRequestConverter = new AuthorizationRequestConverter();
-		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService);
-
+		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
 
 		authorizationServerConfigurer
+			.registeredClientRepository(registeredClientRepository)
+			.authorizationService(authorizationService)
+			.authorizationServerSettings(authorizationServerSettings)
+			.tokenGenerator(tokenGenerator)
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.authorizationRequestConverter(authorizationRequestConverter)
@@ -109,7 +99,7 @@ public class AuthorizationServerConfig {
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(this.verifierClient, issuerConfig, sessionUrlRelationList);
+					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
 					RequestMatcher requestMatcher = request -> true;
 					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
 				}
@@ -118,8 +108,6 @@ public class AuthorizationServerConfig {
 		return http.build();
 	}
 
-	// Defines the authorizationServerSetting used by OAuth2AuthorizationServerConfigurer
-	// customizing configuration settings for the OAuth2 authorization server
 	@Bean
 	public AuthorizationServerSettings authorizationServerSettings(OAuth2IssuerConfig issuerConfig) {
 		return AuthorizationServerSettings.builder().issuer(issuerConfig.getUrl()).build();
@@ -181,6 +169,11 @@ public class AuthorizationServerConfig {
 		return authorizationService;
 	}
 
+	@Bean
+	public ManageOAuth2Authorization manageOAuth2Authorization(JdbcTemplate jdbcTemplate){
+		return new ManageOAuth2Authorization(jdbcTemplate);
+	}
+
 	// the JWK Set endpoint is configured only if a JWKSource<SecurityContext> @Bean is registered
 	@Bean
 	public JWKSource<SecurityContext> jwkSource() {
@@ -205,9 +198,6 @@ public class AuthorizationServerConfig {
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
 		return context -> {
-			System.out.println(context.getAuthorizationGrantType().getValue());
-			System.out.println(context.getTokenType().getValue());
-			System.out.println(context.getAuthorization().getAuthorizationGrantType());
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
 				JwtClaimsSet.Builder claims = context.getClaims();
 				if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
@@ -225,11 +215,12 @@ public class AuthorizationServerConfig {
 				}
 
 				OAuth2Authorization authorization = context.getAuthorization();
-				OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+                assert authorization != null;
+                OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
 
 				if (authorization.getAuthorizedScopes().contains("credential")) {
-					// Customize headers/claims for access_token
-					if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+                    assert authorizationRequest != null;
+                    if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
 						JSONObject authDetailsAuthorizationJSON = new JSONObject(authDetailsAuthorization);
 						claims.claim("credentialID", authDetailsAuthorizationJSON.get("credentialID"));

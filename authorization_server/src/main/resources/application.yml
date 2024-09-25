@@ -5,8 +5,8 @@ server:
     client-auth: want
 
 verifier:
-  url: https://verifier-backend.eudiw.dev/ui/presentations
-  address: verifier-backend.eudiw.dev
+  url: https://dev.verifier-backend.eudiw.dev/ui/presentations
+  address: dev.verifier-backend.eudiw.dev
 
 oauth2-issuer-url:
   url: http://localhost:8084

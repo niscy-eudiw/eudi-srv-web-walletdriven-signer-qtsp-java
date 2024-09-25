@@ -87,44 +87,18 @@ public class SignaturesService {
 
         String signatureAlgorithm = getSignatureAlgorithm(signAlgo, signAlgoParams, hashAlgorithmID);
 
-        if(credential.getId().equals("cred1")){
-            String privateKeyBase64 = credential.getPrivateKey();
-            byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            PKCS8EncodedKeySpec spec2 = new PKCS8EncodedKeySpec(privateKeyBytes);
-            PrivateKey sKey = keyFactory.generatePrivate(spec2);
+        String privateKeyBase64 = credential.getPrivateKey();
+        byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
 
-            List<String> signatures = new ArrayList<>();
-            for (String dtbs : hashes) {
-                try {
-                    String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
-                    byte[] dtbs_bytes = Base64.getDecoder().decode(dtbsDecoded);
-                    Signature sig = Signature.getInstance(signatureAlgorithm);
-                    sig.initSign(sKey);
-                    sig.update(dtbs_bytes);
-                    byte[] signature_bytes = sig.sign();
-                    String signature = Base64.getEncoder().encodeToString(signature_bytes);
-                    signatures.add(signature);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-            return signatures;
+        List<String> signatures = new ArrayList<>();
+        for (String dtbs : hashes) {
+            String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
+            byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
+            byte[] signatureBytes = this.hsmService.signWithSomeAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+            String signature = Base64.getEncoder().encodeToString(signatureBytes);
+            signatures.add(signature);
         }
-        else{
-            String privateKeyBase64 = credential.getPrivateKey();
-            byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
-
-            List<String> signatures = new ArrayList<>();
-            for (String dtbs : hashes) {
-                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
-                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-                byte[] signatureBytes = this.hsmService.signWithSomeAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
-                String signature = Base64.getEncoder().encodeToString(signatureBytes);
-                signatures.add(signature);
-            }
-            return signatures;
-        }
+        return signatures;
     }
     
     public String getSignatureAlgorithm(String signAlgo, String signAlgoParams, String hashAlgorithmID){

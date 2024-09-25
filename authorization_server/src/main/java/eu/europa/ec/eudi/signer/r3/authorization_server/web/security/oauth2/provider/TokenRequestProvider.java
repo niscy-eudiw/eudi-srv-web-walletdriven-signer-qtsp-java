@@ -190,6 +190,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
         }
         authorization = authorizationBuilder.build();
 
+        System.out.println(authorization.getAccessToken().getToken().getExpiresAt());
+
         // Invalidate the authorization code as it can only be used once
         authorization = invalidate(authorization, authorizationCode.getToken());
         this.authorizationService.save(authorization);

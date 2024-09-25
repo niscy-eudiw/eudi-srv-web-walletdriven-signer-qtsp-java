@@ -84,6 +84,11 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
             queryPairs.put(key, value);
         }
-        return queryPairs.get("scope");
+
+        String scope = queryPairs.get("scope");
+        if(scope == null && queryPairs.get("authorization_details") != null)
+            scope = "credential";
+
+        return scope;
     }
 }
