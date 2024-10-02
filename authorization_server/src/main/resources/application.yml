@@ -1,8 +1,18 @@
 server:
-  port: 9443
+  port: 8484
   ssl:
     bundle: demo-authorizationserver
     client-auth: want
+
+verifier:
+  url: https://dev.verifier-backend.eudiw.dev/ui/presentations
+  address: dev.verifier-backend.eudiw.dev
+
+oauth2-issuer-url:
+  url: http://localhost:8084
+
+trusted-issuers:
+  folder: certificate_of_issuers
 
 spring:
   ssl:
@@ -21,9 +31,30 @@ spring:
             password: password
             type: PKCS12
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  profiles:
+    include:
+      - "auth"
+      - "client-registration"
+
 logging:
   level:
     root: INFO
-    org.springframework.web: INFO
-    org.springframework.security: INFO
+    org.springframework.web: TRACE
+    org.springframework.security: TRACE
     org.springframework.security.oauth2: INFO

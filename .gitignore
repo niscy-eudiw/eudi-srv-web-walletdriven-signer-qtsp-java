@@ -5,7 +5,12 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+authorization_server/src/main/resources/application-auth.yml
+authorization_server/src/main/resources/application-client-registration.yml
+authorization_server/src/main/resources/keystore.p12
 resource_server/src/main/resources/application-auth.yml
+resource_server/src/main/resources/keystore.p12
+oauth_client_test/*
 
 ### STS ###
 .apt_generated

@@ -1,5 +1,8 @@
 server:
-  port: 8081
+  port: 8485
+  ssl:
+    bundle: resource_server
+    client-auth: need
 
 spring:
   datasource:
@@ -22,9 +25,33 @@ spring:
     include:
       - "ejbca"
       - "auth"
+
   application:
     name: qtsp
     version: 0.0.1
+
+  ssl:
+    bundle:
+      jks:
+        resource_server:
+          key:
+            alias: messages-resource-sample
+            password: password
+          keystore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+          truststore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8084/oauth2/jwks
+          issuer-uri: http://localhost:8084
 
 info:
   specs: "2.0.0.0"
@@ -35,7 +62,7 @@ info:
   description: "This is a test Qualified Trust Service Provider"
   authType:
     - "oauth2code"
-  oauth2: "http://localhost:9000"
+  oauth2: "https://walletcentric.signer.eudiw.dev"
   asynchronousOperationMode: false
   methods:
     - "oauth2/authorize"
@@ -60,5 +87,9 @@ info:
 credentials:
   onlyValidSupport: false
 
-trusted-issuers:
-  folder: certificate_of_issuers
+logging:
+  level:
+    root: INFO
+    org.springframework.web: TRACE
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO
