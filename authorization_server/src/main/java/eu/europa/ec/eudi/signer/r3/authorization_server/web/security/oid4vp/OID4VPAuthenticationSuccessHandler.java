@@ -5,6 +5,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.Authentication;
@@ -47,6 +50,7 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String url = sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
 
         logger.info("Returning to: {}", url);
+        String urlEncoded = URLEncoder.encode(url, StandardCharsets.UTF_8);
         this.redirectStrategy.sendRedirect(request, response, url);
     }
 }

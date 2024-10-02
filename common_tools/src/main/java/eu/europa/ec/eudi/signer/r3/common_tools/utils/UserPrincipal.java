@@ -74,6 +74,11 @@ public class UserPrincipal implements OAuth2User, UserDetails, Serializable {
     public String getSurname() {
         return this.surname;
     }
+
+    public String getFullName(){
+        return this.fullName;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;

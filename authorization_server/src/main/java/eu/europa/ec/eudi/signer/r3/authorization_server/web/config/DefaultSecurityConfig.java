@@ -27,6 +27,7 @@ public class DefaultSecurityConfig {
 			.authorizeHttpRequests(authorize ->
 				authorize
 					.requestMatchers("/oid4vp/callback").permitAll()
+					.requestMatchers("/initial").permitAll()
 					.anyRequest().authenticated()
 			)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED));
