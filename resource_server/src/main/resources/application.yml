@@ -25,6 +25,7 @@ spring:
     include:
       - "ejbca"
       - "auth"
+
   application:
     name: qtsp
     version: 0.0.1
