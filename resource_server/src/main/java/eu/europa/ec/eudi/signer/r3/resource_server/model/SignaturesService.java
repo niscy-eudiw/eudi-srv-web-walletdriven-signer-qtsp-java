@@ -94,7 +94,7 @@ public class SignaturesService {
         for (String dtbs : hashes) {
             String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
             byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-            byte[] signatureBytes = this.hsmService.signWithSomeAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+            byte[] signatureBytes = this.hsmService.signDTBSWithGivenAlgorithmAndRSAKey(privateKeyBytes, dtbsBytes, signatureAlgorithm);
             String signature = Base64.getEncoder().encodeToString(signatureBytes);
             signatures.add(signature);
         }

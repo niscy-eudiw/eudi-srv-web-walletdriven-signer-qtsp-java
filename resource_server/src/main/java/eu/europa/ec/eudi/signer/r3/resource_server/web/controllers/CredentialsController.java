@@ -67,7 +67,7 @@ public class CredentialsController {
             List<String> listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             if(listAvailableCredentialsId.isEmpty()){
                 logger.info("Empty List of Available Credentials.");
-                this.credentialsService.createCredential(userHash, givenName, surname, givenName+" "+surname, issuingCountry);
+                this.credentialsService.createRSACredential(userHash, givenName, surname, givenName+" "+surname, issuingCountry);
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             }
             credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);
