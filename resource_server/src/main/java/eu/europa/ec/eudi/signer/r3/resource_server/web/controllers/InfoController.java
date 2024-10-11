@@ -26,9 +26,7 @@ public class InfoController {
 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
-        log.trace("Receive request ");
-        System.out.println(requestMessage);
-        System.out.println(infoProperties.toString());
+        log.trace("Receive request @/csc/v2/info: {}.", requestMessage);
 
         List<String> keySet = this.infoProperties.getSignature_formats().keySet().stream().toList();;
 
@@ -39,6 +37,7 @@ public class InfoController {
             envelope_properties.add(env_properties);
         }
 
+        log.info("Returning info information @/csc/v2/info.");
         return new InfoResponse(
              this.infoProperties.getSpecs(), this.infoProperties.getName(), this.infoProperties.getLogo(),
              this.infoProperties.getRegion(), this.infoProperties.getLang(), this.infoProperties.getDescription(),
