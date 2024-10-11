@@ -1,10 +1,11 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,12 +17,16 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.InfoResponse;
 @RestController
 @RequestMapping(value = "/csc/v2/info")
 public class InfoController {
+    private final InfoConfig infoProperties;
+    private final Logger log = LoggerFactory.getLogger(InfoController.class);
 
-    @Autowired
-    private InfoConfig infoProperties;
+    public InfoController(@Autowired InfoConfig infoProperties){
+        this.infoProperties = infoProperties;
+    }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
+        log.trace("Receive request ");
         System.out.println(requestMessage);
         System.out.println(infoProperties.toString());
 

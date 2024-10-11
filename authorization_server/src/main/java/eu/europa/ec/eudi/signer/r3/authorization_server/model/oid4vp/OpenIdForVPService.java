@@ -1,6 +1,5 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,7 +7,7 @@ import java.util.Optional;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalid;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalidException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
@@ -23,52 +22,54 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class OpenId4VPService {
+public class OpenIdForVPService {
 
-    private static final Logger log = LoggerFactory.getLogger(OpenId4VPService.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenIdForVPService.class);
     private final UserRepository repository;
-    private final TrustedIssuersCertificateConfig trustedIssuersCertificatesConfig;
+    private final TrustedIssuersCertificateConfig trustedCertificatesConfig;
 
-
-    @Autowired
-    public OpenId4VPService(UserRepository repository,
-                            TrustedIssuersCertificateConfig trustedIssuersCertificateConfig) {
+    public OpenIdForVPService(@Autowired UserRepository repository,
+                              @Autowired TrustedIssuersCertificateConfig trustedCertificatesConfig) {
         this.repository = repository;
-        this.trustedIssuersCertificatesConfig = trustedIssuersCertificateConfig;
+        this.trustedCertificatesConfig = trustedCertificatesConfig;
     }
 
-    public record UserOIDTemporaryInfo(User user, String givenName, String familyName) {
-        public String getFullName() {
-                return givenName + " " + familyName;
-            }
-    }
+    public record UserOIDTemporaryInfo(User user, String givenName, String familyName){}
 
-    public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier)
-            throws VerifiablePresentationVerificationException, VPTokenInvalid, NoSuchAlgorithmException, Exception {
-
-        JSONObject vp;
+    /**
+     * Function that allows to load a User object from the VP Token received from the Verifier.
+     * Before creating the User object, the VP Token is validated.
+     * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
+     * @return an unauthenticated token with information about the user to authenticate
+     * @throws VerifiablePresentationVerificationException exception thrown if the VP Token's verification failed
+     */
+    public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier) throws VPTokenInvalidException,
+          VerifiablePresentationVerificationException {
+        log.info("Starting to load VP Toke from response...");
+        JSONObject vpToken;
         try{
-            vp =  new JSONObject(messageFromVerifier);
+            vpToken =  new JSONObject(messageFromVerifier);
         }
         catch (JSONException e){
-            throw new Exception("The response from the Verifier doesn't contain a correctly formatted JSON string.");
+            log.error(e.getMessage());
+            throw new VPTokenInvalidException(SignerError.UnexpectedError,
+                  "The response from the Verifier doesn't contain a correctly formatted JSON string.");
         }
+        log.trace("VP Token: {}", vpToken);
 
-        System.out.println(vp);
-
-        VPValidator validator = new VPValidator(
-                    vp,
-                    VerifierClient.PresentationDefinitionId,
-                    VerifierClient.PresentationDefinitionInputDescriptorsId,
-                    this.trustedIssuersCertificatesConfig);
+        VPValidator validator = new VPValidator(vpToken, VerifierClient.PresentationDefinitionId,
+                    VerifierClient.PresentationDefinitionInputDescriptorsId, this.trustedCertificatesConfig);
         Map<Integer, String> logsMap = new HashMap<>();
         MDoc document = validator.loadAndVerifyDocumentForVP(logsMap);
+        log.info("Successfully validated and loaded the VP Token from the verifier response.");
+
         UserOIDTemporaryInfo user = loadUserFromDocument(document);
-        addToDB(user.user());
+        log.trace("Successfully created an object User with the information from the VP Token.");
+
         return AuthenticationManagerToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
-    public UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalid, NoSuchAlgorithmException {
+    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalidException {
         List<IssuerSignedItem> l = document.getIssuerSignedItems(document.getDocType().getValue());
 
         String familyName = null;
@@ -77,7 +78,6 @@ public class OpenId4VPService {
         String issuingCountry = null;
         String issuanceAuthority = null;
         boolean ageOver18 = false;
-
         for (IssuerSignedItem el : l) {
             switch (el.getElementIdentifier().getValue()) {
                 case "family_name" -> familyName = el.getElementValue().getValue().toString();
@@ -90,23 +90,26 @@ public class OpenId4VPService {
         }
 
         if (!ageOver18) {
-            throw new VPTokenInvalid(SignerError.UserNotOver18, SignerError.UserNotOver18.getFormattedMessage());
+            log.error(SignerError.UserNotOver18.getDescription());
+            throw new VPTokenInvalidException(SignerError.UserNotOver18, SignerError.UserNotOver18.getFormattedMessage());
         }
 
         if (familyName == null || givenName == null || birthDate == null || issuingCountry == null) {
-            String logMessage = SignerError.VPTokenMissingValues.getCode()
-                    + "(loadUserFromDocument in OpenId4VPService.class): "
-                    + SignerError.VPTokenMissingValues.getDescription();
-            log.error(logMessage);
-            throw new VPTokenInvalid(SignerError.VPTokenMissingValues,
-                    "The VP token doesn't have all the required values.");
+            log.error("{}(loadUserFromDocument in OpenId4VPService.class): {}",
+                  SignerError.VPTokenMissingValues.getCode(), SignerError.VPTokenMissingValues.getDescription());
+            throw new VPTokenInvalidException(SignerError.VPTokenMissingValues,
+                  "The VP token doesn't have all the required values.");
         }
+        log.info("Successfully retrieve the required parameters from the VP Token.");
 
         User user = new User(familyName, givenName, birthDate, issuingCountry, issuanceAuthority, "user");
+        log.info("Successfully created an object User with the received VP Token.");
+        addUserToDatabase(user);
+        log.info("Added User to the database.");
         return new UserOIDTemporaryInfo(user, givenName, familyName);
     }
 
-    private void addToDB(User userFromVerifierResponse) {
+    private void addUserToDatabase(User userFromVerifierResponse) {
         Optional<User> userInDatabase = repository.findByHash(userFromVerifierResponse.getHash());
         if (userInDatabase.isEmpty()){
             repository.save(userFromVerifierResponse);

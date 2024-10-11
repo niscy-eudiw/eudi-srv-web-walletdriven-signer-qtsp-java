@@ -6,10 +6,9 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 
 public class AuthenticationManagerToken extends AbstractAuthenticationToken {
-    private String hash;
-    private String username;
+    private final String hash;
+    private final String username;
     private Object principal;
-    private Object credentials;
     private String scope;
 
     public AuthenticationManagerToken(String hash, String username){
@@ -17,7 +16,6 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
         this.hash = hash;
         this.username = username;
         this.principal = hash;
-        this.credentials = null;
         super.setAuthenticated(false);
     }
 
@@ -36,7 +34,6 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
         this.hash = user.getUsername();
         this.username = user.getUsername() + ";" + user.getGivenName() + ";" + user.getSurname();
         this.principal = user;
-        this.credentials = user.getPassword();
         super.setAuthenticated(true);
     }
 
@@ -62,17 +59,11 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
         this.principal = user;
     }
 
-    public void setAuthorities(Collection<? extends GrantedAuthority> authorities){
-
-    }
+    public void setAuthorities(Collection<? extends GrantedAuthority> authorities){}
 
     @Override
     public Object getCredentials() {
         return null;
-    }
-
-    public void setCredentials(Object credentials){
-        this.credentials = credentials;
     }
 
     public String getHash() {
@@ -81,10 +72,6 @@ public class AuthenticationManagerToken extends AbstractAuthenticationToken {
 
     public String getUsername() {
         return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
     }
 
     public String getScope() {

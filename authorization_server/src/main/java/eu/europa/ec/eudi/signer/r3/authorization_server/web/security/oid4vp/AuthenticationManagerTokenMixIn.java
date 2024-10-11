@@ -28,10 +28,10 @@ public abstract class AuthenticationManagerTokenMixIn {
 
 class AuthenticationManagerTokenDeserializer extends JsonDeserializer<AuthenticationManagerToken> {
 
-    private static final TypeReference<List<GrantedAuthority>> GRANTED_AUTHORITY_LIST = new TypeReference<List<GrantedAuthority>>() {
+    private static final TypeReference<List<GrantedAuthority>> GRANTED_AUTHORITY_LIST = new TypeReference<>() {
     };
 
-    private static final TypeReference<Object> OBJECT = new TypeReference<Object>() {
+    private static final TypeReference<Object> OBJECT = new TypeReference<>() {
     };
 
     @Override
@@ -43,7 +43,7 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
 
     private AuthenticationManagerToken deserialize(JsonParser parser, ObjectMapper mapper, JsonNode root)
           throws IOException {
-        Boolean authenticated = readJsonNode(root, "authenticated").asBoolean();
+        boolean authenticated = readJsonNode(root, "authenticated").asBoolean();
 
         String hash = readJsonNode(root, "hash").asText();
         String username = readJsonNode(root, "username").asText();
@@ -51,9 +51,6 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
 
         JsonNode principalNode = readJsonNode(root, "principal");
         Object principal = getPrincipal(mapper, principalNode);
-
-        JsonNode credentialsNode = readJsonNode(root, "credentials");
-        Object credentials = getCredentials(credentialsNode);
 
         List<GrantedAuthority> authorities = mapper.readValue(readJsonNode(root, "authorities").traverse(mapper), GRANTED_AUTHORITY_LIST);
 
@@ -77,22 +74,8 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
         return jsonNode.has(field) ? jsonNode.get(field) : MissingNode.getInstance();
     }
 
-    private Object getCredentials(JsonNode credentialsNode) {
-        if (credentialsNode.isNull() || credentialsNode.isMissingNode()) {
-            return null;
-        }
-        return credentialsNode.asText();
-    }
-
-    private Object getPrincipal(ObjectMapper mapper, JsonNode principalNode)
-          throws IOException, JsonParseException, JsonMappingException {
-        if (principalNode.isObject()) {
-            return mapper.readValue(principalNode.traverse(mapper), Object.class);
-        }
+    private Object getPrincipal(ObjectMapper mapper, JsonNode principalNode) throws IOException {
+        if (principalNode.isObject()) return mapper.readValue(principalNode.traverse(mapper), Object.class);
         return principalNode.asText();
-    }
-
-    private String getString(ObjectMapper mapper, JsonNode node) {
-        return node.asText();
     }
 }

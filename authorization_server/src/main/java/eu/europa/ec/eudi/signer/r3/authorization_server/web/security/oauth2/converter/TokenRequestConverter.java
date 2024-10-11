@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -36,7 +37,7 @@ public class TokenRequestConverter implements AuthenticationConverter {
 
     private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
         logger.error(errorDescription);
-        return new OAuth2Error(errorCode, null, null);
+        return new OAuth2Error(errorCode, errorDescription, null);
     }
 
     @Override
@@ -44,9 +45,20 @@ public class TokenRequestConverter implements AuthenticationConverter {
         logger.info("Request received at {}", request.getRequestURL().toString());
 
         if(!this.tokenRequestMatcher.matches(request)){
-            String errorType = "invalid_request";
-            String error_description = "The request doesn't match the requests supported. Possible parameters missing.";
-            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
+            if(request.getParameter("client_id") == null){
+                throw new OAuth2AuthenticationException(
+                      getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter client_id."));
+            }
+            else if(request.getParameter("grant_type") == null){
+                throw new OAuth2AuthenticationException(
+                      getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter client_id."));
+            }
+            else if(request.getParameter("code") == null){
+                throw new OAuth2AuthenticationException(
+                      getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter code."));
+            }
+
+
         }
         logger.info("Request received match the supported requests.");
 
@@ -59,18 +71,16 @@ public class TokenRequestConverter implements AuthenticationConverter {
         // grant_type (REQUIRED)
         String grantType = tokenRequest.getGrant_type();
         if (!AuthorizationGrantType.AUTHORIZATION_CODE.getValue().equals(grantType)) {
-            String errorType = "invalid_request";
-            String error_description = "The grant type requested is not supported. ("+grantType+")";
-            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
+            throw new OAuth2AuthenticationException(
+                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameter grant_type."));
         }
         logger.info("Grant_type ({}) is supported.", grantType);
 
         // code (REQUIRED)
         String code = tokenRequest.getCode();
         if (!StringUtils.hasText(code) || request.getParameterValues("code").length != 1) {
-            String errorType = "invalid_request";
-            String error_description = "The code parameter is required.";
-            throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
+            throw new OAuth2AuthenticationException(
+                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter code."));
         }
         logger.info("Code parameter required is present ({}).", code);
 
@@ -78,11 +88,21 @@ public class TokenRequestConverter implements AuthenticationConverter {
         String redirectUri = tokenRequest.getRedirect_uri();
         if (StringUtils.hasText(redirectUri) && request.getParameterValues(OAuth2ParameterNames.REDIRECT_URI).length != 1) {
             String errorType = OAuth2ErrorCodes.INVALID_REQUEST;
-            String error_description = "OAuth 2.0 Parameter: " +  OAuth2ParameterNames.REDIRECT_URI;
+            String error_description = "The redirect uri parameter is required.";
             throw new OAuth2AuthenticationException(getOAuth2Error(errorType, error_description));
         }
         logger.info("Redirect Uri required is present ({}).", redirectUri);
 
+        Map<String, Object> additionalParameters = getAdditionalParameters(tokenRequest);
+
+        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthenticationToken =
+              new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
+
+        logger.info("OAuth2AuthorizationCodeAuthenticationToken is generated.");
+        return authorizationCodeAuthenticationToken;
+    }
+
+    private static @NotNull Map<String, Object> getAdditionalParameters(OAuth2TokenRequest tokenRequest) {
         Map<String, Object> additionalParameters = new HashMap<>();
         additionalParameters.put("refresh_token", tokenRequest.getRefresh_token());
         additionalParameters.put("client_id", tokenRequest.getClient_id());
@@ -92,11 +112,6 @@ public class TokenRequestConverter implements AuthenticationConverter {
         additionalParameters.put("client_assertion_type", tokenRequest.getClient_assertion_type());
         additionalParameters.put("authorization_details", tokenRequest.getAuthorization_details());
         additionalParameters.put("clientData", tokenRequest.getClientData());
-
-        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthenticationToken =
-              new OAuth2AuthorizationCodeAuthenticationToken(code, clientPrincipal, redirectUri, additionalParameters);
-
-        logger.info("OAuth2AuthorizationCodeAuthenticationToken is generated.");
-        return authorizationCodeAuthenticationToken;
+        return additionalParameters;
     }
 }

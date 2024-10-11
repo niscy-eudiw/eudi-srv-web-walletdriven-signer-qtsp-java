@@ -1,11 +1,13 @@
-// https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/java/org/springframework/security/oauth2/server/authorization/authentication/OAuth2AuthorizationCodeRequestAuthenticationProvider.java
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
+import java.security.Principal;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.Set;
+import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.h2.security.SHA256;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -36,18 +38,7 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.security.Principal;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
-
-/**
- * A main processor used for authenticating the OAuth2AuthorizationCodeRequestAuthenticationToken
- */
 public class AuthorizationRequestProvider implements AuthenticationProvider {
-
     private final Consumer<OAuth2AuthorizationCodeRequestAuthenticationContext> authenticationValidator = new OAuth2AuthorizationCodeRequestAuthenticationValidator();
     private final RegisteredClientRepository registeredClientRepository;
     private final Logger logger = LogManager.getLogger(AuthorizationRequestProvider.class);
@@ -84,55 +75,66 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
         logger.error(errorDescription);
-        return new OAuth2Error(errorCode, null, null);
+        return new OAuth2Error(errorCode, errorDescription, null);
     }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken = (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
-        logger.info("Authenticate OAuth2AuthorizationCodeRequestAuthenticationToken from clientID: {}", authenticationToken.getClientId());
+        OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken =
+              (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
+        logger.info("Authenticating OAuth2AuthorizationCodeRequestAuthenticationToken for the clientID: {}.",
+              authenticationToken.getClientId());
 
-        RegisteredClient registeredClient = this.registeredClientRepository.findByClientId(authenticationToken.getClientId());
-        if (registeredClient == null)
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "ClientID "+ authenticationToken.getClientId() +" not found."), null);
-        logger.info("clientID from AuthenticationToken is registered");
+        RegisteredClient registeredClient =
+              this.registeredClientRepository.findByClientId(authenticationToken.getClientId());
+        if (registeredClient == null) {
+            OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
+                  "ClientID " + authenticationToken.getClientId() + " from the request not found.");
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
+        }
+        logger.info("ClientID from AuthenticationToken is registered.");
 
-        OAuth2AuthorizationCodeRequestAuthenticationContext.Builder authenticationContextBuilder = OAuth2AuthorizationCodeRequestAuthenticationContext.with(authenticationToken).registeredClient(registeredClient);
+        OAuth2AuthorizationCodeRequestAuthenticationContext.Builder authenticationContextBuilder =
+              OAuth2AuthorizationCodeRequestAuthenticationContext
+                    .with(authenticationToken)
+                    .registeredClient(registeredClient);
         this.authenticationValidator.accept(authenticationContextBuilder.build());
 
         if (!registeredClient.getAuthorizationGrantTypes().contains(AuthorizationGrantType.AUTHORIZATION_CODE))
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Request grant_type is not allowed for the registered client."), null);
-        logger.info("Requested grant_type {} for registered client: {}", AuthorizationGrantType.AUTHORIZATION_CODE, registeredClient.getId());
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Request grant_type 'authorization_code' is not allowed for the registered client."), authenticationToken);
+        logger.info("Requested grant_type {} for registered client: {}.",
+              AuthorizationGrantType.AUTHORIZATION_CODE.getValue(), registeredClient.getId());
 
         // if the scope requested is in the scopes supported:
         Set<String> requestedScopes = authenticationToken.getScopes();
         if (!CollectionUtils.isEmpty(requestedScopes)) {
             for (String requestedScope : requestedScopes) {
                 if (!registeredClient.getScopes().contains(requestedScope))
-                    throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE, OAuth2ParameterNames.SCOPE+" is not supported"), null);
+                    throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_SCOPE, "The scope "+OAuth2ParameterNames.SCOPE+" is not supported."), authenticationToken);
             }
         }
         logger.info("Validated that the requested scopes are supported scopes.");
 
-        String codeChallenge = (String) authenticationToken.getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE);
+        String codeChallenge = (String) authenticationToken
+              .getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE);
         if(!StringUtils.hasText(codeChallenge))
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Error validating the code_challenge & code_challenge_method"), null);
-        String codeChallengeMethod = (String) authenticationToken.getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE_METHOD);
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Error validating the code_challenge & code_challenge_method"), authenticationToken);
+        String codeChallengeMethod = (String) authenticationToken
+              .getAdditionalParameters().get(PkceParameterNames.CODE_CHALLENGE_METHOD);
         if(!StringUtils.hasText(codeChallengeMethod) || !codeChallengeMethod.equals("S256"))
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Error validating the code_challenge & code_challenge_method"), null);
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Error validating the code_challenge & code_challenge_method. Currently the only code_challenge_method supported is S256."), authenticationToken);
         logger.info("Validated code_challenge & code_challenge_method.");
+
+        String redirectUri = authenticationToken.getRedirectUri();
+        if(!StringUtils.hasText(redirectUri)) redirectUri = registeredClient.getRedirectUris().iterator().next();
 
         // The request is valid - ensure the resource owner is authenticated
         Authentication principal = (Authentication) authenticationToken.getPrincipal();
-        if (!isPrincipalAuthenticated(principal, requestedScopes)) {
+        if (!isPrincipalAuthenticated(principal)) {
             logger.warn("Did not authenticate authorizationCode request since principal not authenticated");
             return authenticationToken;
         }
-        logger.info("Principal of type "+principal.getClass().getName()+" is authenticated.");
-
-        String redirectUri = authenticationToken.getRedirectUri();
-        if(!StringUtils.hasText(redirectUri))
-            redirectUri = registeredClient.getRedirectUris().iterator().next();
+        logger.info("Principal of type {} is authenticated.", principal.getClass().getName());
 
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
               .authorizationUri(authenticationToken.getAuthorizationUri())
@@ -144,7 +146,8 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               .build();
         logger.info("Generated OAuth2AuthorizationRequest: {}.", authorizationRequest.toString());
 
-        OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal, requestedScopes, authenticationToken);
+        OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal,
+              requestedScopes, authenticationToken);
         logger.info("Generated OAuth2AuthorizationCode: {}", authorizationCode.getTokenValue());
 
         System.out.println(principal.getName());
@@ -164,11 +167,10 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         logger.info("Authorization Code: {}.", authorization.getToken(OAuth2AuthorizationCode.class));
 
         return new OAuth2AuthorizationCodeRequestAuthenticationToken(authorizationRequest.getAuthorizationUri(),
-              registeredClient.getClientId(), principal, authorizationCode, redirectUri,
-              authorizationRequest.getState(), requestedScopes);
+              registeredClient.getClientId(), principal, authorizationCode, redirectUri, authorizationRequest.getState(), requestedScopes);
     }
 
-    private static boolean isPrincipalAuthenticated(Authentication principal, Set<String> scope) {
+    private static boolean isPrincipalAuthenticated(Authentication principal) {
         return principal != null && !AnonymousAuthenticationToken.class.isAssignableFrom(principal.getClass()) && principal.isAuthenticated();
     }
 

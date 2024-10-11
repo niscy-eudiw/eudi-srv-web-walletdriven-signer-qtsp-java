@@ -13,16 +13,6 @@ public class OAuth2AuthorizeRequest {
     private String client_id;
     private String redirect_uri;
     private String scope;
-
-    /*
-     * Authorization_details:
-     * * type
-     * * credentialID
-     * * signatureQualifier
-     * * documentDigests
-     * * hashAlgorithmOID
-     * * locations
-     */
     private String authorization_details;
     @NotBlank
     private String code_challenge;
