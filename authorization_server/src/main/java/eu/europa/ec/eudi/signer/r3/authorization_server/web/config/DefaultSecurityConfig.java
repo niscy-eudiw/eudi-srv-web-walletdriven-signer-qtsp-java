@@ -1,10 +1,12 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenId4VPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -56,9 +58,9 @@ public class DefaultSecurityConfig {
 	}
 
 	@Bean
-	public CustomUserDetailsService userDetailsService(UserRepository userRepository){
-		User tester = new User("user", "tester", "irrelevant_date", "FC", "Test PID issuer", "user");
-		tester.setPassword("{noop}some_password");
+	public CustomUserDetailsService userDetailsService(UserRepository userRepository, UserTestLoginFormConfig userTest){
+		User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
+		tester.setPassword(userTest.getPassword());
 		if(userRepository.findByHash(tester.getHash()).isEmpty())
 			userRepository.save(tester);
 		return new CustomUserDetailsService(userRepository);
