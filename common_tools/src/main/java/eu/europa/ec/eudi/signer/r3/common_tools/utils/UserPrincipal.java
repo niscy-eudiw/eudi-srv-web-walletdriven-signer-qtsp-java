@@ -19,19 +19,21 @@ public class UserPrincipal implements OAuth2User, UserDetails, Serializable {
     private final String hash;
     private final Collection<? extends GrantedAuthority> authorities;
     private Map<String, Object> attributes;
+    private final String password;
 
-    public UserPrincipal(String id, String hash, String givenName, String surname, Collection<? extends GrantedAuthority> authorities) {
+    public UserPrincipal(String id, String hash, String givenName, String surname, Collection<? extends GrantedAuthority> authorities, String password) {
         this.id = id;
         this.hash = hash;
         this.givenName = givenName;
         this.surname = surname;
         this.fullName = givenName + " " + surname;
         this.authorities = authorities;
+        this.password = password;
     }
 
-    public static UserPrincipal create(String id, String hash, String role, String givenName, String surname) {
+    public static UserPrincipal create(String id, String hash, String role, String givenName, String surname, String password) {
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
-        return new UserPrincipal(id, hash, givenName, surname, authorities);
+        return new UserPrincipal(id, hash, givenName, surname, authorities, password);
     }
 
     public String getId() {
@@ -86,16 +88,12 @@ public class UserPrincipal implements OAuth2User, UserDetails, Serializable {
 
     @Override
     public String getPassword() {
-        return null;
+        return this.password;
     }
 
     @Override
     public Map<String, Object> getAttributes() {
         return attributes;
-    }
-
-    public void setAttributes(Map<String, Object> attributes) {
-        this.attributes = attributes;
     }
 
     @Override
