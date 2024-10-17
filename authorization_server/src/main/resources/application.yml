@@ -3,6 +3,8 @@ server:
   ssl:
     bundle: demo-authorizationserver
     client-auth: want
+  error:
+    include-message: always
 
 verifier:
   url: https://dev.verifier-backend.eudiw.dev/ui/presentations
@@ -51,6 +53,7 @@ spring:
     include:
       - "auth"
       - "client-registration"
+      - "user-login-form"
 
 logging:
   level:

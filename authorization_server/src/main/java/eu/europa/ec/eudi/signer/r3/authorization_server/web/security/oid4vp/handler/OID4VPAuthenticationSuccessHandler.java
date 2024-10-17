@@ -1,13 +1,11 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.Authentication;
@@ -19,7 +17,6 @@ import org.springframework.security.web.RedirectStrategy;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
@@ -39,7 +36,7 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         SecurityContext context = securityContextHolderStrategy.createEmptyContext();
         context.setAuthentication(authentication);
         securityContextHolderStrategy.setContext(context);
@@ -50,7 +47,6 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         String url = sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
 
         logger.info("Returning to: {}", url);
-        String urlEncoded = URLEncoder.encode(url, StandardCharsets.UTF_8);
         this.redirectStrategy.sendRedirect(request, response, url);
     }
 }

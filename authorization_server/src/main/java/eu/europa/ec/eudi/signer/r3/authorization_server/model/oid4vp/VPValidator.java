@@ -185,7 +185,7 @@ public class VPValidator {
                     "Failed the ValidityInfo verification step: the Signed in the IssuerAuth is not valid.", VerifiablePresentationVerificationException.Default);
     }
 
-    private Map<Integer, String> addSignatureLog(MDoc document, Map<Integer, String> logs) {
+    private void addSignatureLog(MDoc document, Map<Integer, String> logs) {
         StringBuilder strBuilder = new StringBuilder();
         assert document.getIssuerSigned().getIssuerAuth() != null;
         byte[] signature = document.getIssuerSigned().getIssuerAuth().getSignatureOrTag();
@@ -193,11 +193,10 @@ public class VPValidator {
         byte[] hash = document.getIssuerSigned().getIssuerAuth().getPayload();
         strBuilder.append("Payload Hash: ").append(Base64.getEncoder().encodeToString(hash));
         logs.put(8, strBuilder.toString());
-        return logs;
     }
 
-    private Map<Integer, String> addIntegrityLog(MSO mso, MDoc document, List<EncodedCBORElement> nameSpaces,
-            Map<Integer, String> logs) {
+    private void addIntegrityLog(MSO mso, MDoc document, List<EncodedCBORElement> nameSpaces,
+                                 Map<Integer, String> logs) {
         StringBuilder integrity_log = new StringBuilder();
 
         String digestAlg = mso.getDigestAlgorithm().getValue();
@@ -227,14 +226,12 @@ public class VPValidator {
         }
 
         logs.put(9, integrity_log.toString());
-        return logs;
     }
 
     public MDoc loadAndVerifyDocumentForVP(Map<Integer, String> logs)
             throws VerifiablePresentationVerificationException {
         try {
-            // Validate the Presentation Submission and get the Path from the
-            // descriptor_map.
+            // Validate the Presentation Submission and get the Path from the descriptor_map.
             int pos = validatePresentationSubmission();
 
             DeviceResponse vpToken = loadVpTokenToDeviceResponse();
@@ -247,8 +244,8 @@ public class VPValidator {
 
             MDoc document = vpToken.getDocuments().get(pos);
 
-            SimpleCOSECryptoProvider provider = null;
-            X509Certificate certificateFromIssuerAuth = null;
+            SimpleCOSECryptoProvider provider;
+            X509Certificate certificateFromIssuerAuth;
 
             // Validate Certificate from the MSO header:
             try {
@@ -261,17 +258,6 @@ public class VPValidator {
                         "The Certificate in issuerAuth is not valid. (" + e.getMessage() + ":" + e.getLocalizedMessage() + ")", VerifiablePresentationVerificationException.Default);
             }
 
-            /*if (provider == null) {
-                throw new VerifiablePresentationVerificationException(SignerError.FailedToValidateVPToken,
-                        "It was not possible to create a Crypto Provider to validate the vp_token.",
-                        VerifiablePresentationVerificationException.Default);
-            }
-            if (certificateFromIssuerAuth == null) {
-                throw new VerifiablePresentationVerificationException(SignerError.FailedToValidateVPToken,
-                        "It was not possible to recover a Certificate from the IssuerAuth",
-                        VerifiablePresentationVerificationException.Default);
-            }*/
-
             MSO mso = document.getMSO();
 
             if (!document.verifyCertificate(provider, this.keyID))
@@ -283,7 +269,7 @@ public class VPValidator {
                 throw new VerifiablePresentationVerificationException(SignerError.SignatureIssuerAuthInvalid,
                         "The IssuerAuth Signature is not valid.", VerifiablePresentationVerificationException.Signature);
 
-            logs = addSignatureLog(document, logs);
+            addSignatureLog(document, logs);
 
             // Verify the "DocType" in MSO == "DocType" in Documents
             if (!document.verifyDocType())
@@ -312,12 +298,10 @@ public class VPValidator {
                         "The digest of the IssuerSignedItem are not equal to the digests in MSO.",
                         VerifiablePresentationVerificationException.Integrity);
 
-            logs = addIntegrityLog(mso, document, nameSpaces, logs);
+            addIntegrityLog(mso, document, nameSpaces, logs);
 
             // Verify the ValidityInfo:
             validateValidityInfoElements(document, mso.getValidityInfo(), certificateFromIssuerAuth.getNotBefore().toInstant(), certificateFromIssuerAuth.getNotAfter().toInstant());
-
-            System.out.println("Verification Success.");
             return document;
         }
         catch (JSONException e){

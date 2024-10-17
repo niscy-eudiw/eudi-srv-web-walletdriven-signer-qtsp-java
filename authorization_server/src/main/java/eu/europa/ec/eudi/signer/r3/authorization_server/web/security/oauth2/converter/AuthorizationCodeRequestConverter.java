@@ -8,11 +8,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationConverter;
@@ -20,19 +21,18 @@ import org.springframework.security.web.util.matcher.AndRequestMatcher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
-
 /**
  * A Pre-processor used when attempting to extract an OAuth2 Authorization Request
  * from a HttpServletRequest to an instance of OAuth2AuthorizationCodeRequestAuthenticationToken.
  */
-public class AuthorizationRequestConverter implements AuthenticationConverter {
+public class AuthorizationCodeRequestConverter implements AuthenticationConverter {
 
     private final RequestMatcher authenticationServiceRequestMatcher;
     private final RequestMatcher authorizationCredentialRequestMatcher;
     private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-    private final Logger logger = LogManager.getLogger(AuthorizationRequestConverter.class);
+    private final Logger logger = LogManager.getLogger(AuthorizationCodeRequestConverter.class);
 
-    public AuthorizationRequestConverter(){
+    public AuthorizationCodeRequestConverter(){
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();
         this.authenticationServiceRequestMatcher = new AndRequestMatcher(
             new AntPathRequestMatcher(
@@ -48,19 +48,23 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
         );
     }
 
-    private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
-        logger.error(errorDescription);
-        return new OAuth2Error(errorCode, null, null);
-    }
-
     @Override
     public Authentication convert(HttpServletRequest request){
         logger.info("Request received at {}", request.getRequestURL().toString());
 
         if(!this.authenticationServiceRequestMatcher.matches(request) && !this.authorizationCredentialRequestMatcher.matches(request)){
-            String errorType = "invalid_request";
-            String error_description = "The request doesn't match the requests supported. Possible parameters missing.";
-            throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(errorType, error_description), null);
+            if(!request.getParameter("response_type").equals("code")){
+                String error_description = "The response type in the request is not supported.";
+                OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE, error_description, null);
+                logger.error(error.toString());
+                throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
+            }
+            else {
+                String error_description = "The request is missing a required parameter.";
+                OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, error_description, null);
+                logger.error(error.toString());
+                throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
+            }
         }
         logger.info("Request received match the supported requests.");
 
@@ -79,11 +83,11 @@ public class AuthorizationRequestConverter implements AuthenticationConverter {
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication is not present. The user is not authenticated.");
         }
-        else if (!principal.getClass().equals(AuthenticationManagerToken.class)) {
+        else if (!principal.getClass().equals(AuthenticationManagerToken.class) && !principal.getClass().equals(UsernamePasswordAuthenticationToken.class)) {
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication present is not valid. The authentication mechanism is not the supported.");
         }
-        else{
+        else if(principal.getClass().equals(AuthenticationManagerToken.class)){
             logger.info("Authentication Principal is a AuthenticationManagerToken.");
             AuthenticationManagerToken token = (AuthenticationManagerToken) principal;
             if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")){

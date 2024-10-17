@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
 public class SessionUrlRelation {
     private String cookieSessionId;

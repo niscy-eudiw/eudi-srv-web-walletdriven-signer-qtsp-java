@@ -3,6 +3,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm;
 import java.nio.ByteBuffer;
 import java.security.Key;
 import java.security.KeyFactory;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
@@ -27,7 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class HsmService {
 
     private byte[] secretKey;
-    private HsmInformation hsmInfo;
+    private final HsmInformation hsmInfo;
     private static final int IVLENGTH = 12;
 
     public HsmService(
@@ -126,7 +127,7 @@ public class HsmService {
         LongRef sessionRef = this.hsmInfo.getSession();
         long session = sessionRef.value();
 
-        CKA[] secretTempl = new CKA[] {
+        CKA[] secretTempl = new CKA[]{
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
@@ -145,8 +146,8 @@ public class HsmService {
     }
 
     // loads the secret key from the bytes for the current session
-    public long loadSecretKey(long session, byte[] secretKeyBytes) throws Exception {
-        CKA[] secretTempl = new CKA[] {
+    public long loadSecretKey(long session, byte[] secretKeyBytes) {
+        CKA[] secretTempl = new CKA[]{
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
@@ -172,7 +173,7 @@ public class HsmService {
         long session = sessionRef.value();
         long secretKeyObj = loadSecretKey(session, this.secretKey);
 
-        CKA[] pubTempl = new CKA[] {
+        CKA[] pubTemplate = new CKA[]{
               new CKA(CKA.MODULUS_BITS, keySize),
               new CKA(CKA.PUBLIC_EXPONENT, Hex.s2b("010001")),
               new CKA(CKA.WRAP, true),
@@ -182,7 +183,7 @@ public class HsmService {
               new CKA(CKA.ID, "rsa-public-key-id")
         };
 
-        CKA[] privTempl = new CKA[] {
+        CKA[] privTemplate = new CKA[]{
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.PRIVATE, true),
               new CKA(CKA.SENSITIVE, true),
@@ -195,7 +196,7 @@ public class HsmService {
 
         LongRef pubKey = new LongRef();
         LongRef privKey = new LongRef();
-        CE.GenerateKeyPair(session, new CKM(CKM.RSA_PKCS_KEY_PAIR_GEN), pubTempl, privTempl, pubKey, privKey);
+        CE.GenerateKeyPair(session, new CKM(CKM.RSA_PKCS_KEY_PAIR_GEN), pubTemplate, privTemplate, pubKey, privKey);
         byte[][] keyPair = new byte[3][];
         keyPair[0] = CE.WrapKey(session, new CKM(CKM.AES_CBC), secretKeyObj, privKey.value());
         keyPair[1] = CE.GetAttributeValue(session, pubKey.value(), CKA.MODULUS).getValue();
@@ -206,51 +207,8 @@ public class HsmService {
         return keyPair;
     }
 
-    /**
-     * Function that generates a EdDSA key pair, and returns its ref in an array.
-     * The first position of the array contains the private key bytes.
-     * The second position of the array contains the public key bytes.
-     */
-    public byte[][] generateEdDSAKeyPair() throws Exception {
-        LongRef sessionRef = this.hsmInfo.getSession();
-        long session = sessionRef.value();
-        long secretKeyObj = loadSecretKey(session, this.secretKey);
-
-        CKA[] pubTempl = new CKA[] {
-              new CKA(CKA.EC_PARAMS, "edwards25519"),
-              new CKA(CKA.WRAP, true),
-              new CKA(CKA.VERIFY, true),
-              new CKA(CKA.TOKEN, true),
-              new CKA(CKA.LABEL, "EdDSA-public-key"),
-              new CKA(CKA.ID, "EdDSA-public-key")
-        };
-
-        CKA[] privTempl = new CKA[] {
-              new CKA(CKA.TOKEN, true),
-              new CKA(CKA.PRIVATE, true),
-              new CKA(CKA.SENSITIVE, true),
-              new CKA(CKA.SIGN, true),
-              new CKA(CKA.UNWRAP, true),
-              new CKA(CKA.EXTRACTABLE, true),
-              new CKA(CKA.LABEL, "EdDSA-private-key"),
-              new CKA(CKA.ID, "EdDSA-private-key"),
-        };
-
-        LongRef pubKey = new LongRef();
-        LongRef privKey = new LongRef();
-        CE.GenerateKeyPair(session, new CKM(CKM.EC_KEY_PAIR_GEN), pubTempl, privTempl, pubKey, privKey);
-        byte[][] keyPair = new byte[2][];
-        keyPair[0] = CE.WrapKey(session, new CKM(CKM.AES_CBC), secretKeyObj, privKey.value());
-        keyPair[1] = CE.GetAttributeValue(session, pubKey.value(), CKA.VALUE).getValue();
-
-        CE.DestroyObject(session, secretKeyObj);
-        this.hsmInfo.releaseSession(sessionRef);
-        return keyPair;
-    }
-
-    public long UnwrapKey(long session, long secretKey, byte[] wrappedKey) {
-
-        CKA[] secTemplUnwrap = new CKA[] {
+    private long unwrapRSAKey(long session, long secretKey, byte[] wrappedKey) {
+        CKA[] templateUnwrap = new CKA[]{
               new CKA(CKA.CLASS, CKO.PRIVATE_KEY),
               new CKA(CKA.KEY_TYPE, CKK.RSA),
               new CKA(CKA.LABEL, "privatekeyunwrapped"),
@@ -260,10 +218,10 @@ public class HsmService {
               new CKA(CKA.EXTRACTABLE, true),
               new CKA(CKA.SIGN, true),
         };
-        return CE.UnwrapKey(session, new CKM(CKM.AES_CBC), secretKey, wrappedKey, secTemplUnwrap);
+        return CE.UnwrapKey(session, new CKM(CKM.AES_CBC), secretKey, wrappedKey, templateUnwrap);
     }
 
-    public byte[] signDTBSwithRSAPKCS11(byte[] wrappedPrivateKey, byte[] DTBSR) throws Exception {
+    public byte[] signDTBSWithRSAKey(byte[] wrappedPrivateKey, byte[] DTBSR) throws Exception {
         // init session
         LongRef sessionRef = this.hsmInfo.getSession();
         long session = sessionRef.value();
@@ -271,7 +229,7 @@ public class HsmService {
         long secretKeyObj = loadSecretKey(session, this.secretKey);
 
         // Unwrap private key
-        long privateKey = UnwrapKey(session, secretKeyObj, wrappedPrivateKey);
+        long privateKey = unwrapRSAKey(session, secretKeyObj, wrappedPrivateKey);
 
         // Sign bytes
         CE.SignInit(session, new CKM(CKM.SHA256_RSA_PKCS), privateKey);
@@ -282,7 +240,15 @@ public class HsmService {
         return signed;
     }
 
-    public byte[] signWithSomeAlgorithm(byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception {
+    /**
+     * Function that allows to obtain a signature value of the DTBSR value with a private key and signature Algorithm.
+     *
+     * @param wrappedPrivateKey  the previously wrapped private key chosen
+     * @param DTBSR              the value of the hash to be signed
+     * @param signatureAlgorithm the signature algorithm to be used
+     * @return the value of the signature
+     */
+    public byte[] signDTBSWithGivenAlgorithmAndRSAKey(byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception {
         // init session
         LongRef sessionRef = this.hsmInfo.getSession();
         long session = sessionRef.value();
@@ -290,7 +256,8 @@ public class HsmService {
         long secretKeyObj = loadSecretKey(session, this.secretKey);
 
         // Unwrap private key
-        long privateKey = UnwrapKey(session, secretKeyObj, wrappedPrivateKey);
+        long privateKey = unwrapRSAKey(session, secretKeyObj, wrappedPrivateKey);
+
         // Get Long value for signature
         long signatureAlgLong = determineLongValueForAlgorithm(signatureAlgorithm);
 
@@ -303,12 +270,17 @@ public class HsmService {
         return signed;
     }
 
-    public long SetAttributePublicKey(long session, byte[] publicKey) throws Exception {
+    public void verifySignature(byte[] DTBSR, byte[] signature, byte[] publicKey) throws Exception {
+        // init session
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+
+        // Get Public Key Parameters
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         X509EncodedKeySpec pKeySpec = new X509EncodedKeySpec(publicKey);
         RSAPublicKey pk = (RSAPublicKey) keyFactory.generatePublic(pKeySpec);
 
-        CKA[] pubTempl = new CKA[] {
+        CKA[] pubTempl = new CKA[]{
               new CKA(CKA.CLASS, CKO.PUBLIC_KEY),
               new CKA(CKA.KEY_TYPE, CKK.RSA),
               new CKA(CKA.MODULUS, pk.getModulus().toByteArray()),
@@ -319,17 +291,7 @@ public class HsmService {
               new CKA(CKA.LABEL, "labelrsa-publicloaded"),
               new CKA(CKA.ID, "labelrsa-publicloaded")
         };
-        return CE.CreateObject(session, pubTempl);
-    }
-
-    public void VerifySignature(byte[] DTBSR, byte[] signature, byte[] publicKey) throws Exception {
-        // init session
-        LongRef sessionRef = this.hsmInfo.getSession();
-        long session = sessionRef.value();
-
-        // Get Public Key Parameters
-        long publicKeyValue = 0;
-        publicKeyValue = SetAttributePublicKey(session, publicKey);
+        long publicKeyValue = CE.CreateObject(session, pubTempl);
 
         // Verify Signature
         CE.VerifyInit(session, new CKM(CKM.SHA256_RSA_PKCS), publicKeyValue);
@@ -338,15 +300,140 @@ public class HsmService {
         this.hsmInfo.CloseSession(sessionRef);
     }
 
+    private long determineLongValueForAlgorithm(String signatureAlgorithm) throws Exception {
+        return switch (signatureAlgorithm) {
+            case "SHA256WITHRSA" -> 64L;
+            case "SHA384WITHRSA" -> 65L;
+            case "SHA512WITHRSA" -> 66L;
 
-    public long determineLongValueForAlgorithm(String signatureAlgorithm){
-        if(signatureAlgorithm.equals("SHA256WITHRSA"))
-            return 64L;
-        if(signatureAlgorithm.equals("SHA384WITHRSA"))
-            return 65L;
-        if(signatureAlgorithm.equals("SHA512WITHRSA"))
-            return 66L;
-        else return 64L;
+            case "SHA256WITHECDSA"-> 4164L;
+            case "SHA384WITHECDSA"->4165L;
+            case "SHA512WITHECDSA" -> 4166L;
+
+            default -> throw new Exception("The signature algorithm is not supported.");
+        };
     }
 
+    /**
+     * Function that generates a EdDSA key pair, and returns its ref in an array.
+     * The first position of the array contains the private key bytes.
+     * The second position of the array contains the public key bytes.
+     */
+    public byte[][] generateEdDSAKeyPair() throws Exception {
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+        long secretKeyObj = loadSecretKey(session, this.secretKey);
+
+        byte[] ecCurveParams = Hex.s2b("06082a8648ce3d030107");
+        CKA[] pubTempl = new CKA[]{
+              new CKA(CKA.EC_PARAMS, ecCurveParams),
+              new CKA(CKA.WRAP, true),
+              new CKA(CKA.VERIFY, true),
+              new CKA(CKA.TOKEN, true),
+              new CKA(CKA.LABEL, "EdDSA-public-key"),
+              new CKA(CKA.ID, "EdDSA-public-key")
+        };
+
+        CKA[] privTempl = new CKA[]{
+              new CKA(CKA.TOKEN, true),
+              new CKA(CKA.PRIVATE, true),
+              new CKA(CKA.SENSITIVE, true),
+              new CKA(CKA.SIGN, true),
+              new CKA(CKA.UNWRAP, true),
+              new CKA(CKA.EXTRACTABLE, true),
+              new CKA(CKA.LABEL, "EdDSA-private-key"),
+              new CKA(CKA.ID, "EdDSA-private-key"),
+        };
+
+        LongRef pubKey = new LongRef();
+        LongRef privKey = new LongRef();
+        CE.GenerateKeyPair(session, new CKM(CKM.ECDSA_KEY_PAIR_GEN), pubTempl, privTempl, pubKey, privKey);
+        byte[][] keyPair = new byte[2][];
+        keyPair[0] = CE.WrapKey(session, new CKM(CKM.AES_CBC), secretKeyObj, privKey.value());
+        keyPair[1] = CE.GetAttributeValue(session, pubKey.value(), CKA.VALUE).getValue();
+
+        CE.DestroyObject(session, secretKeyObj);
+        this.hsmInfo.releaseSession(sessionRef);
+        return keyPair;
+    }
+
+    private long unwrapEdDSAKey(long session, long secretKey, byte[] wrappedKey){
+        CKA[] templateUnwrap = new CKA[]{
+              new CKA(CKA.CLASS, CKO.PRIVATE_KEY),
+              new CKA(CKA.KEY_TYPE, CKK.EC),
+              new CKA(CKA.LABEL, "privatekeyunwrapped"),
+              new CKA(CKA.ID, "privatekeyunwrapped"),
+              new CKA(CKA.TOKEN, true),
+              new CKA(CKA.SENSITIVE, true),
+              new CKA(CKA.EXTRACTABLE, true),
+              new CKA(CKA.SIGN, true),
+        };
+        return CE.UnwrapKey(session, new CKM(CKM.AES_CBC), secretKey, wrappedKey, templateUnwrap);
+    }
+
+    public byte[] signDTBSWithGivenAlgorithmAndEdDSAKey(byte[] wrappedPrivateKey, byte[] DTBSR,
+                                                        String signatureAlgorithm) throws Exception {
+        // init session
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+
+        long secretKeyObj = loadSecretKey(session, this.secretKey);
+
+        // Unwrap private key
+        long privateKey = unwrapEdDSAKey(session, secretKeyObj, wrappedPrivateKey);
+
+        // Get Long value for signature
+        long signatureAlgLong = determineLongValueForAlgorithm(signatureAlgorithm);
+
+        // Sign bytes
+        CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
+        byte[] signed = CE.Sign(session, DTBSR);
+
+        CE.DestroyObject(session, secretKeyObj);
+        this.hsmInfo.releaseSession(sessionRef);
+        return signed;
+    }
+
+    public byte[] signDTBSWithEdDSAKey(byte[] wrappedPrivateKey, byte[] DTBSR) throws Exception {
+        // init session
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+
+        long secretKeyObj = loadSecretKey(session, this.secretKey);
+
+        // Unwrap private key
+        long privateKey = unwrapEdDSAKey(session, secretKeyObj, wrappedPrivateKey);
+
+        // Sign bytes
+        CE.SignInit(session, new CKM(CKM.ECDSA_SHA256), privateKey);
+        byte[] signed = CE.Sign(session, DTBSR);
+
+        CE.DestroyObject(session, secretKeyObj);
+        this.hsmInfo.releaseSession(sessionRef);
+        return signed;
+    }
+
+    public void verifyECDSASignature(byte[] DTBSR, byte[] signature, PublicKey pk) throws Exception {
+        // init session
+        LongRef sessionRef = this.hsmInfo.getSession();
+        long session = sessionRef.value();
+
+        CKA[] pubTempl = new CKA[]{
+              new CKA(CKA.CLASS, CKO.PUBLIC_KEY),
+              new CKA(CKA.KEY_TYPE, CKK.EC),
+              new CKA(CKA.VALUE, pk.getEncoded()),
+              new CKA(CKA.WRAP, true),
+              new CKA(CKA.VERIFY, true),
+              new CKA(CKA.TOKEN, true),
+              new CKA(CKA.LABEL, "labelrsa-publicloaded"),
+              new CKA(CKA.ID, "labelrsa-publicloaded")
+        };
+        long publicKeyValue = CE.CreateObject(session, pubTempl);
+
+        // Verify Signature
+        CE.VerifyInit(session, new CKM(CKM.SHA256_RSA_PKCS), publicKeyValue);
+        CE.Verify(session, DTBSR, signature);
+
+        this.hsmInfo.CloseSession(sessionRef);
+    }
 }

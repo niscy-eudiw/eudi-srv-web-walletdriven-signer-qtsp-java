@@ -1,7 +1,8 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.springframework.stereotype.Component;
 
 @Component

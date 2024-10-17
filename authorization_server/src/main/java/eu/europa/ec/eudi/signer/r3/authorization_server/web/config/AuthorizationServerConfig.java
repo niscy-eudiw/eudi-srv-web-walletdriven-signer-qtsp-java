@@ -9,6 +9,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
@@ -16,7 +17,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationRequestConverter;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationCodeRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
@@ -28,10 +29,8 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Consumer;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.context.annotation.Bean;
@@ -39,6 +38,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
@@ -50,6 +51,8 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.authorization.*;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -60,6 +63,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -69,15 +73,15 @@ public class AuthorizationServerConfig {
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
-		JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-		OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
+																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
+																	  OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
 	{
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 		authorizationServerConfigurer.oidc(Customizer.withDefaults());
 
-		AuthorizationRequestConverter authorizationRequestConverter = new AuthorizationRequestConverter();
+		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
@@ -90,22 +94,62 @@ public class AuthorizationServerConfig {
 			.authorizationEndpoint(authorizationEndpoint ->
 				authorizationEndpoint
 					.authorizationRequestConverter(authorizationRequestConverter)
-					.authenticationProvider(authorizationRequestProvider))
+					.authenticationProvider(authorizationRequestProvider)
+					.authenticationProviders(removeDefaultAuthorizationCodeProvider()))
 			.tokenEndpoint(tokenEndpoint ->
 				tokenEndpoint
 					.accessTokenRequestConverter(tokenRequestConverter)
+					.authenticationProviders(removeDefaultTokenProvider())
 					.authenticationProvider(tokenRequestProvider));
 
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
-					RequestMatcher requestMatcher = request -> true;
-					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
-				}
-			)
+				OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
+				RequestMatcher requestMatcherDefault = request -> {
+					String client_id = request.getParameter("client_id");
+					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester");
+				};
+				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
+
+				RequestMatcher requestMatcher = request -> {
+					String client_id = request.getParameter("client_id");
+					return client_id.equals("wallet-client-tester") || client_id.equals("sca-client-tester");
+				};
+				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), requestMatcher);
+			})
 			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		return http.build();
+	}
+
+	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
+		return (authenticationProviders) -> {
+			System.out.println("Before: "+authenticationProviders.size());
+			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
+			while (iterator.hasNext()) {
+				AuthenticationProvider authenticationProvider = iterator.next();
+				System.out.println(authenticationProvider.getClass());
+				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class)) {
+					iterator.remove();
+				}
+				System.out.println("After: "+authenticationProviders.size());
+			}
+		};
+	}
+
+	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
+		return (authenticationProviders) -> {
+			System.out.println("Before: "+authenticationProviders.size());
+			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
+			while (iterator.hasNext()) {
+				AuthenticationProvider authenticationProvider = iterator.next();
+				System.out.println(authenticationProvider.getClass());
+				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class)) {
+					iterator.remove();
+				}
+				System.out.println("After: "+authenticationProviders.size());
+			}
+		};
 	}
 
 	@Bean
@@ -126,7 +170,6 @@ public class AuthorizationServerConfig {
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
 		for (Map.Entry<String, OAuth2ClientRegistrationConfig.Client> e : config.getClient().entrySet()) {
-			System.out.println(e.getKey());
 			OAuth2ClientRegistrationConfig.Registration registration = e.getValue().getRegistration();
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
@@ -202,15 +245,25 @@ public class AuthorizationServerConfig {
 				JwtClaimsSet.Builder claims = context.getClaims();
 				if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
 					AuthenticationManagerToken token = context.getPrincipal();
-					System.out.println(token.getPrincipal().getClass());
 					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 						UserPrincipal up = (UserPrincipal) token.getPrincipal();
-						System.out.println(up);
 						claims.claim("givenName", up.getGivenName());
 						claims.claim("surname", up.getSurname());
-
 						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
 						claims.claim("issuingCountry", u.getIssuingCountry());
+					}
+				}
+				else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
+					UsernamePasswordAuthenticationToken token = context.getPrincipal();
+					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+						UserPrincipal up = (UserPrincipal) token.getPrincipal();
+						claims.claim("givenName", up.getGivenName());
+						System.out.println(up.getGivenName());
+						claims.claim("surname", up.getSurname());
+						System.out.println(up.getSurname());
+						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+						claims.claim("issuingCountry", u.getIssuingCountry());
+						System.out.println(u.getIssuingCountry());
 					}
 				}
 

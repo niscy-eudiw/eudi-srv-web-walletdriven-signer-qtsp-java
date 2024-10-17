@@ -6,20 +6,19 @@ import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.pkcs.CertificationRequest;
 import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.*;
+import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
-import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 
 import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
@@ -36,7 +35,6 @@ import java.util.*;
  * The module response for managing certificates and certificate chains
  */
 public class CertificatesService {
-
     private final HsmService hsmService;
     private final EjbcaService ejbcaService;
 
@@ -74,11 +72,11 @@ public class CertificatesService {
         return (X509Certificate)certFactory.generateCertificate(inputStream);
     }
 
-    public List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privKeyValues) throws Exception {
+    public List<X509Certificate> generateCertificatesWithRSA(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
         // Create a certificate Signing Request for the keys
         byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
-        byte[] signature = hsmService.signDTBSwithRSAPKCS11(privKeyValues, csrInfo);
-        PKCS10CertificationRequest certificateHSM = generateCertificateRequest(csrInfo, signature);
+        byte[] signature = hsmService.signDTBSWithRSAKey(privateKeyValues, csrInfo);
+        PKCS10CertificationRequest certificateHSM = generateCertificateRequestWithRSA(csrInfo, signature);
         String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
 
         // Makes a request to the CA
@@ -89,8 +87,26 @@ public class CertificatesService {
         return certificateAndCertificateChain;
     }
 
-    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName, String countryName)
-          throws Exception {
+    public List<X509Certificate> generateCertificatesWithEdDSA(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
+        // Create a certificate Signing Request for the keys
+        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
+        byte[] signature = hsmService.signDTBSWithEdDSAKey(privateKeyValues, csrInfo);
+        hsmService.verifyECDSASignature(csrInfo, signature, publicKey);
+
+        PKCS10CertificationRequest certificateHSM = generateCertificateRequestWithEdDSA(csrInfo, signature);
+        String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
+        System.out.println(certificateString);
+
+        // Makes a request to the CA
+        List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
+        if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
+            throw new Exception("Certificates received from CA are not valid");
+        }
+        return certificateAndCertificateChain;
+    }
+
+    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName,
+                                                  String countryName) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         SubjectPublicKeyInfo pki = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
 
@@ -105,7 +121,7 @@ public class CertificatesService {
         return cri.getEncoded();
     }
 
-    private PKCS10CertificationRequest generateCertificateRequest(byte[] certificateRequestInfo, byte[] signature) {
+    private PKCS10CertificationRequest generateCertificateRequestWithRSA(byte[] certificateRequestInfo, byte[] signature) {
         CertificationRequestInfo cri = CertificationRequestInfo.getInstance(certificateRequestInfo);
         DERBitString sig = new DERBitString(signature);
 
@@ -114,9 +130,17 @@ public class CertificatesService {
         return new PKCS10CertificationRequest(cr);
     }
 
+    private PKCS10CertificationRequest generateCertificateRequestWithEdDSA(byte[] certificateRequestInfo, byte[] signature) {
+        CertificationRequestInfo cri = CertificationRequestInfo.getInstance(certificateRequestInfo);
+        DERBitString sig = new DERBitString(signature);
+
+        AlgorithmIdentifier rsaWithSha256 = new AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256);
+        CertificationRequest cr = new CertificationRequest(cri, rsaWithSha256, sig);
+        return new PKCS10CertificationRequest(cr);
+    }
+
     private boolean validateCertificateFromCA(List<X509Certificate> certificatesAndCertificateChain, String givenName, String surname, String subjectCN, String countryCode){
-        if(certificatesAndCertificateChain.isEmpty())
-            return false;
+        if(certificatesAndCertificateChain.isEmpty()) return false;
 
         String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(countryCode);
         X509Certificate certificate = certificatesAndCertificateChain.get(0);
@@ -154,12 +178,5 @@ public class CertificatesService {
                 return false;
         }
         return true;
-    }
-
-    private static DistributionPoint[] createDistributionPoints(String crlURL) throws Exception {
-        GeneralName crlName = new GeneralName(GeneralName.uniformResourceIdentifier, crlURL);
-        DistributionPointName dpn = new DistributionPointName(new GeneralNames(crlName));
-        return new DistributionPoint[] {  new DistributionPoint(dpn, null, null)
-        };
     }
 }
