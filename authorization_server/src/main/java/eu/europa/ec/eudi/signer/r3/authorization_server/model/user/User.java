@@ -27,12 +27,16 @@ public class User {
     @Column(name = "issuance_authority")
     private String issuanceAuthority;
 
-    public String determineHash(String familyName, String givenName, String birthDate, String country)
-          throws NoSuchAlgorithmException {
-        String familyNameAndGivenNameAndBirthDateAndCountry = familyName + ";" + givenName + ";" + birthDate + ";"
-              + country;
-        MessageDigest sha = MessageDigest.getInstance("SHA-256");
-        byte[] result = sha.digest(familyNameAndGivenNameAndBirthDateAndCountry.getBytes());
+    public String determineHash(String familyName, String givenName, String birthDate, String country) {
+        String familyAndGivenNameAndBirthDateAndCountry = familyName + ";" + givenName + ";" + birthDate + ";" + country;
+        byte[] result = null;
+        try {
+            MessageDigest sha = MessageDigest.getInstance("SHA-256");
+            result = sha.digest(familyAndGivenNameAndBirthDateAndCountry.getBytes());
+        }
+        catch (NoSuchAlgorithmException e){
+            System.out.println(e.getMessage());
+        }
         return Base64.getEncoder().encodeToString(result);
     }
 
@@ -41,7 +45,7 @@ public class User {
     }
 
     public User(String familyName, String givenName, String birthDate, String issuingCountry, String issuanceAuthority,
-                String role) throws NoSuchAlgorithmException {
+                String role){
         this.id = UUID.randomUUID().toString();
         this.role = role;
         this.hash = determineHash(familyName, givenName, birthDate, issuingCountry);

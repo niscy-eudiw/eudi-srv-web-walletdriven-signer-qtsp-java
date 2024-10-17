@@ -1,30 +1,25 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.AuthorizationRequestVariables;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
-import jakarta.servlet.ServletException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
-import org.springframework.util.Assert;
 
 /**
  * Used by the Exception Translation Filter to commence a login authentication with OID4VP via the OID4VPAuthenticationTokenFilter.
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
-public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint, InitializingBean {
-    private String realmName;
-
+public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final VerifierClient verifierClient;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final Logger logger = LogManager.getLogger(OID4VPAuthenticationEntryPoint.class);
@@ -38,7 +33,7 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint,
     }
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException, ServletException {
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         try{
             String serviceUrl = this.issuerConfig.getUrl();
             logger.info("Authorization Server Url: {}", serviceUrl);
@@ -70,18 +65,13 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint,
             }
             logger.info("Current Cookie Session: {}", cookieSession);
 
-            AuthorizationRequestVariables variables = this.verifierClient.initPresentationTransaction(cookieSession, serviceUrl);
+            String redirectLink = this.verifierClient.initPresentationTransaction(cookieSession, serviceUrl);
             this.sessionUrlRelationList.addSessionUrlRelation(cookieSession, returnTo);
-            this.redirectStrategy.sendRedirect(request, response, variables.getRedirectLink());
+            this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
         catch (Exception e){
             logger.error(e.getMessage());
-            throw new IOException(e.getMessage());
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        Assert.hasText(this.realmName, "realmName must be specified");
     }
 }

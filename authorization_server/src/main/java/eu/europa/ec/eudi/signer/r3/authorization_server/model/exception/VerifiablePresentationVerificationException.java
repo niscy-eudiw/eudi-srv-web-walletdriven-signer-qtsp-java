@@ -3,11 +3,11 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.exception;
 
 public class VerifiablePresentationVerificationException extends Exception {
 
-    public static int Default = -1;
+    public static final int Default = -1;
 
-    public static int Signature = 8;
+    public static final int Signature = 8;
 
-    public static int Integrity = 9;
+    public static final int Integrity = 9;
 
     private final int type;
 

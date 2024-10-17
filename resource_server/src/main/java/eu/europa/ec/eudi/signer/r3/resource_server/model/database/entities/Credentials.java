@@ -226,8 +226,7 @@ public class Credentials {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Credentials)) return false;
-        Credentials that = (Credentials) o;
+        if (!(o instanceof Credentials that)) return false;
         return multisign == that.multisign && keyLen == that.keyLen && Objects.equals(userID, that.userID) &&
               Objects.equals(signatureQualifier, that.signatureQualifier) && Objects.equals(SCAL, that.SCAL) &&
               Objects.equals(lang, that.lang) && Objects.deepEquals(privateKey, that.privateKey) &&
