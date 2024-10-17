@@ -3,7 +3,6 @@ package eu.europa.ec.eudi.signer.r3.common_tools.utils;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.*;
@@ -21,8 +20,7 @@ import java.util.List;
       getterVisibility = JsonAutoDetect.Visibility.NONE,
       isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public abstract class UserPrincipalMixIn {
-}
+public abstract class UserPrincipalMixIn {}
 
 
 class UserPrincipalDeserializer extends JsonDeserializer<UserPrincipal> {
@@ -32,16 +30,18 @@ class UserPrincipalDeserializer extends JsonDeserializer<UserPrincipal> {
     public UserPrincipal deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         ObjectMapper mapper = (ObjectMapper) parser.getCodec();
         JsonNode root = mapper.readTree(parser);
-        return deserialize(parser, mapper, root);
+        return deserialize(mapper, root);
     }
 
-    private UserPrincipal deserialize(JsonParser parser, ObjectMapper mapper, JsonNode root) throws IOException {
+    private UserPrincipal deserialize(ObjectMapper mapper, JsonNode root)
+          throws IOException {
         String id = readJsonNode(root, "id").asText();
         String hash = readJsonNode(root, "hash").asText();
         String givenName = readJsonNode(root, "givenName").asText();
         String surname = readJsonNode(root, "surname").asText();
         List<GrantedAuthority> authorities = mapper.readValue(readJsonNode(root, "authorities").traverse(mapper), GRANTED_AUTHORITY_LIST);
-        return new UserPrincipal(id, hash, givenName, surname, authorities);
+        String password = readJsonNode(root, "password").asText();
+        return new UserPrincipal(id, hash, givenName, surname, authorities, password);
     }
 
     private JsonNode readJsonNode(JsonNode jsonNode, String field) {

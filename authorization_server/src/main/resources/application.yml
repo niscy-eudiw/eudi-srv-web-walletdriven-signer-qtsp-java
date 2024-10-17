@@ -53,6 +53,7 @@ spring:
     include:
       - "auth"
       - "client-registration"
+      - "user-login-form"
 
 logging:
   level:

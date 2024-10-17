@@ -12,20 +12,17 @@ import java.util.UUID;
 @Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = { "hash" }))
 public class User {
     @Id
-    private String id;
-
+    private final String id;
     @NotNull
     private String role;
-
     @NotNull
     private String hash;
-
     @NotNull
     @Column(name = "issuing_country")
     private String issuingCountry;
-
     @Column(name = "issuance_authority")
     private String issuanceAuthority;
+    private String password;
 
     public String determineHash(String familyName, String givenName, String birthDate, String country) {
         String familyAndGivenNameAndBirthDateAndCountry = familyName + ";" + givenName + ";" + birthDate + ";" + country;
@@ -51,10 +48,7 @@ public class User {
         this.hash = determineHash(familyName, givenName, birthDate, issuingCountry);
         this.issuingCountry = issuingCountry;
         this.issuanceAuthority = issuanceAuthority;
-    }
-
-    public User(String id) {
-        this.id = id;
+        this.password = null;
     }
 
     public String getId() {
@@ -77,15 +71,22 @@ public class User {
         return issuanceAuthority;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     @Override
     public String toString() {
-        String sb = "UserOID4VP{" +
+        return "UserOID4VP{" +
               "id='" + id + '\'' +
               ", hash='" + hash + '\'' +
               ", role='" + role + '\'' +
               ", issuingCountry='" + issuingCountry + '\'' +
               ", issuanceAuthority='" + issuanceAuthority + '\'' +
               '}';
-        return sb;
     }
 }

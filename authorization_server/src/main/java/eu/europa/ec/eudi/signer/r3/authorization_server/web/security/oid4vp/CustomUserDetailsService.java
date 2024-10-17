@@ -18,13 +18,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     /**
      * Loads the user with a given username if it is present in the database
-     * This class expects the username to be composed by "hash";"givenname";"surname"
+     * This class expects the username to be composed by "hash";"givenName";"surname"
      * */
     @Override
     @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         String[] n = username.split(";");
         User user = userRepository.findByHash(n[0]).orElseThrow(() -> new UsernameNotFoundException("User not found with hash: ." + n[0]));
-        return UserPrincipal.create(user.getId(), user.getHash(), user.getRole(), n[1], n[2]);
+        return UserPrincipal.create(user.getId(), user.getHash(), user.getRole(), n[1], n[2], user.getPassword());
     }
 }

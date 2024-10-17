@@ -38,6 +38,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -62,6 +63,7 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings;
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -103,11 +105,19 @@ public class AuthorizationServerConfig {
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-					OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
-					RequestMatcher requestMatcher = request -> true;
-					exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcher);
-				}
-			)
+				OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
+				RequestMatcher requestMatcherDefault = request -> {
+					String client_id = request.getParameter("client_id");
+					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester");
+				};
+				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
+
+				RequestMatcher requestMatcher = request -> {
+					String client_id = request.getParameter("client_id");
+					return client_id.equals("wallet-client-tester") || client_id.equals("sca-client-tester");
+				};
+				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), requestMatcher);
+			})
 			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		return http.build();
 	}
@@ -241,6 +251,19 @@ public class AuthorizationServerConfig {
 						claims.claim("surname", up.getSurname());
 						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
 						claims.claim("issuingCountry", u.getIssuingCountry());
+					}
+				}
+				else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
+					UsernamePasswordAuthenticationToken token = context.getPrincipal();
+					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+						UserPrincipal up = (UserPrincipal) token.getPrincipal();
+						claims.claim("givenName", up.getGivenName());
+						System.out.println(up.getGivenName());
+						claims.claim("surname", up.getSurname());
+						System.out.println(up.getSurname());
+						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+						claims.claim("issuingCountry", u.getIssuingCountry());
+						System.out.println(u.getIssuingCountry());
 					}
 				}
 

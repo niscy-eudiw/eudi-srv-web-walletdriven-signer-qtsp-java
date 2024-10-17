@@ -2,20 +2,17 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Component;
 
-@Component
 public class AuthenticationManagerProvider implements AuthenticationProvider {
 
     private final CustomUserDetailsService userDetailsService;
     private final Logger logger = LogManager.getLogger(AuthenticationManagerProvider.class);
 
-    public AuthenticationManagerProvider(@Autowired CustomUserDetailsService userDetailsService){
+    public AuthenticationManagerProvider(CustomUserDetailsService userDetailsService){
         this.userDetailsService = userDetailsService;
     }
 

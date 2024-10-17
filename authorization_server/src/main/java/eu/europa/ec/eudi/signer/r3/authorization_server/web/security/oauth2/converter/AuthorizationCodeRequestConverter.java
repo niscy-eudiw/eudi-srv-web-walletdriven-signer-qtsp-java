@@ -12,8 +12,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationConverter;
@@ -83,11 +83,11 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication is not present. The user is not authenticated.");
         }
-        else if (!principal.getClass().equals(AuthenticationManagerToken.class)) {
+        else if (!principal.getClass().equals(AuthenticationManagerToken.class) && !principal.getClass().equals(UsernamePasswordAuthenticationToken.class)) {
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication present is not valid. The authentication mechanism is not the supported.");
         }
-        else{
+        else if(principal.getClass().equals(AuthenticationManagerToken.class)){
             logger.info("Authentication Principal is a AuthenticationManagerToken.");
             AuthenticationManagerToken token = (AuthenticationManagerToken) principal;
             if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")){
