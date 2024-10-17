@@ -11,9 +11,9 @@ import jakarta.persistence.Table;
 @Table(name = "secret_key")
 public class SecretKey {
     @Id
-    private String id;
+    private final String id;
 
-    @Column(nullable = true, length = 2000)
+    @Column(length = 2000)
     private byte[] secretKey;
 
     public SecretKey() {

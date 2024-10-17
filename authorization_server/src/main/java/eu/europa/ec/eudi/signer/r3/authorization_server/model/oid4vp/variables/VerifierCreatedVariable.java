@@ -1,4 +1,4 @@
-package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
+package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
 import java.util.Objects;
 

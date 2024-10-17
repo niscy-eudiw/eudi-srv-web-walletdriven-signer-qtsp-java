@@ -1,5 +1,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariable;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
@@ -22,12 +24,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class VerifierClient {
-
-    public static String PresentationDefinitionId = "32f54163-7166-48f1-93d8-ff217bdb0653";
-    public static String PresentationDefinitionInputDescriptorsId = "eu.europa.ec.eudi.pid.1";
-
+    public static final String PresentationDefinitionId = "32f54163-7166-48f1-93d8-ff217bdb0653";
+    public static final String PresentationDefinitionInputDescriptorsId = "eu.europa.ec.eudi.pid.1";
     private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
-
     private final VerifierConfig verifierProperties;
     private final VerifierCreatedVariables verifierVariables;
 
@@ -37,43 +36,92 @@ public class VerifierClient {
     }
 
     /**
-     * Function that allows to make a Presentation Request, following the OpenID for
-     * Verifiable Presentations - draft 20, to the verifier
-     * This function already writes the logs for the ApiException. The message in
-     * that exceptions can also be used to display info to the user.
-     *
-     * @param user an identifier of the user that made the request (ex: a cookie or an id)
-     * @return the deep link that redirects the user to the EUDI Wallet
-     * @throws Exception
+     * Function that allows to make a Presentation Request to the OpenID for Verifiable Presentations Verifier,
+     * following the OpenID for Verifiable Presentations - draft 20.
+     * @param userId an identifier of the user that made the request
+     * @param currentServiceUrl the url of the current service
+     * @return the deep link that redirects the client app to the EUDI Wallet
      */
-    public AuthorizationRequestVariables initPresentationTransaction(String user, String service_url) throws Exception {
-        System.out.println("init user: "+user);
-        Map<String, String> headers = getHeaders();
-        String nonce = generateNonce();
-        String body = getBody(service_url, nonce, user);
+    public String initPresentationTransaction(String userId, String currentServiceUrl) throws Exception {
+        log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
+        String nonce = getNonce();
 
-        JSONObject responseFromVerifierAfterInitPresentation;
+        // makes the http Presentation Request:
+        JSONObject responseFromVerifier;
         try {
-            responseFromVerifierAfterInitPresentation = httpRequestToInitPresentation(body, headers);
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce);
         } catch (Exception e) {
             throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
         }
+        log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
 
-        Set<String> keys = responseFromVerifierAfterInitPresentation.keySet();
+        // Validates if the values required are present in the JSON Object Response:
+        Set<String> keys = responseFromVerifier.keySet();
         if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
             throw new Exception(SignerError.MissingDataInResponseVerifier.getFormattedMessage());
-
-        String request_uri = responseFromVerifierAfterInitPresentation.getString("request_uri");
-        String client_id = responseFromVerifierAfterInitPresentation.getString("client_id");
-        if(!client_id.equals(this.verifierProperties.getAddress())) throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
-
-        String presentation_id = responseFromVerifierAfterInitPresentation.getString("presentation_id");
+        String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
+        String client_id = responseFromVerifier.getString("client_id");
+        if(!client_id.equals(this.verifierProperties.getAddress()))
+            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+        String presentation_id = responseFromVerifier.getString("presentation_id");
 
-        String deepLink = redirectUriDeepLink(encoded_request_uri, client_id);
-        // String encoded_return_to = URLEncoder.encode(return_to, StandardCharsets.UTF_8);
-        this.verifierVariables.addUsersVerifierCreatedVariable(user, nonce, presentation_id);
-        return new AuthorizationRequestVariables(deepLink, nonce, presentation_id);
+        // Saves the values required associated to later retrieve the VP Token from the Verifier:
+        this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
+
+        // Generates a link to the Wallet, to where the client app will be redirected:
+        String linkToWallet = getLinkToWallet(encoded_request_uri, client_id);
+        log.info("Generated link to the Wallet for authentication of the user {}", userId);
+        return linkToWallet;
+    }
+
+    private String getNonce() throws Exception {
+        SecureRandom prng = new SecureRandom();
+        String randomNum = String.valueOf(prng.nextInt());
+        MessageDigest sha = MessageDigest.getInstance("SHA-256");
+        byte[] result = sha.digest(randomNum.getBytes());
+        return Base64.getUrlEncoder().encodeToString(result);
+    }
+
+    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce) throws Exception {
+        Map<String, String> headers = getHeaders();
+        String bodyMessage = getBody(userId, serviceUrl, nonce);
+
+        // makes a request to the verifier
+        HttpResponse response;
+        try {
+            response = WebUtils.httpPostRequest(verifierProperties.getUrl(), headers, bodyMessage);
+        } catch (Exception e) {
+            log.error("An error occurred when trying to connect to the Verifier. {}", e.getMessage());
+            throw new Exception("An error occurred when trying to connect to the Verifier");
+        }
+
+        // validates if the http request was successful
+        if (response.getStatusLine().getStatusCode() != 200) {
+            String error = WebUtils.convertStreamToString(response.getEntity().getContent());
+            int statusCode = response.getStatusLine().getStatusCode();
+            log.error("[Error {}] HTTP Post request to Verifier was not successful." +
+                  " Error Message: {} ", statusCode, error);
+            throw new Exception("[Error "+statusCode+"] HTTP Post request to Verifier was not successful.");
+        }
+
+        HttpEntity entity = response.getEntity();
+        if (entity == null) {
+            log.error("Http Post response from the presentation request is empty.");
+            throw new Exception("Http Post response from the presentation request is empty.");
+        }
+        String result = WebUtils.convertStreamToString(entity.getContent());
+        JSONObject responseVerifier;
+        try{
+            responseVerifier =  new JSONObject(result);
+        }
+        catch (JSONException e){
+            log.error("The response of the presentation request from the Verifier " +
+                  "doesn't contain a correctly formatted JSON string.");
+            throw new Exception("The response of the presentation request from the Verifier " +
+                  "doesn't contain a correctly formatted JSON string.");
+        }
+        return responseVerifier;
     }
 
     private Map<String, String> getHeaders() {
@@ -82,15 +130,7 @@ public class VerifierClient {
         return headers;
     }
 
-    private String generateNonce() throws Exception {
-        SecureRandom prng = new SecureRandom();
-        String randomNum = String.valueOf(prng.nextInt());
-        MessageDigest sha = MessageDigest.getInstance("SHA-256");
-        byte[] result = sha.digest(randomNum.getBytes());
-        return Base64.getUrlEncoder().encodeToString(result);
-    }
-
-    private String getBody(String service_url, String nonce, String userCookieSession) throws Exception{
+    private String getBody(String userId, String serviceUrl, String nonce) {
         String presentationDefinition = "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
               "'input_descriptors': [{" +
@@ -110,50 +150,18 @@ public class VerifierClient {
               "]}}]}";
         JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
 
-        String redirect_uri = service_url+"/oid4vp/callback?&session_id="+userCookieSession+"&response_code={RESPONSE_CODE}";
-        System.out.println(redirect_uri);
+        String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
-        jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirect_uri);
+        jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         return jsonBodyToInitPresentation.toString();
     }
 
-    private JSONObject httpRequestToInitPresentation(String jsonObjectString, Map<String, String> headers) throws Exception {
-        HttpResponse response;
-        try {
-            response = WebUtils.httpPostRequest(verifierProperties.getUrl(), headers, jsonObjectString);
-        } catch (Exception e) {
-            throw new Exception("An error occurred when trying to connect to the Verifier");
-        }
-
-        if (response.getStatusLine().getStatusCode() != 200) {
-            String error = WebUtils.convertStreamToString(response.getEntity().getContent());
-            int statusCode = response.getStatusLine().getStatusCode();
-            log.error("HTTP Post Request not successful. Error : " + statusCode);
-            throw new Exception("HTTP Post Request not successful. Error : " + response.getStatusLine().getStatusCode());
-        }
-
-        HttpEntity entity = response.getEntity();
-        if (entity == null) {
-            throw new Exception("Response to the presentation request is empty.");
-        }
-        String result = WebUtils.convertStreamToString(entity.getContent());
-
-        JSONObject responseVerifier;
-        try{
-            responseVerifier =  new JSONObject(result);
-        }
-        catch (JSONException e){
-            throw new Exception("The response from the Verifier doesn't contain a correctly formatted JSON string.");
-        }
-        return responseVerifier;
-    }
-
-    private String redirectUriDeepLink(String request_uri, String client_id) {
+    private String getLinkToWallet(String request_uri, String client_id) {
         return "eudi-openid4vp://" +
                 verifierProperties.getAddress() +
                 "?client_id=" +
@@ -162,50 +170,47 @@ public class VerifierClient {
                 request_uri;
     }
 
-    public VerifierCreatedVariable getVerifierVariables(String user) throws Exception{
-        System.out.println("get user: "+user);
-        VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
-        if (variables == null) throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
-        return variables;
-    }
-
     /**
-     * get authorization response from the oid4vp verifier
+     * Function that allows to retrieve the VP Token from the Verifier
+     * @param userId an identifier of the user that made the request
+     * @param code the code returned by the verifier and required to retrieve the VP Token
+     * @return a json formatted string with the vp token
      */
-    public String getVPTokenFromVerifier(String user, String code, VerifierCreatedVariable variables) throws Exception {
-        System.out.println("get user: "+user);
+    public String getVPTokenFromVerifier(String userId, String code) throws Exception {
+        log.info("Starting to retrieve the VP Token to authenticate the user {}...", userId);
 
-        String nonce = variables.getNonce();
-        String presentation_id = variables.getPresentation_id();
+        VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(userId);
+        if (variables == null) {
+            log.error("Failed to retrieve the required local variables to complete the authentication.");
+            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+        }
+        log.info("Retrieved the required local variables to complete the authentication.");
+
         log.info("Current Verifier Variables State: {}", verifierVariables);
-        log.info("User {}: Nonce: {} & Presentation_id: {}", user, nonce, presentation_id);
+        log.info("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getPresentation_id());
 
         Map<String, String> headers = getHeaders();
-        String url = uriToRequestWalletPID(presentation_id, nonce, code);
-        System.out.println(url);
+        String url = getUrlToRetrieveVPToken(variables.getPresentation_id(), variables.getNonce(), code);
+        log.info("Obtained the link to retrieve the VP Token from the verifier.");
 
-        String message = null;
         WebUtils.StatusAndMessage response;
         try {
             response = WebUtils.httpGetRequests(url, headers);
         } catch (Exception e) {
+            log.error("Failed to retrieve the VP Token. Error: {}", e.getMessage());
             throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
         }
 
-        if (response.getStatusCode() == 404)
-            throw new Exception("Failed connection to Verifier: impossible to get vp_token");
-        else if (response.getStatusCode() == 200) {
-            message = response.getMessage();
+        if (response.getStatusCode() == 404) {
+            log.error("Failed to connect with Verifier and retrieve the VP Token.");
+            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
         }
-        return message;
+        log.info("Successfully retrieved the json string with the VP Token.");
+        return response.getMessage();
     }
 
-    private String uriToRequestWalletPID(String presentation_id, String nonce, String code) {
-        return verifierProperties.getUrl() +
-                "/" + presentation_id +
-                "?nonce=" +
-                nonce +
-                "&response_code="+
-                code;
+    private String getUrlToRetrieveVPToken(String presentation_id, String nonce, String code) {
+        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" +
+                nonce + "&response_code=" + code;
     }
 }

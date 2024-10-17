@@ -1,12 +1,14 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenId4VPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationFailureHandler;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,6 +41,7 @@ public class DefaultSecurityConfig {
 				authorize
 					.requestMatchers("/oid4vp/callback").permitAll()
 					.requestMatchers("/login").permitAll()
+					.requestMatchers("/error").permitAll()
 					.anyRequest().authenticated()
 			)
 			.csrf(AbstractHttpConfigurer::disable)
@@ -82,16 +85,25 @@ public class DefaultSecurityConfig {
 	}
 
 	@Bean
-	public OID4VPAuthenticationSuccessHandler myAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){
+	public OID4VPAuthenticationSuccessHandler customAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){
 		return new OID4VPAuthenticationSuccessHandler(sessionUrlRelationList);
 	}
 
 	@Bean
-	public OID4VPAuthenticationFilter authenticationFilter(AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
-														   VerifierClient verifierClient, OpenId4VPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
+	public OID4VPAuthenticationFailureHandler customAuthenticationFailureHandler(){
+		return new OID4VPAuthenticationFailureHandler();
+	}
+
+	@Bean
+	public OID4VPAuthenticationFilter authenticationFilter(
+		AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
+		OID4VPAuthenticationFailureHandler authenticationFailureHandler, VerifierClient verifierClient,
+		OpenIdForVPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
+
 		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
+		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
 		return filter;
 	}
 }

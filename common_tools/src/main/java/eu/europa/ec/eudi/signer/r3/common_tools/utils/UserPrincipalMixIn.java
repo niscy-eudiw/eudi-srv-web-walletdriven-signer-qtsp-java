@@ -24,7 +24,6 @@ public abstract class UserPrincipalMixIn {}
 
 
 class UserPrincipalDeserializer extends JsonDeserializer<UserPrincipal> {
-
     private static final TypeReference<List<GrantedAuthority>> GRANTED_AUTHORITY_LIST = new TypeReference<>() {};
 
     @Override

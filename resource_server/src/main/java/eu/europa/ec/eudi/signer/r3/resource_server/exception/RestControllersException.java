@@ -4,9 +4,9 @@ import org.springframework.http.HttpStatusCode;
 
 public class RestControllersException {
 
-    private HttpStatusCode statusCode;
-    private String error;
-    private String errorDescription;
+    private final HttpStatusCode statusCode;
+    private final String error;
+    private final String errorDescription;
 
     public RestControllersException(HttpStatusCode statusCode, String error, String errorDescription) {
         this.statusCode = statusCode;
