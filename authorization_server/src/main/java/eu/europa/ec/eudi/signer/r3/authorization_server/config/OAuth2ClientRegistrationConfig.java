@@ -3,9 +3,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.PropertySource;
 
-@PropertySource("classpath:application-client-registration.yml")
 @ConfigurationProperties(prefix="authorizationserver")
 public class OAuth2ClientRegistrationConfig {
 
