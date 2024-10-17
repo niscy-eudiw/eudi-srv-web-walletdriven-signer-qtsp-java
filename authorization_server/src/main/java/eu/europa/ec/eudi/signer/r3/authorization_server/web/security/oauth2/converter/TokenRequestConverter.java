@@ -46,19 +46,20 @@ public class TokenRequestConverter implements AuthenticationConverter {
 
         if(!this.tokenRequestMatcher.matches(request)){
             if(request.getParameter("client_id") == null){
+                logger.error("Missing parameter client_id.");
                 throw new OAuth2AuthenticationException(
                       getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter client_id."));
             }
             else if(request.getParameter("grant_type") == null){
+                logger.error("Missing parameter grant_type.");
                 throw new OAuth2AuthenticationException(
                       getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter client_id."));
             }
             else if(request.getParameter("code") == null){
+                logger.error("Missing parameter code.");
                 throw new OAuth2AuthenticationException(
                       getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Missing parameter code."));
             }
-
-
         }
         logger.info("Request received match the supported requests.");
 

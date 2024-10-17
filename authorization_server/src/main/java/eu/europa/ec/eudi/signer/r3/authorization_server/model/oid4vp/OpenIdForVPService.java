@@ -1,5 +1,6 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class OpenIdForVPService {
      * @throws VerifiablePresentationVerificationException exception thrown if the VP Token's verification failed
      */
     public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier) throws VPTokenInvalidException,
-          VerifiablePresentationVerificationException {
+          VerifiablePresentationVerificationException, NoSuchAlgorithmException {
         log.info("Starting to load VP Toke from response...");
         JSONObject vpToken;
         try{
@@ -69,7 +70,7 @@ public class OpenIdForVPService {
         return AuthenticationManagerToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
-    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalidException {
+    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalidException, NoSuchAlgorithmException {
         List<IssuerSignedItem> l = document.getIssuerSignedItems(document.getDocType().getValue());
 
         String familyName = null;

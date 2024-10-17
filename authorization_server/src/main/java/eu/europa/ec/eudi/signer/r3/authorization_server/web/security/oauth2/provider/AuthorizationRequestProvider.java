@@ -187,9 +187,6 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
               .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
               .authorizationGrant(authenticationToken);
         OAuth2TokenContext tokenContext = tokenContextBuilder.build();
-
-        System.out.println("Equals Access_token?: "+ tokenContext.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN));
-
         OAuth2AuthorizationCode authorizationCode = this.authorizationCodeGenerator.generate(tokenContext);
         if (authorizationCode == null)
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.SERVER_ERROR, "The token generator failed to generate the authorization code."), null);
