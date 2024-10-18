@@ -24,7 +24,7 @@ public class User {
     private String issuanceAuthority;
     private String password;
 
-    public String determineHash(String familyName, String givenName, String birthDate, String country) {
+    public static String determineHash(String familyName, String givenName, String birthDate, String country) {
         String familyAndGivenNameAndBirthDateAndCountry = familyName + ";" + givenName + ";" + birthDate + ";" + country;
         byte[] result = null;
         try {
@@ -45,7 +45,7 @@ public class User {
                 String role){
         this.id = UUID.randomUUID().toString();
         this.role = role;
-        this.hash = determineHash(familyName, givenName, birthDate, issuingCountry);
+        this.hash = User.determineHash(familyName, givenName, birthDate, issuingCountry);
         this.issuingCountry = issuingCountry;
         this.issuanceAuthority = issuanceAuthority;
         this.password = null;

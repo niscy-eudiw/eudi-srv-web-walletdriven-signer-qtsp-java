@@ -116,7 +116,7 @@ public class AuthorizationServerConfig {
 					String client_id = request.getParameter("client_id");
 					return client_id.equals("wallet-client-tester") || client_id.equals("sca-client-tester");
 				};
-				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), requestMatcher);
+				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getUrl()+"/login"), requestMatcher);
 			})
 			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		return http.build();
