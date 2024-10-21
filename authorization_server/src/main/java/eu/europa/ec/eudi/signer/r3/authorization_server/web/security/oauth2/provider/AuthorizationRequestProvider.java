@@ -94,11 +94,17 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         }
         logger.info("ClientID from AuthenticationToken is registered.");
 
-        OAuth2AuthorizationCodeRequestAuthenticationContext.Builder authenticationContextBuilder =
-              OAuth2AuthorizationCodeRequestAuthenticationContext
-                    .with(authenticationToken)
-                    .registeredClient(registeredClient);
-        this.authenticationValidator.accept(authenticationContextBuilder.build());
+        try {
+            OAuth2AuthorizationCodeRequestAuthenticationContext.Builder authenticationContextBuilder =
+                  OAuth2AuthorizationCodeRequestAuthenticationContext
+                        .with(authenticationToken)
+                        .registeredClient(registeredClient);
+            this.authenticationValidator.accept(authenticationContextBuilder.build());
+        }catch (OAuth2AuthorizationCodeRequestAuthenticationException e){
+            e.printStackTrace();
+            logger.error(e.getMessage());
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(e.getError(), authenticationToken);
+        }
 
         if (!registeredClient.getAuthorizationGrantTypes().contains(AuthorizationGrantType.AUTHORIZATION_CODE))
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Request grant_type 'authorization_code' is not allowed for the registered client."), authenticationToken);

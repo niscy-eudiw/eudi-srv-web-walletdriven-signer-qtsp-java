@@ -1,9 +1,11 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
@@ -35,18 +37,17 @@ import java.util.List;
 public class DefaultSecurityConfig {
 
 	@Bean
-	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig) throws Exception {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
 					.requestMatchers("/oid4vp/callback").permitAll()
 					.requestMatchers("/login").permitAll()
-					.requestMatchers("/error").permitAll()
 					.anyRequest().authenticated()
 			)
 			.csrf(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-			.formLogin(Customizer.withDefaults());
+			.formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())));
 		return http.build();
 	}
 
