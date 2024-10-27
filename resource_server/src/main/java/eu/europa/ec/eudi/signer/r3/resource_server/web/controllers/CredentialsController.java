@@ -1,5 +1,6 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.CredentialsConfig;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.CredentialsService;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListRequest;
@@ -24,11 +25,13 @@ public class CredentialsController {
 
     private final CredentialsService credentialsService;
     private final CredentialsConfig credentialsConfig;
+    private final CryptoUtils cryptoUtils;
     private static final Logger logger = LoggerFactory.getLogger(CredentialsController.class);
 
-    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig) {
+    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig) throws Exception {
         this.credentialsService = credentialsService;
         this.credentialsConfig = credentialsConfig;
+        this.cryptoUtils = new CryptoUtils();
     }
 
     /***
@@ -71,9 +74,15 @@ public class CredentialsController {
 
             // get the list of the available credentials of the user
             List<String> listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
-            if(listAvailableCredentialsId.isEmpty()){
-                logger.info("Empty List of Available Credentials.");
-                this.credentialsService.createRSACredential(userHash, givenName, surname, givenName+" "+surname, issuingCountry);
+            if(listAvailableCredentialsId.isEmpty() || !this.credentialsService.existsActiveCertificate(listAvailableCredentialsId)){
+                logger.info("There are no active certificates.");
+
+                String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
+                System.out.println(givenNameDecrypted);
+                String surnameDecrypted = this.cryptoUtils.decryptString(surname);
+                System.out.println(surnameDecrypted);
+
+                this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             }
             credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);

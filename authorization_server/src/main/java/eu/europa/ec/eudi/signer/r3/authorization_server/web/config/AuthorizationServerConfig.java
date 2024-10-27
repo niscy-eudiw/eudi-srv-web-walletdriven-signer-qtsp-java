@@ -14,6 +14,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
@@ -23,6 +24,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.prov
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -33,6 +35,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -67,14 +70,22 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
+
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
+
+	private final CryptoUtils cryptoUtils = new CryptoUtils();
+
+	public AuthorizationServerConfig() throws Exception {
+
+	}
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-																	  OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
+																	  OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
+																	  UserRepository userRepository) throws Exception
 	{
 
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
@@ -124,7 +135,6 @@ public class AuthorizationServerConfig {
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
 		return (authenticationProviders) -> {
-			System.out.println("Before: "+authenticationProviders.size());
 			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
 			while (iterator.hasNext()) {
 				AuthenticationProvider authenticationProvider = iterator.next();
@@ -132,14 +142,12 @@ public class AuthorizationServerConfig {
 				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class)) {
 					iterator.remove();
 				}
-				System.out.println("After: "+authenticationProviders.size());
 			}
 		};
 	}
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
 		return (authenticationProviders) -> {
-			System.out.println("Before: "+authenticationProviders.size());
 			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
 			while (iterator.hasNext()) {
 				AuthenticationProvider authenticationProvider = iterator.next();
@@ -147,14 +155,15 @@ public class AuthorizationServerConfig {
 				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class)) {
 					iterator.remove();
 				}
-				System.out.println("After: "+authenticationProviders.size());
 			}
 		};
 	}
 
 	@Bean
 	public AuthorizationServerSettings authorizationServerSettings(OAuth2IssuerConfig issuerConfig) {
-		return AuthorizationServerSettings.builder().issuer(issuerConfig.getUrl()).build();
+		return AuthorizationServerSettings.builder()
+			  .issuer(issuerConfig.getUrl())
+			  .build();
 	}
 
 	@Bean
@@ -243,35 +252,34 @@ public class AuthorizationServerConfig {
 		return context -> {
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
 				JwtClaimsSet.Builder claims = context.getClaims();
-				if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
-					AuthenticationManagerToken token = context.getPrincipal();
-					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-						UserPrincipal up = (UserPrincipal) token.getPrincipal();
-						claims.claim("givenName", up.getGivenName());
-						claims.claim("surname", up.getSurname());
-						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-						claims.claim("issuingCountry", u.getIssuingCountry());
-					}
-				}
-				else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
-					UsernamePasswordAuthenticationToken token = context.getPrincipal();
-					if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-						UserPrincipal up = (UserPrincipal) token.getPrincipal();
-						claims.claim("givenName", up.getGivenName());
-						System.out.println(up.getGivenName());
-						claims.claim("surname", up.getSurname());
-						System.out.println(up.getSurname());
-						User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-						claims.claim("issuingCountry", u.getIssuingCountry());
-						System.out.println(u.getIssuingCountry());
-					}
-				}
-
 				OAuth2Authorization authorization = context.getAuthorization();
                 assert authorization != null;
-                OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+
+				if(authorization.getAuthorizedScopes().contains("service")){
+					if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
+						AuthenticationManagerToken token = context.getPrincipal();
+						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+							UserPrincipal up = (UserPrincipal) token.getPrincipal();
+                            claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
+                            claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
+							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+							claims.claim("issuingCountry", u.getIssuingCountry());
+						}
+					}
+					else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
+						UsernamePasswordAuthenticationToken token = context.getPrincipal();
+						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+							UserPrincipal up = (UserPrincipal) token.getPrincipal();
+							claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
+							claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
+							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+							claims.claim("issuingCountry", u.getIssuingCountry());
+						}
+					}
+				}
 
 				if (authorization.getAuthorizedScopes().contains("credential")) {
+					OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
                     assert authorizationRequest != null;
                     if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);

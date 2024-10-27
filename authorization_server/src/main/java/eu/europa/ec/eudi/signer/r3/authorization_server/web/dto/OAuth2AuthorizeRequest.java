@@ -32,10 +32,6 @@ public class OAuth2AuthorizeRequest {
     private String account_token;
     private String clientData;
 
-    public String getResponse_type() {
-        return response_type;
-    }
-
     public void setResponse_type(String response_type) {
         this.response_type = response_type;
     }
@@ -94,10 +90,6 @@ public class OAuth2AuthorizeRequest {
 
     public void setState(String state) {
         this.state = state;
-    }
-
-    public String getRequest_uri() {
-        return request_uri;
     }
 
     public void setRequest_uri(String request_uri) {
@@ -208,10 +200,16 @@ public class OAuth2AuthorizeRequest {
         authRequest.setRedirect_uri(request.getParameter("redirect_uri"));
         authRequest.setScope(request.getParameter("scope"));
         authRequest.setAuthorization_details(request.getParameter("authorization_details"));
+
+        // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
+        if(authRequest.getScope() == null && authRequest.getAuthorization_details() == null )
+            authRequest.setScope("service");
+
         authRequest.setCode_challenge(getRequiredParameter(request, "code_challenge"));
         authRequest.setCode_challenge_method(request.getParameter("code_challenge_method"));
         authRequest.setState(request.getParameter("state"));
         authRequest.setRequest_uri(request.getParameter("request_uri"));
+
         authRequest.setLang(request.getParameter("lang"));
         authRequest.setCredentialID(request.getParameter("credentialID"));
         authRequest.setSignatureQualifier(request.getParameter("signatureQualifier"));
@@ -233,6 +231,15 @@ public class OAuth2AuthorizeRequest {
             throw new IllegalArgumentException("Too many values for the parameter: " + name);
         }
         return value;
+    }
+
+    public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails(){
+        return request ->
+              request.getParameter("client_id") != null
+                    && Objects.equals(request.getParameter("response_type"), "code")
+                    && request.getParameter("scope") == null
+                    && request.getParameter("authorization_details") == null
+                    && request.getParameter("code_challenge") != null;
     }
 
     public static RequestMatcher requestMatcherForService(){

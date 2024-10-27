@@ -26,10 +26,11 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
  * from a HttpServletRequest to an instance of OAuth2AuthorizationCodeRequestAuthenticationToken.
  */
 public class AuthorizationCodeRequestConverter implements AuthenticationConverter {
-
     private final RequestMatcher authenticationServiceRequestMatcher;
     private final RequestMatcher authorizationCredentialRequestMatcher;
-    private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous", "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+    private final RequestMatcher withoutScopeOrAuthorizationDetailsRequestMatcher;
+    private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous",
+          "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
     private final Logger logger = LogManager.getLogger(AuthorizationCodeRequestConverter.class);
 
     public AuthorizationCodeRequestConverter(){
@@ -46,20 +47,30 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
                 "/oauth2/authorize", HttpMethod.GET.name()
             ), credentialsRequestMatcher
         );
+
+        // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
+        RequestMatcher withoutScopeOrAuthorizationDetails = OAuth2AuthorizeRequest.requestMatcherWithoutScopeOrAuthorizationDetails();
+        this.withoutScopeOrAuthorizationDetailsRequestMatcher = new AndRequestMatcher(
+              new AntPathRequestMatcher(
+                    "/oauth2/authorize", HttpMethod.GET.name()
+              ), withoutScopeOrAuthorizationDetails
+        );
     }
 
     @Override
     public Authentication convert(HttpServletRequest request){
         logger.info("Request received at {}", request.getRequestURL().toString());
 
-        if(!this.authenticationServiceRequestMatcher.matches(request) && !this.authorizationCredentialRequestMatcher.matches(request)){
-            if(!request.getParameter("response_type").equals("code")){
+        if (!this.authenticationServiceRequestMatcher.matches(request) &&
+              !this.authorizationCredentialRequestMatcher.matches(request) &&
+              !this.withoutScopeOrAuthorizationDetailsRequestMatcher.matches(request))
+        {
+            if (!request.getParameter("response_type").equals("code")) {
                 String error_description = "The response type in the request is not supported.";
                 OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE, error_description, null);
                 logger.error(error.toString());
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
-            }
-            else {
+            } else {
                 String error_description = "The request is missing a required parameter.";
                 OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, error_description, null);
                 logger.error(error.toString());
@@ -83,7 +94,8 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication is not present. The user is not authenticated.");
         }
-        else if (!principal.getClass().equals(AuthenticationManagerToken.class) && !principal.getClass().equals(UsernamePasswordAuthenticationToken.class)) {
+        else if (!principal.getClass().equals(AuthenticationManagerToken.class) &&
+              !principal.getClass().equals(UsernamePasswordAuthenticationToken.class)) {
             principal = ANONYMOUS_AUTHENTICATION;
             logger.warn("Authentication present is not valid. The authentication mechanism is not the supported.");
         }
@@ -120,7 +132,6 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         additionalParameters.put("description", authorizeRequest.getDescription());
         additionalParameters.put("account_token", authorizeRequest.getAccount_token());
         additionalParameters.put("clientData", authorizeRequest.getClientData());
-
         return additionalParameters;
     }
 }
