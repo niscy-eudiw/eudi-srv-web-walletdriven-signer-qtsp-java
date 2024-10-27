@@ -10,6 +10,7 @@ authorization_server/src/main/resources/application-client-registration.yml
 authorization_server/src/main/resources/application-dev.yml
 authorization_server/src/main/resources/application-user-login-form.yml
 authorization_server/src/main/resources/keystore.p12
+common_tools/src/main/resources/application-crypto.yml
 resource_server/src/main/resources/application-auth.yml
 resource_server/src/main/resources/application-dev.yml
 resource_server/src/main/resources/keystore.p12

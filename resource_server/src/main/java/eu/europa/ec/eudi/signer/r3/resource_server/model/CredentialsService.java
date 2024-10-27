@@ -52,6 +52,19 @@ public class CredentialsService {
         return listAvailableCredentials;
     }
 
+    public boolean existsActiveCertificate(List<String> listAvailableCredentials){
+        for (String credentialId: listAvailableCredentials){
+            Optional<Credentials> optionalCredential = this.credentialsRepository.findById(credentialId);
+            if (optionalCredential.isEmpty()) continue;
+            Credentials credential = optionalCredential.get();
+            try {
+                this.certificatesService.base64DecodeCertificate(credential.getCertificate()).checkValidity();
+                return true;
+            } catch (Exception ignored) {}
+        }
+        return false;
+    }
+
     /**
      * Function that returns the list of credential info
      * @param listAvailableCredentials the list of the available credentials to a user, retrieved previously

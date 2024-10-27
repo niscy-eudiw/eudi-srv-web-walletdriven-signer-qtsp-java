@@ -73,16 +73,26 @@ info:
   validationInfo: false
   signAlgorithms:
     algos:
-      - "1.2.840.10045.4.3.2"
       - "1.2.840.113549.1.1.1"
-      - "1.2.840.113549.1.1.10"
   signature_formats:
     P:
-      - "Certification"
-      - "Revision"
+      - "Enveloped"
+    X:
+      - "Enveloped"
+      - "Enveloping"
+      - "Detached"
+      - "Internally detached"
+    C:
+      - "Enveloping"
+      - "Detached"
+    J:
+      - "Enveloping"
+      - "Detached"
   conformance_levels:
     - "Ades-B-B"
     - "Ades-B-T"
+    - "Ades-B-LT"
+    - "Ades-B-LTA"
 
 credentials:
   onlyValidSupport: false

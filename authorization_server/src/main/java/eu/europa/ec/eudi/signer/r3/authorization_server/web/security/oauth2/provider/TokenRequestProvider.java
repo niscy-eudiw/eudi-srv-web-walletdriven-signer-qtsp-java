@@ -132,7 +132,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
             try {
                 MessageDigest sha = MessageDigest.getInstance("SHA-256");
                 byte[] result = sha.digest(code_verifier.getBytes());
-                code_challenge_calculated = Base64.getUrlEncoder().encodeToString(result);
+                code_challenge_calculated = Base64.getUrlEncoder().withoutPadding().encodeToString(result);
+                logger.info("Code_Challenge_Calculated: {}", code_challenge_calculated);
             } catch (Exception e) {
                 throw new OAuth2AuthenticationException(OAuth2ErrorCodes.INVALID_GRANT);
             }
@@ -251,9 +252,6 @@ public class TokenRequestProvider implements AuthenticationProvider {
             accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, generatedAccessToken.getTokenValue(),
                   generatedAccessToken.getIssuedAt(), generatedAccessToken.getExpiresAt(), tokenContext.getAuthorizedScopes());
         }
-        /*OAuth2AccessToken accessToken = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, generatedAccessToken.getTokenValue(),
-              generatedAccessToken.getIssuedAt(), generatedAccessToken.getIssuedAt().plus(730L, ChronoUnit.DAYS), tokenContext.getAuthorizedScopes());
-        logger.info("Generated access token");*/
 
         OAuth2Authorization.Builder authorizationBuilder = OAuth2Authorization.from(authorization);
         if (generatedAccessToken instanceof ClaimAccessor claimAccessor) {
