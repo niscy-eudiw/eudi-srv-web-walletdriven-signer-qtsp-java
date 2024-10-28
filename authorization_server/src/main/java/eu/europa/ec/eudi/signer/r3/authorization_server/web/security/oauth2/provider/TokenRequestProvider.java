@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
@@ -153,15 +154,20 @@ public class TokenRequestProvider implements AuthenticationProvider {
         if(authorization.getAuthorizedScopes().contains("credential") && authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
             if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null && authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") == null) {
                 throw new OAuth2AuthenticationException(
-                      getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest don't match the Authorization Details from the authorizationRequest."));
+                      getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
             } else {
                 String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
                 String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
-                JSONObject authDetailsAuthorizationJSON = new JSONObject(authDetailsAuthorization);
-                JSONObject authDetailsTokenJSON = new JSONObject(authDetailsToken);
+
+                JSONArray authDetailsAuthorizationArray = new JSONArray(authDetailsAuthorization);
+                JSONObject authDetailsAuthorizationJSON = authDetailsAuthorizationArray.getJSONObject(0);
+
+                JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
+                JSONObject authDetailsTokenJSON = authDetailsTokenArray.getJSONObject(0);
+
                 if (!authDetailsAuthorizationJSON.similar(authDetailsTokenJSON)) {
                     throw new OAuth2AuthenticationException(
-                          getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest don't match the Authorization Details from the authorizationRequest."));
+                          getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
                 }
             }
             logger.info("Validated Authorization_details");

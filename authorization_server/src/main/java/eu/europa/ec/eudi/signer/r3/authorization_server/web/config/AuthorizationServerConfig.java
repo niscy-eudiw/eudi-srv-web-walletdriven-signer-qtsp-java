@@ -283,7 +283,8 @@ public class AuthorizationServerConfig {
                     assert authorizationRequest != null;
                     if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
-						JSONObject authDetailsAuthorizationJSON = new JSONObject(authDetailsAuthorization);
+						JSONArray authDetailsAuthorizationArray = new JSONArray(authDetailsAuthorization);
+						JSONObject authDetailsAuthorizationJSON = authDetailsAuthorizationArray.getJSONObject(0);
 						claims.claim("credentialID", authDetailsAuthorizationJSON.get("credentialID"));
 						claims.claim("hashAlgorithmOID", authDetailsAuthorizationJSON.get("hashAlgorithmOID"));
 						JSONArray documentDigests = authDetailsAuthorizationJSON.getJSONArray("documentDigests");
