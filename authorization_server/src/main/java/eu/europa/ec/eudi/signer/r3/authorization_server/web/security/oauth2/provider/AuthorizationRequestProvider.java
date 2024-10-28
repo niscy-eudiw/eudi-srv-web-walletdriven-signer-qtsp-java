@@ -96,17 +96,12 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         logger.info("ClientID from AuthenticationToken is registered.");
 
         AuthorizationGrantType grantType = validateAndFetchAuthorizationGrantType(registeredClient, authenticationToken);
-
         String redirectUri = validateAndFetchRedirectUri(registeredClient, authenticationToken);
-
         Set<String> requestedScopes = validateAndFetchScopes(registeredClient, authenticationToken);
-
         validatePKCEParameter(authenticationToken);
 
         String authorizationDetails = (String) authenticationToken.getAdditionalParameters().get("authorization_details");
-        if(authorizationDetails != null){
-            validateAuthorizationDetails(authorizationDetails, authenticationToken);
-        }
+        if(authorizationDetails != null) validateAuthorizationDetails(authorizationDetails, authenticationToken);
 
         // The request is valid - ensure the resource owner is authenticated
         Authentication principal = (Authentication) authenticationToken.getPrincipal();
@@ -229,46 +224,55 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
     private void validateAuthorizationDetails(String authorizationDetails,
                                               OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken){
         try{
-            JSONObject authorizationDetailsJSON = new JSONObject(authorizationDetails);
+            JSONArray authorizationDetailsArray = new JSONArray(authorizationDetails);
+            if(authorizationDetailsArray.isEmpty()){
+                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
+                      "Authorization Details Object is missing.");
+                throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
+            }
 
-            String type = authorizationDetailsJSON.getString("type");
-            if(type == null){
+            JSONObject authorizationDetailsJSON = authorizationDetailsArray.getJSONObject(0);
+
+            if(!authorizationDetailsJSON.has("type")){
                 OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                       "The 'type' in the 'authorization_details' parameter is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
+            String type = authorizationDetailsJSON.getString("type");
             if(!type.equals("credential")){
                 OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                       "The 'type' in the 'authorization_details' parameter is invalid.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
 
-            String credentialID = authorizationDetailsJSON.getString("credentialID");
-            String signatureQualifier = authorizationDetailsJSON.getString("signatureQualifier");
+            String credentialID = null;
+            if(authorizationDetailsJSON.has("credentialID")){
+                credentialID = authorizationDetailsJSON.getString("credentialID");
+            }
+            String signatureQualifier = null;
+            if(authorizationDetailsJSON.has("signatureQualifier")){
+                signatureQualifier = authorizationDetailsJSON.getString("signatureQualifier");
+            }
             if(credentialID == null && signatureQualifier == null){
                 OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                       "The 'credentialID' and 'signatureQualifier' in the 'authorization_details' parameter missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
 
-            String hashAlgorithmOID = authorizationDetailsJSON.getString("hashAlgorithmOID");
-            if(hashAlgorithmOID == null){
+            if(!authorizationDetailsJSON.has("hashAlgorithmOID")) {
                 OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                       "The 'hashAlgorithmOID' in the 'authorization_details' parameter is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
 
-            JSONArray documentDigests = authorizationDetailsJSON.getJSONArray("documentDigests");
-            if(documentDigests == null){
+            if(!authorizationDetailsJSON.has("documentDigests")){
                 OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                       "The 'documentDigests' in the 'authorization_details' parameter is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
-
-            for (Object jsonObject: documentDigests){
+            for (Object jsonObject: authorizationDetailsJSON.getJSONArray("documentDigests")){
                 JSONObject j = (JSONObject) jsonObject;
-                String hash = j.getString("hash");
-                if(hash == null){
+                if(!j.has("hash")){
                     OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                           "The 'hash' in the 'documentDigests' in 'authorization_details' parameter is missing.");
                     throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
@@ -276,6 +280,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             }
         }
         catch (JSONException e){
+            e.printStackTrace();
             OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                   "The 'authorization_details' parameter in the request is invalid.");
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
