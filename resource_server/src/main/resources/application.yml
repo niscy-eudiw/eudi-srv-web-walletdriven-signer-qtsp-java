@@ -73,7 +73,14 @@ info:
   validationInfo: false
   signAlgorithms:
     algos:
-      - "1.2.840.113549.1.1.1"
+      - "1.2.840.113549.1.1.1" # RSA Encryption
+      - "1.2.840.113549.1.1.11" # rsa-with-sha256
+      - "1.2.840.113549.1.1.12" # rsa-with-sha384
+      - "1.2.840.113549.1.1.13" # rsa-with-sha512
+      - "1.2.840.10045.2.1" # ecdsa or ecPublicKey
+      - "1.2.840.10045.4.3.2" # ecdsa-with-SHA256
+      - "1.2.840.10045.4.3.3" # ecdsa-with-SHA384
+      - "1.2.840.10045.4.3.4" # ecdsa-with-SHA512
   signature_formats:
     P:
       - "Enveloped"
@@ -100,6 +107,6 @@ credentials:
 logging:
   level:
     root: INFO
-    org.springframework.web: TRACE
-    org.springframework.security: TRACE
+    org.springframework.web: INFO
+    org.springframework.security: INFO
     org.springframework.security.oauth2: INFO
