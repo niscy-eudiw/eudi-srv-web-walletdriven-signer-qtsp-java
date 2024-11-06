@@ -3,9 +3,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo;
 import java.util.List;
 
 public class CredentialsInfoAuth {
-
-    // explicit | oauth2code
-    private String mode;
+    private String mode; // explicit | oauth2code
     private String expression;
     private List<Object> objects;
 

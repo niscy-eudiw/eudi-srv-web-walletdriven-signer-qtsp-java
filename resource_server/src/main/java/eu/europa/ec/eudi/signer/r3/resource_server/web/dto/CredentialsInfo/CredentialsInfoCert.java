@@ -3,20 +3,13 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo;
 import java.util.List;
 
 public class CredentialsInfoCert {
-    // valid | expired | revoked | suspended
-    private String status;
-    // one or more certificates from the certificate chain
-    private List<String> certificates;
-    // the issuer distinguished name from the end entity certificate
-    private String issuerDN;
-    // the serial number of the end entity certificate
-    private String serialNumber;
-    // the subject distinguished name from the end entity certificate
-    private String subjectDN;
-    // the validity start date from the end entity certificate
-    private String validFrom;
-    // the validity end date from the end entity certificate
-    private String validTo;
+    private String status; // valid | expired | revoked | suspended
+    private List<String> certificates; // one or more certificates from the certificate chain
+    private String issuerDN; // the issuer distinguished name from the end entity certificate
+    private String serialNumber; // the serial number of the end entity certificate
+    private String subjectDN; // the subject distinguished name from the end entity certificate
+    private String validFrom; // the validity start date from the end entity certificate
+    private String validTo; // the validity end date from the end entity certificate
 
     public String getStatus() {
         return status;

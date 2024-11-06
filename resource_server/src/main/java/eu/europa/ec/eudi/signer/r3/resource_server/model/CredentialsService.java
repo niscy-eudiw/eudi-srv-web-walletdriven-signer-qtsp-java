@@ -14,7 +14,6 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.Crede
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.security.cert.X509Certificate;
 
@@ -156,9 +155,6 @@ public class CredentialsService {
             credentialsInfoCert.setSerialNumber(String.valueOf(x509Certificate.getSerialNumber()));
             credentialsInfoCert.setSubjectDN(x509Certificate.getSubjectDN().getName());
 
-
-            String patternDate = "YYYYMMDDHHMMSSZ";
-            SimpleDateFormat simpleDateFormatter = new SimpleDateFormat(patternDate);
             Date validTo = x509Certificate.getNotAfter();
             Date validFrom = x509Certificate.getNotBefore();
             credentialsInfoCert.setValidTo(new ASN1GeneralizedTime(validTo).getTimeString());
