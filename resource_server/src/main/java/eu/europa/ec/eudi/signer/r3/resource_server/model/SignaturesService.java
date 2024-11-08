@@ -5,10 +5,13 @@ import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.C
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
 import eu.europa.esig.dss.enumerations.*;
 
+import java.io.ByteArrayOutputStream;
+import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERSequenceGenerator;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,14 +113,27 @@ public class SignaturesService {
 
         String privateKeyBase64 = credential.getPrivateKey();
         byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
-
         List<String> signatures = new ArrayList<>();
-        for (String dtbs : hashes) {
-            String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
-            byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-            byte[] signatureBytes = this.hsmService.signDTBSWithGivenAlgorithmAndRSAKey(privateKeyBytes, dtbsBytes, signatureAlgorithm);
-            String signature = Base64.getEncoder().encodeToString(signatureBytes);
-            signatures.add(signature);
+
+        if(signatureAlgorithm.contains("RSA")){
+            logger.info("Signing {} hashes with the credential id {} the signature algorithm {} and a RSA key.", hashes.size(), credentialID, signatureAlgorithm);
+            for (String dtbs : hashes) {
+                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
+                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
+                byte[] signatureBytes = this.hsmService.signDTBSWithRSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+                String signature = Base64.getEncoder().encodeToString(signatureBytes);
+                signatures.add(signature);
+            }
+        }
+        else if(signatureAlgorithm.contains("ECDSA")){
+            logger.info("Signing {} hashes with the credential id {} the signature algorithm {} and a P-256 key.", hashes.size(), credentialID, signatureAlgorithm);
+            for (String dtbs : hashes) {
+                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
+                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
+                byte[] signatureBytes = this.hsmService.signDTBSWithECDSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+                String signature = Base64.getEncoder().encodeToString(signatureBytes);
+                signatures.add(signature);
+            }
         }
         return signatures;
     }
@@ -134,7 +150,7 @@ public class SignaturesService {
             return algorithmName;
         }
         catch (IllegalArgumentException e){
-			logger.error("Trying to load the Signature Algorithm from the OID {}." +
+			logger.warn("Trying to load the Signature Algorithm from the OID {}." +
                   " The given algorithm is not a valid signature algorithm.", signAlgo);
 
             EncryptionAlgorithm encryptionAlgorithm = EncryptionAlgorithm.forOID(signAlgo);

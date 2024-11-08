@@ -21,10 +21,7 @@ import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import javax.security.auth.x500.X500Principal;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -72,11 +69,20 @@ public class CertificatesService {
         return (X509Certificate)certFactory.generateCertificate(inputStream);
     }
 
-    public List<X509Certificate> generateCertificatesWithRSA(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
+
+    public List<X509Certificate> generateRSACertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
+        return generateCertificates(publicKey, givenName, surname, subjectCN, countryCode, privateKeyValues, "RSA");
+    }
+
+    public List<X509Certificate> generateP256Certificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
+        return generateCertificates(publicKey, givenName, surname, subjectCN, countryCode, privateKeyValues, "ECDSA");
+    }
+
+    private List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues, String keyAlgorithm) throws Exception{
         // Create a certificate Signing Request for the keys
         byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
-        byte[] signature = hsmService.signDTBSWithRSAKey(privateKeyValues, csrInfo);
-        PKCS10CertificationRequest certificateHSM = generateCertificateRequestWithRSA(csrInfo, signature);
+
+        PKCS10CertificationRequest certificateHSM = generateCertificateRequest(privateKeyValues, csrInfo, keyAlgorithm);
         String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
 
         // Makes a request to the CA
@@ -87,23 +93,6 @@ public class CertificatesService {
         return certificateAndCertificateChain;
     }
 
-    public List<X509Certificate> generateCertificatesWithEdDSA(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
-        // Create a certificate Signing Request for the keys
-        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
-        byte[] signature = hsmService.signDTBSWithEdDSAKey(privateKeyValues, csrInfo);
-        hsmService.verifyECDSASignature(csrInfo, signature, publicKey);
-
-        PKCS10CertificationRequest certificateHSM = generateCertificateRequestWithEdDSA(csrInfo, signature);
-        String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
-        System.out.println(certificateString);
-
-        // Makes a request to the CA
-        List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
-        if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
-            throw new Exception("Certificates received from CA are not valid");
-        }
-        return certificateAndCertificateChain;
-    }
 
     private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName,
                                                   String countryName) throws Exception {
@@ -121,21 +110,21 @@ public class CertificatesService {
         return cri.getEncoded();
     }
 
-    private PKCS10CertificationRequest generateCertificateRequestWithRSA(byte[] certificateRequestInfo, byte[] signature) {
-        CertificationRequestInfo cri = CertificationRequestInfo.getInstance(certificateRequestInfo);
+    private PKCS10CertificationRequest generateCertificateRequest( byte[] privateKeyValues, byte[] certRequestInfo, String keyAlgorithm) throws Exception {
+        byte[] signature = null;
+        AlgorithmIdentifier algorithmIdentifier = null;
+        if(keyAlgorithm.equals("RSA")) {
+            signature = hsmService.signDTBSWithRSAAndSHA256(privateKeyValues, certRequestInfo);
+            algorithmIdentifier = new AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption);
+        }
+        else if(keyAlgorithm.equals("ECDSA")){
+            signature = hsmService.signDTBSWithECDSAAndSHA256(privateKeyValues, certRequestInfo);
+            algorithmIdentifier = new AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256);
+        }
+
+        CertificationRequestInfo cri = CertificationRequestInfo.getInstance(certRequestInfo);
         DERBitString sig = new DERBitString(signature);
-
-        AlgorithmIdentifier rsaWithSha256 = new AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption);
-        CertificationRequest cr = new CertificationRequest(cri, rsaWithSha256, sig);
-        return new PKCS10CertificationRequest(cr);
-    }
-
-    private PKCS10CertificationRequest generateCertificateRequestWithEdDSA(byte[] certificateRequestInfo, byte[] signature) {
-        CertificationRequestInfo cri = CertificationRequestInfo.getInstance(certificateRequestInfo);
-        DERBitString sig = new DERBitString(signature);
-
-        AlgorithmIdentifier rsaWithSha256 = new AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256);
-        CertificationRequest cr = new CertificationRequest(cri, rsaWithSha256, sig);
+        CertificationRequest cr = new CertificationRequest(cri, algorithmIdentifier, sig);
         return new PKCS10CertificationRequest(cr);
     }
 
