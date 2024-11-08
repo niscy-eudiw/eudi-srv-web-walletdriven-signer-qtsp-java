@@ -5,11 +5,20 @@ import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.C
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
 import eu.europa.esig.dss.enumerations.*;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestException;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+
+import org.bouncycastle.asn1.*;
+import org.bouncycastle.asn1.pkcs.RSAPublicKey;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
+import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,11 +124,24 @@ public class SignaturesService {
         for (String dtbs : hashes) {
             String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
             byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-            byte[] signatureBytes = this.hsmService.signDTBSWithGivenAlgorithmAndRSAKey(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+            byte[] dtbsr = wrapForRsaSign(dtbsBytes, hashAlgorithmOID);
+
+            byte[] signatureBytes = this.hsmService.signDTBSWithGivenAlgorithmAndRSAKey(privateKeyBytes, dtbsr, signatureAlgorithm);
             String signature = Base64.getEncoder().encodeToString(signatureBytes);
             signatures.add(signature);
         }
         return signatures;
+    }
+
+    public static byte[] wrapForRsaSign(byte[] dig, String hashAlgo) throws Exception {
+        ASN1ObjectIdentifier oid = new DefaultDigestAlgorithmIdentifierFinder().find(hashAlgo).getAlgorithm();
+        ASN1Sequence oidSeq = new DERSequence(new ASN1Encodable[] { oid, DERNull.INSTANCE });
+        ASN1Sequence seq = new DERSequence(new ASN1Encodable[] { oidSeq, new DEROctetString(dig) });
+        try {
+            return seq.getEncoded();
+        } catch (IOException e) {
+            throw new DigestException(e);
+        }
     }
     
     private String getSignatureAlgorithm(String signAlgo, String signAlgoParams, String hashAlgorithmOID) throws Exception {

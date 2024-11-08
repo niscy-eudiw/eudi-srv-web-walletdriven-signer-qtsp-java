@@ -1,6 +1,8 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm;
 
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.PublicKey;
@@ -262,7 +264,7 @@ public class HsmService {
         long signatureAlgLong = determineLongValueForAlgorithm(signatureAlgorithm);
 
         // Sign bytes
-        CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
+        CE.SignInit(session, new CKM(CKM.RSA_PKCS), privateKey);
         byte[] signed = CE.Sign(session, DTBSR);
 
         CE.DestroyObject(session, secretKeyObj);
