@@ -307,7 +307,7 @@ public class HsmService {
         long signatureAlgLong = determineLongValueForAlgorithm(signatureAlgorithm);
 
         // Sign bytes
-        CE.SignInit(session, new CKM(CKM.RSA_PKCS), privateKey);
+        CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
         byte[] signed = CE.Sign(session, DTBSR);
 
         CE.DestroyObject(session, secretKeyObj);
@@ -412,10 +412,12 @@ public class HsmService {
 
     private long determineLongValueForAlgorithm(String signatureAlgorithm) throws Exception {
         return switch (signatureAlgorithm) {
+            case "RSA" -> 1L;
             case "SHA256WITHRSA" -> 64L;
             case "SHA384WITHRSA" -> 65L;
             case "SHA512WITHRSA" -> 66L;
 
+            case "ECDSA" -> 4161L;
             case "SHA256WITHECDSA"-> 4164L;
             case "SHA384WITHECDSA"->4165L;
             case "SHA512WITHECDSA" -> 4166L;

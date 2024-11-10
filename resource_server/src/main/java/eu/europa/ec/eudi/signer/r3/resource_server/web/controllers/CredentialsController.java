@@ -76,14 +76,11 @@ public class CredentialsController {
             List<String> listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             if(listAvailableCredentialsId.isEmpty() || !this.credentialsService.existsActiveCertificate(listAvailableCredentialsId)){
                 logger.info("There are no active certificates.");
-
                 String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
-                System.out.println(givenNameDecrypted);
                 String surnameDecrypted = this.cryptoUtils.decryptString(surname);
-                System.out.println(surnameDecrypted);
 
-                // this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
-                this.credentialsService.createECDSAP256Credential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
+                this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
+                //this.credentialsService.createECDSAP256Credential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             }
             credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);

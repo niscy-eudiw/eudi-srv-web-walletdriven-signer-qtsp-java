@@ -113,6 +113,8 @@ public class SignaturesService {
             throw new Exception("An error occurred when trying to determine the signature algorithm to use.");
         }
 
+        System.out.println(signatureAlgorithm);
+
         String privateKeyBase64 = credential.getPrivateKey();
         byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
         List<String> signatures = new ArrayList<>();
@@ -122,7 +124,7 @@ public class SignaturesService {
             for (String dtbs : hashes) {
                 String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
                 byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-                byte[] dtbsr = wrapForRsaSign(dtbsBytes, hashAlgorithmOID);
+                // byte[] dtbsr = wrapForRsaSign(dtbsBytes, hashAlgorithmOID);
                 byte[] signatureBytes = this.hsmService.signDTBSWithRSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
                 signatures.add(signature);
@@ -158,7 +160,7 @@ public class SignaturesService {
 
         try{
             SignatureAlgorithm signAlgorithm = SignatureAlgorithm.forOID(signAlgoOID.getId());
-            String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signAlgorithm.getOid()));
+            String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signAlgorithm.getEncryptionAlgorithm().getOid()));
             logger.info("The algorithm defined in the signAlgo parameter already contains an hash algorithm." +
                   " Algorithm Name found: {}", algorithmName);
             return algorithmName;
@@ -177,6 +179,7 @@ public class SignaturesService {
             String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signatureAlgorithm.getOid()));
             logger.info("From the signAlgo and the hashAlgorithmOID, the signature algorithm was obtained: {}",
                   algorithmName);
+            // return encryptionAlgorithm.getName();
             return algorithmName;
         }
     }
