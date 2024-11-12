@@ -292,16 +292,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         this.authorizationService.save(authorization);
         logger.info("Saved Authorization");
 
-        OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;
-        if(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") != null) {
-            String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
-            Map<String, Object> additionalParameters = new HashMap<>();
-            JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
-            List<Object> authDetailsList = authDetailsTokenArray.toList();
-            additionalParameters.put("authorization_details", authDetailsList);
-            accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
-        }
-        else accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null);
+        OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null);
         logger.info("Authenticate TokenRequest and generated an OAuth2AccessTokenAuthenticationToken.");
         return accessTokenAuthenticationToken;
     }
