@@ -1,3 +1,19 @@
+/*
+ Copyright 2024 European Commission
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
 package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
@@ -13,10 +29,8 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.Crede
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
-
 import java.util.*;
 import java.security.cert.X509Certificate;
-
 import org.bouncycastle.asn1.ASN1GeneralizedTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -173,13 +187,21 @@ public class CredentialsService {
         return infoAuth;
     }
 
-    // TO DO: add exceptions!
+    /**
+     * Function that allows to create a credential (key pair and certificate) based on the RSA algorithm
+     * @param userHash the hash of the user to whom the credential is created
+     * @param givenName the given name of the user to be present in the certificate
+     * @param surname the surname of the user to be present in the certificate
+     * @param name the full name of the user to be used as CN
+     * @param issuingCountry the country to be used in the certificate
+     */
     public void createRSACredential(String userHash, String givenName, String surname, String name, String issuingCountry)
         throws Exception{
+        int keySizeInBits = 2048;
         Credentials credential = new Credentials();
-        KeyPairRegister keysValues = this.keysService.RSAKeyPairGeneration();
+        KeyPairRegister keysValues = this.keysService.generateRSAKeyPair(keySizeInBits);
 
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateCertificatesWithRSA(keysValues.getPublicKeyValue(),
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateRSACertificates(keysValues.getPublicKeyValue(),
               givenName, surname, name, issuingCountry, keysValues.getPrivateKeyBytes());
         X509Certificate signingCertificate = EJBCACertificates.get(0);
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
@@ -201,9 +223,12 @@ public class CredentialsService {
         credential.setPublicKey( Base64.getEncoder().encodeToString(keysValues.getPublicKeyValue().getEncoded()));
         credential.setKeyStatus("enabled");
         List<String> keyAlgo = new ArrayList<>();
-        keyAlgo.add("1.2.840.113549.1.1.1");
+        keyAlgo.add("1.2.840.113549.1.1.1"); // rsaEncryption
+        keyAlgo.add("1.2.840.113549.1.1.11"); // sha256WithRSAEncryption
+        keyAlgo.add("1.2.840.113549.1.1.12"); // sha384WithRSAEncryption
+        keyAlgo.add("1.2.840.113549.1.1.13"); // sha512WithRSAEncryption
         credential.setKeyAlgo(keyAlgo);
-        credential.setKeyLen(2048);
+        credential.setKeyLen(keySizeInBits);
         credential.setCertStatus("valid");
         credential.setCertificate(this.certificatesService.base64EncodeCertificate(signingCertificate));
         credential.setCertificateChain(certs);
@@ -211,16 +236,23 @@ public class CredentialsService {
         this.credentialsRepository.save(credential);
     }
 
-    // TO DO: add exceptions!
-    public void createEdDSACredential(String userHash, String givenName, String surname, String name, String issuingCountry)
+    /**
+     * Function that allows to create a credential (key pair and certificate) based on the EC (P-256) algorithm
+     * @param userHash the hash of the user to whom the credential is created
+     * @param givenName the given name of the user to be present in the certificate
+     * @param surname the surname of the user to be present in the certificate
+     * @param name the full name of the user to be used as CN
+     * @param issuingCountry the country to be used in the certificate
+     */
+    public void createECDSAP256Credential(String userHash, String givenName, String surname, String name, String issuingCountry)
           throws Exception{
         Credentials credential = new Credentials();
+        KeyPairRegister keyValues = this.keysService.generateP256KeyPair();
 
-        KeyPairRegister keyValues = this.keysService.EdDSAKeyPairGeneration();
-
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateCertificatesWithEdDSA(keyValues.getPublicKeyValue(), givenName,
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(keyValues.getPublicKeyValue(), givenName,
               surname, name, issuingCountry, keyValues.getPrivateKeyBytes());
         X509Certificate signingCertificate = EJBCACertificates.get(0);
+
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
 
         List<CertificateChain> certs = new ArrayList<>();
@@ -237,19 +269,22 @@ public class CredentialsService {
         credential.setMultisign(1);
         credential.setLang("en-US");
         credential.setPrivateKey(Base64.getEncoder().encodeToString(keyValues.getPrivateKeyBytes()));
-        credential.setPublicKey( Base64.getEncoder().encodeToString(keyValues.getPublicKeyValue().getEncoded()));
+        credential.setPublicKey(Base64.getEncoder().encodeToString(keyValues.getPublicKeyValue().getEncoded()));
         credential.setKeyStatus("enabled");
         List<String> keyAlgo = new ArrayList<>();
-        keyAlgo.add("1.2.840.113549.1.1.1");
+        keyAlgo.add("1.2.840.10045.2.1"); // ecPublicKey
+        keyAlgo.add("1.2.840.10045.4.3.2"); // ecdsa-with-SHA256
+        keyAlgo.add("1.2.840.10045.4.3.3"); // ecdsa-with-SHA384
+        keyAlgo.add("1.2.840.10045.4.3.4"); // ecdsa-with-SHA512
         credential.setKeyAlgo(keyAlgo);
-        credential.setKeyLen(2048);
+        credential.setKeyLen(256);
+        credential.setKeyCurve("1.2.840.10045.3.1.7");
         credential.setCertStatus("valid");
         credential.setCertificate(this.certificatesService.base64EncodeCertificate(signingCertificate));
         credential.setCertificateChain(certs);
         credential.setAuthMode("oauth2code");
         this.credentialsRepository.save(credential);
     }
-
 
     /**
      * Function that checks if a credential ID belongs to a user

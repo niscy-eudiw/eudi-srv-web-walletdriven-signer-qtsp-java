@@ -1,17 +1,33 @@
+/*
+ Copyright 2024 European Commission
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
 package eu.europa.ec.eudi.signer.r3.resource_server.model.keys;
 
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
-import org.bouncycastle.asn1.edec.EdECObjectIdentifiers;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.jcajce.provider.asymmetric.util.EC5Util;
 import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.ECPointUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
-import org.bouncycastle.jce.spec.ECNamedCurveSpec;
 
 import java.math.BigInteger;
 import java.security.*;
+import java.security.interfaces.ECPublicKey;
 import java.security.spec.*;
 
 /**
@@ -25,8 +41,8 @@ public class KeysService {
         this.hsmService = hsmService;
     }
 
-    public KeyPairRegister RSAKeyPairGeneration() throws Exception{
-        byte[][] keyPairBytes = this.hsmService.generateRSAKeyPair(2048);
+    public KeyPairRegister generateRSAKeyPair(int keySizeInBits) throws Exception{
+        byte[][] keyPairBytes = this.hsmService.generateRSAKeyPair(keySizeInBits);
         KeyPairRegister keyPair = new KeyPairRegister();
         keyPair.setPrivateKeyBytes(keyPairBytes[0]);
 
@@ -46,26 +62,57 @@ public class KeysService {
         return keyFactory.generatePublic(pKeySpec);
     }
 
-    public KeyPairRegister EdDSAKeyPairGeneration() throws Exception{
-        byte[][] keyPairBytes = this.hsmService.generateEdDSAKeyPair();
+    public KeyPairRegister generateP256KeyPair() throws Exception{
+        byte[][] keyPairBytes = this.hsmService.generateECPrime256v1KeyPair();
 
         byte[] privateKeyBytes = keyPairBytes[0];
-        byte[] publicKeyBytes = keyPairBytes[1];
+        byte[] publicKeyQPoint = keyPairBytes[1];
+        byte[] publicKeyParams = keyPairBytes[2];
 
         KeyPairRegister keyPair = new KeyPairRegister();
         keyPair.setPrivateKeyBytes(privateKeyBytes);
-        PublicKey EdDSAPublicKey = getEdDSAPublicKeyFromBytes(publicKeyBytes);
+        PublicKey EdDSAPublicKey = getECPublicKeyFromSpecs(publicKeyQPoint, publicKeyParams);
         keyPair.setPublicKeyValue(EdDSAPublicKey);
         return keyPair;
     }
 
-    private PublicKey getEdDSAPublicKeyFromBytes(byte[] EdDSAPublicKeyBytes) throws Exception{
+    private ECPublicKey getECPublicKeyFromSpecs(byte[] publicKeyQPoint, byte[] publicKeyParams) throws Exception{
         Security.addProvider(new BouncyCastleProvider());
-        KeyFactory keyFactory = KeyFactory.getInstance("EC", "BC");
-        ECNamedCurveParameterSpec spec = ECNamedCurveTable.getParameterSpec("prime256v1");
-        ECParameterSpec params = new ECNamedCurveSpec("prime256v1", spec.getCurve(), spec.getG(), spec.getN());
-        ECPoint point = ECPointUtil.decodePoint(params.getCurve(), EdDSAPublicKeyBytes);
-        ECPublicKeySpec publicKeySpec = new ECPublicKeySpec(point, params);
-        return keyFactory.generatePublic(publicKeySpec);
+        final ASN1ObjectIdentifier oid = ASN1ObjectIdentifier.getInstance(publicKeyParams);
+        final org.bouncycastle.jce.spec.ECParameterSpec ecSpec = ECNamedCurveTable.getParameterSpec(oid.getId());
+        final java.security.spec.EllipticCurve ellipticCurve = EC5Util.convertCurve(ecSpec.getCurve(), ecSpec.getSeed());
+        final java.security.spec.ECPoint ecPoint = ECPointUtil.decodePoint(ellipticCurve, ASN1OctetString.getInstance(publicKeyQPoint).getOctets());
+        final org.bouncycastle.math.ec.ECPoint ecp = EC5Util.convertPoint(ecSpec.getCurve(), ecPoint);
+        final org.bouncycastle.jce.spec.ECPublicKeySpec pubKeySpec = new org.bouncycastle.jce.spec.ECPublicKeySpec(ecp, ecSpec);
+        final KeyFactory keyfactory = KeyFactory.getInstance("ECDSA", "BC");
+		return (ECPublicKey) keyfactory.generatePublic(pubKeySpec);
+    }
+
+    public byte[] getQPointBytesFromECPublicKey(ECPublicKey ECPublicKey) throws Exception{
+        // the value of the q point
+        ECPoint w = ECPublicKey.getW();
+
+        byte[] x = w.getAffineX().toByteArray();
+        byte[] y = w.getAffineY().toByteArray();
+        int fieldSizeBytes = (ECPublicKey.getParams().getCurve().getField().getFieldSize() + 7) / 8;
+        x = padToFieldSize(x, fieldSizeBytes);
+        y = padToFieldSize(y, fieldSizeBytes);
+
+        // Encode the point in uncompressed format: 0x04 + x + y
+        byte[] qPointBytes = new byte[1 + x.length + y.length];
+        qPointBytes[0] = 0x04; // Uncompressed point indicator
+        System.arraycopy(x, 0, qPointBytes, 1, x.length);
+        System.arraycopy(y, 0, qPointBytes, 1 + x.length, y.length);
+
+		return (new DEROctetString(qPointBytes)).getEncoded();
+    }
+
+    private static byte[] padToFieldSize(byte[] coord, int fieldSize) {
+        if (coord.length == fieldSize) {
+            return coord;
+        }
+        byte[] paddedCoord = new byte[fieldSize];
+        System.arraycopy(coord, Math.max(0, coord.length - fieldSize), paddedCoord, Math.max(0, fieldSize - coord.length), Math.min(coord.length, fieldSize));
+        return paddedCoord;
     }
 }
