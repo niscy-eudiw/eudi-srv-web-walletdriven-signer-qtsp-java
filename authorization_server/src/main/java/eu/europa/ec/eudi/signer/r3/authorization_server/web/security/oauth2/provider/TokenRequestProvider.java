@@ -243,7 +243,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
           OAuth2ClientAuthenticationToken clientPrincipal){
 
         Authentication principal = authorization.getAttribute(Principal.class.getName());
-        logger.info("Principal Info: {}", principal.toString());
+		logger.info("Principal Info: {}", principal.toString());
 
         DefaultOAuth2TokenContext.Builder tokenContextBuilder = DefaultOAuth2TokenContext.builder()
               .registeredClient(registeredClient)
