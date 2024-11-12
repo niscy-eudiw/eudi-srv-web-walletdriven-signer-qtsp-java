@@ -20,10 +20,8 @@ import java.util.List;
 import jakarta.validation.constraints.NotBlank;
 
 public class CredentialsInfoKey {
-
-    // enabled | disabled
     @NotBlank
-    private String status;
+    private String status; // enabled | disabled
     @NotBlank
     private List<String> algo;
     @NotBlank

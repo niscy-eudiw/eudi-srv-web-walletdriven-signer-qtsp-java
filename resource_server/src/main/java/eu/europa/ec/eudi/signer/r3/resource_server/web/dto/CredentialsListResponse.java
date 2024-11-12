@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
@@ -86,8 +87,8 @@ public class CredentialsListResponse {
         private CredentialsInfoKey key;
         private CredentialsInfoCert cert;
         private CredentialsInfoAuth auth;
-        // 1 | 2
-        private String SCAL = "1";
+
+        private String SCAL = "1"; // 1 | 2
         // >= 1
         @NotBlank
         private int multisign;
@@ -141,6 +142,7 @@ public class CredentialsListResponse {
             this.auth = auth;
         }
 
+        @JsonProperty("SCAL")
         public String getSCAL() {
             return SCAL;
         }
