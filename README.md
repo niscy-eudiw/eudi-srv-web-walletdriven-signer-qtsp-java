@@ -32,7 +32,10 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 
 This is a REST API server that implements a wallet-driven QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
 The QTSP provides endpoints based on the CSC API v2.0 specification and supports authentication via OpenID4VP.
+
 Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [deploy](#deployment) it in your environment.
+
+The Wallet Centric rQES Specification can be found [here](docs/rqes-walledriven.md).
 
 ## Disclaimer
 
