@@ -20,8 +20,8 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
   - [Deployment](#deployment)
     - [Requirements](#requirements)
     - [Common Tools](#common-tools)
-    - [Authorization Server](#authorization-server)
-    - [Resource Server](#resource-server)
+    - [Authorization Server (AS)](#authorization-server-as)
+    - [Resource Server (RS)](#resource-server-rs)
   - [How to contribute](#how-to-contribute)
   - [License](#license)
     - [Third-party component licenses](#third-party-component-licenses)
@@ -195,7 +195,7 @@ symmetric-secret-key: # a BASE64-encoded value of an AES secret key
 
 This secret key is required to encode certain values in JWT tokens.
 
-### Authorization Server
+### Authorization Server (AS)
 
 1. **Create the application-auth.yml file**
 
@@ -264,7 +264,7 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
    ```
 
-   Replace {ip} with the appropriate IP address or hostname of the RSSP  (???) component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
+   Replace {ip} with the appropriate IP address or hostname of the AS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the AS program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
@@ -319,7 +319,7 @@ This secret key is required to encode certain values in JWT tokens.
    ./deploy_as.sh
    ```
 
-### Resource Server
+### Resource Server (RS)
 
 1. **Create the application-auth.yml file**
 
@@ -378,7 +378,7 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
    ```
 
-   Replace {ip} with the appropriate IP address or hostname of the RSSP (???) component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
+   Replace {ip} with the appropriate IP address or hostname of the RS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RS program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
