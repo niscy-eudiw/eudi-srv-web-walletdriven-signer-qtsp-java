@@ -1,31 +1,38 @@
-# EUDI Wallet-driven QTSP
+# EUDI Wallet-driven signer QTSP
+
+![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
+:heavy_exclamation_mark: **Important!** Before you proceed, please read
+the [EUDI Wallet Reference Implementation project description](https://github.com/eu-digital-identity-wallet/.github/blob/main/profile/reference-implementation.md)
+
 
 ## Table of contents
 
-- [Overview](#overview)
-- [:heavy_exclamation_mark: Disclaimer](#disclaimer)
-- [Sequence Diagrams](#sequence-diagrams)
-  - [Service Authentication](#service-authentication)
-  - [Credentials Listing](#credentials-listing)
-  - [Credential Authorization](#credential-authorization)
-- [Endpoints](#endpoints)
-- [Deployment](#deployment)
-  - [Requirements](#requirements)
-  - [Common Tools](#common-tools)
-  - [Authorization Server](#authorization-server)
-  - [Resource Server](#resource-server)
-
--   [How to contribute](#how-to-contribute)
--   [License](#license)
-   -   [Third-party component licenses](#third-party-component-licenses)
-   -   [License details](#license-details)
+- [EUDI Wallet-driven signer QTSP](#eudi-wallet-driven-signer-qtsp)
+  - [Table of contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Disclaimer](#disclaimer)
+  - [Sequence Diagrams](#sequence-diagrams)
+    - [Service Authentication](#service-authentication)
+    - [Credentials Listing](#credentials-listing)
+    - [Credential Authorization](#credential-authorization)
+  - [Endpoints](#endpoints)
+  - [Deployment](#deployment)
+    - [Requirements](#requirements)
+    - [Common Tools](#common-tools)
+    - [Authorization Server](#authorization-server)
+    - [Resource Server](#resource-server)
+  - [How to contribute](#how-to-contribute)
+  - [License](#license)
+    - [Third-party component licenses](#third-party-component-licenses)
+    - [License details](#license-details)
 
 
 ## Overview
 
-This is a REST API server that implements a wallet-driven QTSP for the remote Qualified Electronic Signature component of the EUDI.
-The QTSP provides endpoints based on the CSC API v2.0 specifications and supports authentication via OpenID4VP.
-Currently, the server is running at "https://walletcentric.signer.eudiw.dev".
+This is a REST API server that implements a wallet-driven QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
+The QTSP provides endpoints based on the CSC API v2.0 specification and supports authentication via OpenID4VP.
+Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [deploy](#deployment) it in your environment.
 
 ## Disclaimer
 
@@ -160,7 +167,7 @@ sequenceDiagram
 
 ## Endpoints
 
-The endpoints presented below are based on the CSC document.
+The endpoints presented below are based on the CSC API v2.0 specifications.
 
 * /oauth2/authorize
 * /oauth2/token
@@ -178,7 +185,7 @@ The endpoints presented below are based on the CSC document.
 
 ### Common Tools
 
-1. **Define the application-crypto.yml file**
+1. **Create the application-crypto.yml file**
 
 The **application-crypto.yml** file must be created in the **common_tools/src/main/resources** folder.
     
@@ -190,9 +197,9 @@ This secret key is required to encode certain values in JWT tokens.
 
 ### Authorization Server
 
-1. **Define the application-auth.yml file**
+1. **Create the application-auth.yml file**
 
-   It is required to define an **application-auth.yml** file in the folder **authorization_server/src/main/resources**. 
+   It is required to create an **application-auth.yml** file in the folder **authorization_server/src/main/resources**. 
    This file allows to define the access credentials of a user of the database for this server. The file should follow the format:
 
    ```
@@ -201,9 +208,9 @@ This secret key is required to encode certain values in JWT tokens.
       datasourcePassword: # the password of the database user, with permissions to the define database
    ```
 
-2. **Define the application-client-registration.yml file**
+2. **Create the application-client-registration.yml file**
 
-   It is required to define an **application-client-registration.yml** file in the folder **authorization_server/src/main/resources**.
+   It is required to create an **application-client-registration.yml** file in the folder **authorization_server/src/main/resources**.
    This file allows to define the OAuth2.0 client of the Authorization Server. This file should follow the format:
 
    ```
@@ -257,7 +264,7 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
    ```
 
-   Replace {ip} with the appropriate IP address or hostname of the RSSP component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
+   Replace {ip} with the appropriate IP address or hostname of the RSSP  (???) component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
@@ -277,7 +284,7 @@ This secret key is required to encode certain values in JWT tokens.
 5. **Set parameters value for authentication using OpenId4VP**
 
    This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet. 
-   To enable this feature, communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
+   To enable this feature (authentication using PID), communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
 
    ```
    verifier:
@@ -303,7 +310,7 @@ This secret key is required to encode certain values in JWT tokens.
 
 7. **Add the issuers certificate**
 
-    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
+   It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
     
 8. **Run the Authorization Server**
@@ -314,9 +321,9 @@ This secret key is required to encode certain values in JWT tokens.
 
 ### Resource Server
 
-1. **Define the application-auth.yml file**
+1. **Create the application-auth.yml file**
 
-   It is required to define an **application-auth.yml** file in the folder **resource_server/src/main/resources**.
+   It is required to create an **application-auth.yml** file in the folder **resource_server/src/main/resources**.
    This file allows to define the access credentials of a user of the database for this server. The file should follow the format:
 
    ```
@@ -327,7 +334,7 @@ This secret key is required to encode certain values in JWT tokens.
       dbEncryptionSalt: # a BASE64-encoded value corresponding to the "Salt" required to form the key that will encrypt/decrypt the secret keys before saving them in the database
    ```
 
-2. **Define the application-ejbca.yml file**
+2. **Create the application-ejbca.yml file**
    The current implementation makes HTTP requests to an EJBCA server, which serves as a Certificate Authority (CA) for issuing new certificates when a user requests it.
 
    These HTTP requests are executed using configurations specified in the file **application-ejbca.yml**, located at **resource_server/src/main/resources**. This file supports configurations for different countries.
@@ -371,7 +378,7 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
    ```
 
-   Replace {ip} with the appropriate IP address or hostname of the RSSP component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
+   Replace {ip} with the appropriate IP address or hostname of the RSSP (???) component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RSSP program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
