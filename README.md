@@ -1,6 +1,7 @@
 # EUDI Wallet-driven signer QTSP
 
-![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+
 
 :heavy_exclamation_mark: **Important!** Before you proceed, please read
 the [EUDI Wallet Reference Implementation project description](https://github.com/eu-digital-identity-wallet/.github/blob/main/profile/reference-implementation.md)
@@ -32,7 +33,10 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 
 This is a REST API server that implements a wallet-driven QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
 The QTSP provides endpoints based on the CSC API v2.0 specification and supports authentication via OpenID4VP.
+
 Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [deploy](#deployment) it in your environment.
+
+The Wallet Centric rQES Specification can be found [here](docs/rqes-walledriven.md).
 
 ## Disclaimer
 
