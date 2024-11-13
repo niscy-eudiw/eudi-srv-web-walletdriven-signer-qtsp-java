@@ -93,7 +93,7 @@ document:
 
 **Before initiating the credential listing or signing operation, the
 Wallet must authenticate itself to the QTSP. In this signature flow, it
-is assumed that both the wallet and the external component (SCA) have
+is assumed that the wallet has
 been previously registered with the QTSP.**
 
 To initiate user authentication with the QTSP (Service Authentication
