@@ -34,6 +34,8 @@ public class WebSecurity {
               .csrf(AbstractHttpConfigurer::disable)
               .authorizeHttpRequests(authorize ->
                     authorize
+                          .requestMatchers("/swagger-ui/**").permitAll()
+                          .requestMatchers("/v3/api-docs/**").permitAll()
                           .requestMatchers("/csc/v2/info").permitAll()
                           .requestMatchers("/csc/v2/signatures/signHash").hasAuthority("SCOPE_credential")
                           .requestMatchers("/csc/v2/credentials/info").hasAnyAuthority("SCOPE_credential", "SCOPE_service")
