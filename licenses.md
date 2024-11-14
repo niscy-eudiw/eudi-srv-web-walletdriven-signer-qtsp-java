@@ -41,7 +41,7 @@ _2024-11-11 14:27:20 CET_
 > -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
-**8** **Group:** `org.springframework.boot` **Name:** `spring-boot-maven-plugin` **Version:** `2.3.1.RELEASE`
+**8** **Group:** `org.springframework.boot` **Name:** `spring-boot-maven-plugin` **Version:** `3.3.0`
 
 > -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
@@ -120,6 +120,12 @@ _2024-11-11 14:27:20 CET_
 
 > -   **POM Project URL**: [https://github.com/FasterXML/jackson](https://github.com/FasterXML/jackson)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+**24** **Group:** `org.springdoc` **Name:** `springdoc-openapi-starter-webmvc-ui` **Version:** `2.3.0`
+
+> -   **POM Project URL**: [https://springdoc.org/](https://springdoc.org/)
+> -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
 
 ## BSD3
 
