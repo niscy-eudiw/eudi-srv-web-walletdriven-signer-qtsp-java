@@ -68,12 +68,21 @@ public class WebUtils {
     public static String convertStreamToString(InputStream is) throws Exception {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            sb.append(line).append("\n");
+        String line = reader.readLine();
+        while (line != null) {
+            sb.append(line);
+            line = reader.readLine();
+            if(line != null) sb.append("\n");
         }
+        reader.close();
         is.close();
         return sb.toString();
+    }
+
+    public static String getSanitizedCookieString(String cookieSession){
+        // Allow alphanumeric characters, spaces, `-`, `_`, `.`, `~`, `=`, `;`, and `,`
+        // Remove disallowed characters and strip extra whitespace
+		return cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
     }
 
     public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers) throws Exception {

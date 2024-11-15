@@ -19,23 +19,37 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 
 public class SignaturesSignHashRequest {
-    @NotBlank
+    @NotBlank(message = "Missing (or invalid type) string parameter credentialID")
+    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          message = "Invalid parameter credentialID")
     private String credentialID;
+
     // the signature activation data returned by the Credential Authorization methods
     private String SAD;
-    @NotBlank
+
     // one or more hash values to be signed. This parameter SHALL contain the Base64-encoded raw message digests
-    private List<String> hashes;
+    @NotEmpty(message = "Empty hash array")
+    //@NotBlank(message = "Missing (or invalid type) array parameter hash")
+    private List<@Pattern(regexp = "([a-zA-Z0-9-_.=]|%[0-9A-Fa-f]{2}){1,100}", message = "Each hash must be URL-encoded") String> hashes;
+
     // the OID of the algorithm used to calculate the hash value.
+    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Invalid parameter hashAlgorithmOID")
     private String hashAlgorithmOID;
-    @NotBlank
+
     // the OID of the algorithm to use for signing
+    @NotBlank
+    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Sign algorithm OID must be in numeric OID format")
     private String signAlgo;
+
     // the Base64-encoded DER-encoded ASN.1 signature parameters, if required by the signature algorithm
     private String signAlgoParams;
+
     // A or S
+    @Pattern(regexp = "^[AS]$", message = "Operation mode must be either 'A' or 'S'")
     private String operationMode;
     private int validity_period;
     private String response_uri;

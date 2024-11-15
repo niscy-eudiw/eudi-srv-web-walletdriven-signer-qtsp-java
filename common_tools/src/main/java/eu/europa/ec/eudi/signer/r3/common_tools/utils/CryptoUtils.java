@@ -28,10 +28,13 @@ import java.util.Base64;
 import java.util.Properties;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class CryptoUtils {
 	private static final int GCM_IV_LENGTH = 12; // 12 bytes
 	private static final int GCM_TAG_LENGTH = 16; // 128 bits
+	private static final Logger log = LoggerFactory.getLogger(CryptoUtils.class);
 
 	private final SecretKey secretKey;
 
@@ -65,7 +68,7 @@ public class CryptoUtils {
 			return Base64.getEncoder().encodeToString(byteBuffer.array());
 		}
 		catch (Exception e){
-			e.printStackTrace();
+			log.error("Error encrypting the value '{}'. {}", value, e.getMessage());
 		}
 		return null;
 	}
@@ -90,7 +93,7 @@ public class CryptoUtils {
 			return new String(valueBytes);
 		}
 		catch (Exception e){
-			e.printStackTrace();
+			log.error("Error decrypting the value '{}'. {}", encryptedBase64EncodedValue, e.getMessage());
 		}
 		return null;
 	}

@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -81,8 +82,11 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint 
             }
             logger.info("Current Cookie Session: {}", cookieSession);
 
-            String redirectLink = this.verifierClient.initPresentationTransaction(cookieSession, serviceUrl);
-            this.sessionUrlRelationList.addSessionUrlRelation(cookieSession, returnTo);
+            assert cookieSession != null;
+            String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
+
+            String redirectLink = this.verifierClient.initPresentationTransaction(sanitizeCookieString, serviceUrl);
+            this.sessionUrlRelationList.addSessionUrlRelation(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
         catch (Exception e){

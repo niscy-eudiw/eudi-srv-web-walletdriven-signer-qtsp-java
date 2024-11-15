@@ -16,12 +16,21 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+
 public class CredentialsInfoRequest {
+    @NotBlank(message = "Missing (or invalid type) string parameter credentialID")
+    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          message = "Invalid parameter credentialID")
     private String credentialID;
     // none | single | chain
+    @Pattern(regexp = "^(none|single|chain)$", message = "Invalid parameter certificates")
     private String certificates = "single";
     private Boolean certInfo = false;
     private Boolean authInfo = false;
+
+    @Pattern(regexp = "^[a-zA-Z]{2}(-[a-zA-Z]{2})?$", message = "Invalid language code")
     private String lang;
     private String clientData;
 

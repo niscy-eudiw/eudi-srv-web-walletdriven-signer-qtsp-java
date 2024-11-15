@@ -22,6 +22,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.Verifiab
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
@@ -68,7 +69,9 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             String sessionId = request.getParameter("session_id");
             logger.trace("SessionID from Request: {}", sessionId);
 
-            String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
+            String sanitizedSessionId = WebUtils.getSanitizedCookieString(sessionId);
+
+            String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sanitizedSessionId, code);
             if (messageFromVerifier == null) {
                 String errorMessage = "It was not possible to retrieve a VP Token from the Verifier.";
                 logger.error(errorMessage);
@@ -77,7 +80,7 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             logger.info("Successfully retrieved the VP Token from the Verifier.");
             logger.trace("VP Token received: {}", messageFromVerifier);
 
-            String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
+            String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId).getUrlToReturnTo();
             String scope = getScopeFromOAuth2Request(urlToReturnTo);
             logger.info("Scope from the OAuth2 Request: {}", scope);
 

@@ -56,6 +56,8 @@ public class DefaultSecurityConfig {
 		http
 			.authorizeHttpRequests(authorize ->
 				authorize
+					.requestMatchers("/swagger-ui/**").permitAll()
+					.requestMatchers("/v3/api-docs/**").permitAll()
 					.requestMatchers("/oid4vp/callback").permitAll()
 					.requestMatchers("/login").permitAll()
 					.anyRequest().authenticated()
@@ -92,6 +94,7 @@ public class DefaultSecurityConfig {
 		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
 		daoAuthenticationProvider.setUserDetailsService(userDetailsService);
 		daoAuthenticationProvider.setPasswordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
+		daoAuthenticationProvider.setHideUserNotFoundExceptions(true);
 
 		List<AuthenticationProvider> providers = new ArrayList<>();
 		providers.add(authenticationManagerProvider);
