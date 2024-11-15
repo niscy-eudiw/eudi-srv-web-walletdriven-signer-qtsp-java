@@ -296,7 +296,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             }
         }
         catch (JSONException e){
-            e.printStackTrace();
+            logger.error("Error {}.",e.getMessage());
             OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
                   "The 'authorization_details' parameter in the request is invalid.");
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);

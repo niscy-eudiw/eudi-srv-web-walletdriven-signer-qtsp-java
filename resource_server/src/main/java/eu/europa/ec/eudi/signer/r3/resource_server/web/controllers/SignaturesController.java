@@ -22,6 +22,8 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashRes
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +63,7 @@ public class SignaturesController {
      * @return a json response with the signature values
      */
     @PostMapping(value = "/signHash", consumes = "application/json", produces = "application/json")
-    public SignaturesSignHashResponse signHash(@RequestBody SignaturesSignHashRequest signHashRequest) {
+    public SignaturesSignHashResponse signHash(@Valid @RequestBody SignaturesSignHashRequest signHashRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
         Map<String, Object> claims = ((Jwt) principal).getClaims();
@@ -100,7 +102,8 @@ public class SignaturesController {
             List<String> hashesRequested = new ArrayList<>();
             for(String s: hashesRequestedEncoded){
                 logger.trace(s);
-                hashesRequested.add(URLDecoder.decode(s, StandardCharsets.UTF_8));
+                String urlDecodedHash = URLDecoder.decode(s, StandardCharsets.UTF_8);
+                hashesRequested.add(urlDecodedHash);
             }
 
             if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(),
@@ -129,6 +132,9 @@ public class SignaturesController {
             }
             else throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the operation mode in the " +
                       "request is invalid.");
+        }
+        catch (ResponseStatusException ex){
+            throw ex;
         }
         catch (Exception e){
             logger.error(e.getMessage());

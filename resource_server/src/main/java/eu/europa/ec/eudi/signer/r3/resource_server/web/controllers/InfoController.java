@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,13 @@ public class InfoController {
 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
-        log.trace("Receive request @/csc/v2/info: {}.", requestMessage);
+
+        String lang;
+        if(requestMessage.containsKey("lang"))
+            lang = validateLangValue(requestMessage.get("lang").toString());
+        else lang = this.infoProperties.getLang();
+
+        log.trace("Receive request @/csc/v2/info with lang value: {}.", lang);
 
         List<String> keySet = this.infoProperties.getSignature_formats().keySet().stream().toList();;
 
@@ -62,4 +69,18 @@ public class InfoController {
              keySet, envelope_properties, this.infoProperties.getConformance_levels());
     }
 
+    private String validateLangValue(String langRequest){
+        String lang;
+        try{
+            Locale locale = Locale.forLanguageTag(langRequest);
+            if(locale.getLanguage().isEmpty())
+                lang = this.infoProperties.getLang();
+            else lang = locale.getLanguage();
+        }
+        catch (Exception e){
+            log.error("'lang' request parameter is invalid. {}", e.getMessage());
+            lang = this.infoProperties.getLang();
+        }
+        return lang;
+    }
 }

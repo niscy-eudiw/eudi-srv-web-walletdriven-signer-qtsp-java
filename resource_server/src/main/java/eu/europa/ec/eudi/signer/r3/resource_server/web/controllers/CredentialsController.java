@@ -25,6 +25,8 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoReques
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 import java.util.List;
 import java.util.Map;
+
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -138,7 +140,7 @@ public class CredentialsController {
      * @return a json response containing information about the credential
      */
     @PostMapping(value = "/info", consumes = "application/json", produces = "application/json")
-    public CredentialsInfoResponse info(@RequestBody CredentialsInfoRequest infoRequestDTO) {
+    public CredentialsInfoResponse info(@Valid @RequestBody CredentialsInfoRequest infoRequestDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
         Map<String, Object> claims = ((Jwt) principal).getClaims();

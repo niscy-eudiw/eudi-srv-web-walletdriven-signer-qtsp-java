@@ -16,14 +16,20 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
+import jakarta.validation.constraints.Pattern;
+
 public class CredentialsListRequest {
+    @Pattern(regexp = "^[A-Za-z0-9+/=]{43}=$", message = "Invalid parameter userID")
     private String userID;
     private Boolean credentialInfo = false;
     // none | single | chain
+    @Pattern(regexp = "^(none|single|chain)$", message = "Invalid parameter certificates")
     private String certificates = "single";
     private Boolean certInfo = false;
     private Boolean authInfo = false;
     private Boolean onlyValid = false;
+
+    @Pattern(regexp = "^[a-zA-Z]{2}(-[a-zA-Z]{2})?$", message = "Invalid language code")
     private String lang;
     private String clientData;
 
