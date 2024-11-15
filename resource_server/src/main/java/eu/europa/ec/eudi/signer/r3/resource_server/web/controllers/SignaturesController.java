@@ -102,7 +102,8 @@ public class SignaturesController {
             List<String> hashesRequested = new ArrayList<>();
             for(String s: hashesRequestedEncoded){
                 logger.trace(s);
-                hashesRequested.add(URLDecoder.decode(s, StandardCharsets.UTF_8));
+                String urlDecodedHash = URLDecoder.decode(s, StandardCharsets.UTF_8);
+                hashesRequested.add(urlDecodedHash);
             }
 
             if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(),
@@ -131,6 +132,9 @@ public class SignaturesController {
             }
             else throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the operation mode in the " +
                       "request is invalid.");
+        }
+        catch (ResponseStatusException ex){
+            throw ex;
         }
         catch (Exception e){
             logger.error(e.getMessage());
