@@ -37,12 +37,12 @@ public class SignaturesSignHashRequest {
     private List<@Pattern(regexp = "([a-zA-Z0-9]|%[0-9A-Fa-f]{2}|[-_.=])+", message = "Each hash must be URL-encoded") String> hashes;
 
     // the OID of the algorithm used to calculate the hash value.
-    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)+$", message = "Invalid parameter hashAlgorithmOID")
+    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Invalid parameter hashAlgorithmOID")
     private String hashAlgorithmOID;
 
     // the OID of the algorithm to use for signing
     @NotBlank
-    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)+$", message = "Sign algorithm OID must be in numeric OID format")
+    @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Sign algorithm OID must be in numeric OID format")
     private String signAlgo;
 
     // the Base64-encoded DER-encoded ASN.1 signature parameters, if required by the signature algorithm
