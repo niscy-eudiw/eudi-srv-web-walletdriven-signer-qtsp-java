@@ -82,8 +82,7 @@ public class WebUtils {
     public static String getSanitizedCookieString(String cookieSession){
         // Allow alphanumeric characters, spaces, `-`, `_`, `.`, `~`, `=`, `;`, and `,`
         // Remove disallowed characters and strip extra whitespace
-        String sanitizeCookieString = cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
-        return sanitizeCookieString;
+		return cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
     }
 
     public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers) throws Exception {
