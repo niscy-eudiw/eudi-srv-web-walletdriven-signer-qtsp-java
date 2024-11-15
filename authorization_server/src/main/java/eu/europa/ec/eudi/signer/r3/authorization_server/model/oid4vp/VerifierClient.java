@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.*;
+
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.json.JSONException;
@@ -116,8 +118,21 @@ public class VerifierClient {
         if (response.getStatusLine().getStatusCode() != 200) {
             String error = WebUtils.convertStreamToString(response.getEntity().getContent());
             int statusCode = response.getStatusLine().getStatusCode();
+
+            // Remove Special Characters
+            String noControlChars = error.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
+
+            // escape HTML Tags
+            String escapedError = StringEscapeUtils.escapeHtml4(noControlChars);
+
+            // Validate that the message only contains alphanumeric characters and basic punctuation
+            String validationPattern = "^[a-zA-Z0-9.,:;\\-?!\\s]+$";
+            if (!escapedError.matches(validationPattern)) {
+                escapedError = "Invalid error message content";
+            }
+
             log.error("[Error {}] HTTP Post request to Verifier was not successful." +
-                  " Error Message: {} ", statusCode, error);
+                  " Error Message: {} ", statusCode, escapedError);
             throw new Exception("[Error "+statusCode+"] HTTP Post request to Verifier was not successful.");
         }
 

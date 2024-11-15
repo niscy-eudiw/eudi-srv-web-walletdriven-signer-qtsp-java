@@ -27,6 +27,7 @@ import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.util.StringUtils;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -63,7 +64,7 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 		clearAuthenticationAttributes(request);
 		String targetUrl = savedRequest.getRedirectUrl();
 
-		String updatedUriString = "";
+		String updatedUriString;
 		try {
 			URI originalUri = URI.create(targetUrl);
 			URI baseUri = URI.create(this.baseUrl);
@@ -74,10 +75,10 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 			updatedUriString = updatedUri.toString();
 		}
 		catch (URISyntaxException e){
-			System.out.println(e.getMessage());
-			e.printStackTrace();
+			logger.error(e.getMessage());
+			throw new IOException(e.getMessage());
 		}
-		System.out.println(updatedUriString);
+		logger.info("Redirecting to {}", updatedUriString);
 
 		getRedirectStrategy().sendRedirect(request, response, updatedUriString);
 	}

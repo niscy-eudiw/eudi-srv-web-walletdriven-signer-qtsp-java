@@ -22,6 +22,8 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashRes
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +63,7 @@ public class SignaturesController {
      * @return a json response with the signature values
      */
     @PostMapping(value = "/signHash", consumes = "application/json", produces = "application/json")
-    public SignaturesSignHashResponse signHash(@RequestBody SignaturesSignHashRequest signHashRequest) {
+    public SignaturesSignHashResponse signHash(@Valid @RequestBody SignaturesSignHashRequest signHashRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
         Map<String, Object> claims = ((Jwt) principal).getClaims();

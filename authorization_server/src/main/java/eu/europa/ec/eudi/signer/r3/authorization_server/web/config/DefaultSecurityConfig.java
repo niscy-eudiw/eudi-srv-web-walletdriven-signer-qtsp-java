@@ -94,6 +94,7 @@ public class DefaultSecurityConfig {
 		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
 		daoAuthenticationProvider.setUserDetailsService(userDetailsService);
 		daoAuthenticationProvider.setPasswordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
+		daoAuthenticationProvider.setHideUserNotFoundExceptions(true);
 
 		List<AuthenticationProvider> providers = new ArrayList<>();
 		providers.add(authenticationManagerProvider);

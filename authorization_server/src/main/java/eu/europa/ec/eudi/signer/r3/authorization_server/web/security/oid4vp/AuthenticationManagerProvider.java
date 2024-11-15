@@ -19,9 +19,10 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 public class AuthenticationManagerProvider implements AuthenticationProvider {
 
@@ -38,7 +39,7 @@ public class AuthenticationManagerProvider implements AuthenticationProvider {
     }
 
     @Override
-    public Authentication authenticate(final Authentication authentication) {
+    public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
         // gets the username from the unauthenticated
         AuthenticationManagerToken auth = (AuthenticationManagerToken) authentication;
         String username = (auth.getPrincipal() == null) ? "NONE_PROVIDED" : auth.getUsername();
@@ -46,7 +47,9 @@ public class AuthenticationManagerProvider implements AuthenticationProvider {
 
         // loads the user found with the given username (if it exists)
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        if (userDetails == null) throw new UsernameNotFoundException("User Not Found");
+        if (userDetails == null){
+            throw new AuthenticationServiceException("User authentication failed.");
+        }
         logger.info("Found an User with the username {}", username);
 
         // returns an authenticated token
