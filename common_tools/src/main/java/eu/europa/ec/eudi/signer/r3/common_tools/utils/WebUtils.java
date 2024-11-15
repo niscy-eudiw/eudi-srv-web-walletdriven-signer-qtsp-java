@@ -76,15 +76,13 @@ public class WebUtils {
         }
         reader.close();
         is.close();
-
-        System.out.println(sb);
         return sb.toString();
     }
 
     public static String getSanitizedCookieString(String cookieSession){
         // Allow alphanumeric characters, spaces, `-`, `_`, `.`, `~`, `=`, `;`, and `,`
         // Remove disallowed characters and strip extra whitespace
-        String sanitizeCookieString = cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();;
+        String sanitizeCookieString = cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
         return sanitizeCookieString;
     }
 
