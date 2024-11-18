@@ -1,0 +1,126 @@
+# Copyright 2024 European Commission
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+server:
+  port: 8485
+  ssl:
+    bundle: resource_server
+    client-auth: need
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  profiles:
+    include:
+      - "ejbca"
+      - "auth"
+
+  application:
+    name: qtsp
+    version: 0.0.1
+
+  ssl:
+    bundle:
+      jks:
+        resource_server:
+          key:
+            alias: messages-resource-sample
+            password: password
+          keystore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+          truststore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8084/oauth2/jwks
+          issuer-uri: http://localhost:8084
+
+info:
+  specs: "2.0.0.0"
+  name: "remote Qualifies Electronic Signature R3 QTSP"
+  logo: "img"
+  region: "EU"
+  lang: "en-US"
+  description: "This is a test Qualified Trust Service Provider"
+  authType:
+    - "oauth2code"
+  oauth2: "https://walletcentric.signer.eudiw.dev"
+  asynchronousOperationMode: false
+  methods:
+    - "oauth2/authorize"
+    - "oauth2/token"
+    - "credentials/list"
+    - "credentials/info"
+    - "signatures/signHash"
+  validationInfo: false
+  signAlgorithms:
+    algos:
+      - "1.2.840.113549.1.1.1" # RSA Encryption
+      - "1.2.840.113549.1.1.11" # rsa-with-sha256
+      - "1.2.840.113549.1.1.12" # rsa-with-sha384
+      - "1.2.840.113549.1.1.13" # rsa-with-sha512
+      - "1.2.840.10045.2.1" # ecdsa or ecPublicKey
+      - "1.2.840.10045.4.3.2" # ecdsa-with-SHA256
+      - "1.2.840.10045.4.3.3" # ecdsa-with-SHA384
+      - "1.2.840.10045.4.3.4" # ecdsa-with-SHA512
+  signature_formats:
+    P:
+      - "Enveloped"
+    X:
+      - "Enveloped"
+      - "Enveloping"
+      - "Detached"
+      - "Internally detached"
+    C:
+      - "Enveloping"
+      - "Detached"
+    J:
+      - "Enveloping"
+      - "Detached"
+  conformance_levels:
+    - "Ades-B-B"
+    - "Ades-B-T"
+    - "Ades-B-LT"
+    - "Ades-B-LTA"
+
+credentials:
+  onlyValidSupport: false
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    org.springframework.security.oauth2: INFO

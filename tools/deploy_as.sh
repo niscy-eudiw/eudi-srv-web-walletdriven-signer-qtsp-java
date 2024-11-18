@@ -1,0 +1,1 @@
+cd ..; mvn clean install; java -jar authorization_server/target/authorization_server-0.0.1-SNAPSHOT.jar
