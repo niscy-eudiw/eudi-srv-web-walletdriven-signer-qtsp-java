@@ -1,0 +1,45 @@
+HELP.md
+target/
+**/target
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+authorization_server/src/main/resources/application-auth.yml
+authorization_server/src/main/resources/application-client-registration.yml
+authorization_server/src/main/resources/application-dev.yml
+authorization_server/src/main/resources/application-user-login-form.yml
+authorization_server/src/main/resources/keystore.p12
+common_tools/src/main/resources/application-crypto.yml
+resource_server/src/main/resources/application-auth.yml
+resource_server/src/main/resources/application-dev.yml
+resource_server/src/main/resources/keystore.p12
+oauth_client_test/*
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

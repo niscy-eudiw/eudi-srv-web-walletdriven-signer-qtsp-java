@@ -1,0 +1,77 @@
+# Copyright 2024 European Commission
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+server:
+  port: 8484
+  ssl:
+    bundle: demo-authorizationserver
+    client-auth: want
+  error:
+    include-message: always
+
+verifier:
+  url: https://dev.verifier-backend.eudiw.dev/ui/presentations
+  address: dev.verifier-backend.eudiw.dev
+
+oauth2-issuer-url:
+  url: http://localhost:8084
+
+trusted-issuers:
+  folder: certificate_of_issuers
+
+spring:
+  ssl:
+    bundle:
+      jks:
+        demo-authorizationserver:
+          key:
+            alias: demo-authorizationserver-sample
+            password: password
+          keystore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+          truststore:
+            location: classpath:keystore.p12
+            password: password
+            type: PKCS12
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+      naming:
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+      naming-strategy: org.hibernate.cfg.ImprovedNamingStrategy
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  profiles:
+    include:
+      - "auth"
+      - "client-registration"
+      - "user-login-form"
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: TRACE
+    org.springframework.security: TRACE
+    org.springframework.security.oauth2: INFO
