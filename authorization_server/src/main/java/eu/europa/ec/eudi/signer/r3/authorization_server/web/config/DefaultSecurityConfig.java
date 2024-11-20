@@ -21,12 +21,13 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginForm
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.SuccessfulLoginAuthentication;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationFailureHandler;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationSuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -54,17 +55,29 @@ public class DefaultSecurityConfig {
 	@Bean
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig) throws Exception {
 		http
-			.authorizeHttpRequests(authorize ->
-				authorize
-					.requestMatchers("/swagger-ui/**").permitAll()
-					.requestMatchers("/v3/api-docs/**").permitAll()
-					.requestMatchers("/oid4vp/callback").permitAll()
-					.requestMatchers("/login").permitAll()
-					.anyRequest().authenticated()
-			)
-			.csrf(AbstractHttpConfigurer::disable)
-			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-			.formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())));
+			  .authorizeHttpRequests(authorize ->
+					authorize
+						  .requestMatchers("/swagger-ui/**").permitAll()
+						  .requestMatchers("/v3/api-docs/**").permitAll()
+						  .requestMatchers("/oid4vp/callback").permitAll()
+						  .requestMatchers("/error").permitAll()
+						  .requestMatchers("/login").permitAll()
+						  .anyRequest().authenticated()
+			  )
+			  .csrf(AbstractHttpConfigurer::disable)
+			  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())))
+			  .exceptionHandling(ex ->
+					ex
+						  .accessDeniedHandler((request, response, accessDeniedException) -> {
+							  response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+							  response.getWriter().write("Access Denied");
+						  })
+						  .authenticationEntryPoint((request, response, authException) -> {
+							  response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+							  response.getWriter().write("Unauthorized");
+						  })
+			  );
 		return http.build();
 	}
 
@@ -89,7 +102,7 @@ public class DefaultSecurityConfig {
 
 	@Bean
 	public AuthenticationManager authenticationManager(CustomUserDetailsService userDetailsService) {
-		AuthenticationManagerProvider authenticationManagerProvider = new AuthenticationManagerProvider(userDetailsService);
+		OID4VPAuthenticationProvider authenticationManagerProvider = new OID4VPAuthenticationProvider(userDetailsService);
 
 		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
 		daoAuthenticationProvider.setUserDetailsService(userDetailsService);
