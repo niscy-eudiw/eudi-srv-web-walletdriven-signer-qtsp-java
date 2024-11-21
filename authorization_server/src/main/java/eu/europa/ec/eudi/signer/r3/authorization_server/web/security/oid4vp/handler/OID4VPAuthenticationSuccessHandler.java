@@ -61,6 +61,7 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         String sessionId = request.getParameter("session_id");
         String url = sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
+        sessionUrlRelationList.removeSessionInformation(sessionId);
 
         logger.info("Returning to: {}", url);
         this.redirectStrategy.sendRedirect(request, response, url);

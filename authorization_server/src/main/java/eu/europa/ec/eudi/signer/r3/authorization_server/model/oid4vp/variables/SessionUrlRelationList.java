@@ -34,9 +34,11 @@ public class SessionUrlRelationList {
         return this.listOfVariables.get(sessionId);
     }
 
+    public synchronized void removeSessionInformation(String sessionId){
+        this.listOfVariables.remove(sessionId);
+    }
+
     public synchronized void addSessionUrlRelation(String user, String url){
         this.listOfVariables.put(user, new SessionUrlRelation(url, user));
     }
-
-
 }
