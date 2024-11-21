@@ -37,9 +37,10 @@ import org.springframework.security.web.RedirectStrategy;
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
 public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint {
+    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationEntryPoint.class);
+
     private final VerifierClient verifierClient;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
-    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationEntryPoint.class);
     private final OAuth2IssuerConfig issuerConfig;
     private final SessionUrlRelationList sessionUrlRelationList;
 
@@ -51,13 +52,15 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+        logger.info("");
+
+        String serviceUrl = this.issuerConfig.getUrl();
+        logger.trace("Authorization Server Url: {}", serviceUrl);
+
+        String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();
+        logger.info("Link to return to after authentication: {}", returnTo);
+
         try{
-            String serviceUrl = this.issuerConfig.getUrl();
-            logger.info("Authorization Server Url: {}", serviceUrl);
-
-            String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();
-            logger.info("Link to return to after authentication: {}", returnTo);
-
             Cookie[] cookies = request.getCookies();
             String cookieSession = null;
             if (cookies != null) {
