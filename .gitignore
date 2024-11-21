@@ -15,7 +15,7 @@ resource_server/src/main/resources/application-auth.yml
 resource_server/src/main/resources/application-dev.yml
 resource_server/src/main/resources/keystore.p12
 
-certificate_of_issuers/scytales.pem
+certificate_of_issuers/ot_root.pem
 
 ### STS ###
 .apt_generated
