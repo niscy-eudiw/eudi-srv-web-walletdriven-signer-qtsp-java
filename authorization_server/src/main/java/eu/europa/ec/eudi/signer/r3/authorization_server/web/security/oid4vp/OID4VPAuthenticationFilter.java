@@ -110,6 +110,7 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             if(numSignatures != null) authenticatedToken.setNumSignatures(numSignatures);
 
             String authorizationDetails = getAuthorizationDetailsFromOAuth2Request(queryValues);
+            System.out.println(authorizationDetails);
             if(authorizationDetails != null) authenticatedToken.setAuthorization_details(authorizationDetails);
 
             logger.info(authenticatedToken.toString());
@@ -134,15 +135,17 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
 
     private Map<String, String> getQueryValues(String urlToReturnTo) throws Exception{
         URI uri = new URI(urlToReturnTo);
-        String query = uri.getQuery();
+        String query = uri.getRawQuery();
 
         Map<String, String> queryPairs = new HashMap<>();
         String[] pairs = query.split("&");
         for (String pair : pairs) {
             int idx = pair.indexOf("=");
-            String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
-            String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
-            queryPairs.put(key, value);
+            if(idx != -1) {
+                String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
+                queryPairs.put(key, value);
+            }
         }
 
         return queryPairs;
