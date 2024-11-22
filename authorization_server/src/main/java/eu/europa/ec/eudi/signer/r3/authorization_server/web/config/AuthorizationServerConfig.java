@@ -29,6 +29,9 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.S
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtendedMixIn;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.handler.OAuth2AuthorizationSuccessHandler;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
@@ -101,7 +104,6 @@ public class AuthorizationServerConfig {
 																	  OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
 																	  UserRepository userRepository) throws Exception
 	{
-
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 		authorizationServerConfigurer.oidc(Customizer.withDefaults());
@@ -112,20 +114,21 @@ public class AuthorizationServerConfig {
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
 
 		authorizationServerConfigurer
-			.registeredClientRepository(registeredClientRepository)
-			.authorizationService(authorizationService)
-			.authorizationServerSettings(authorizationServerSettings)
-			.tokenGenerator(tokenGenerator)
-			.authorizationEndpoint(authorizationEndpoint ->
-				authorizationEndpoint
-					.authorizationRequestConverter(authorizationRequestConverter)
-					.authenticationProvider(authorizationRequestProvider)
-					.authenticationProviders(removeDefaultAuthorizationCodeProvider()))
-			.tokenEndpoint(tokenEndpoint ->
-				tokenEndpoint
-					.accessTokenRequestConverter(tokenRequestConverter)
-					.authenticationProviders(removeDefaultTokenProvider())
-					.authenticationProvider(tokenRequestProvider));
+			  .registeredClientRepository(registeredClientRepository)
+			  .authorizationService(authorizationService)
+			  .authorizationServerSettings(authorizationServerSettings)
+			  .tokenGenerator(tokenGenerator)
+			  .authorizationEndpoint(authorizationEndpoint ->
+					authorizationEndpoint
+						  .authorizationRequestConverter(authorizationRequestConverter)
+						  .authenticationProvider(authorizationRequestProvider)
+						  .authenticationProviders(removeDefaultAuthorizationCodeProvider())
+						  .authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
+			  .tokenEndpoint(tokenEndpoint ->
+					tokenEndpoint
+						  .accessTokenRequestConverter(tokenRequestConverter)
+						  .authenticationProviders(removeDefaultTokenProvider())
+						  .authenticationProvider(tokenRequestProvider));
 
 		http
 			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -225,8 +228,9 @@ public class AuthorizationServerConfig {
 		ObjectMapper objectMapper = new ObjectMapper();
 		objectMapper.registerModules(securityModules);
 		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
-		objectMapper.addMixIn(AuthenticationManagerToken.class, AuthenticationManagerTokenMixIn.class);
+		objectMapper.addMixIn(OID4VPAuthenticationToken.class, OID4VPAuthenticationTokenMixIn.class);
 		objectMapper.addMixIn(UserPrincipal.class, UserPrincipalMixIn.class);
+		objectMapper.addMixIn(UsernamePasswordAuthenticationTokenExtended.class, UsernamePasswordAuthenticationTokenExtendedMixIn.class);
 
 		rowMapper.setObjectMapper(objectMapper);
 		oAuth2AuthorizationParametersMapper.setObjectMapper(objectMapper);
@@ -270,8 +274,8 @@ public class AuthorizationServerConfig {
                 assert authorization != null;
 
 				if(authorization.getAuthorizedScopes().contains("service")){
-					if(context.getPrincipal().getClass().equals(AuthenticationManagerToken.class)){
-						AuthenticationManagerToken token = context.getPrincipal();
+					if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class)){
+						OID4VPAuthenticationToken token = context.getPrincipal();
 						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 							UserPrincipal up = (UserPrincipal) token.getPrincipal();
                             claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
@@ -282,6 +286,15 @@ public class AuthorizationServerConfig {
 					}
 					else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
 						UsernamePasswordAuthenticationToken token = context.getPrincipal();
+						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+							UserPrincipal up = (UserPrincipal) token.getPrincipal();
+							claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
+							claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
+							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+							claims.claim("issuingCountry", u.getIssuingCountry());
+						}
+					}else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
+						UsernamePasswordAuthenticationTokenExtended token = context.getPrincipal();
 						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 							UserPrincipal up = (UserPrincipal) token.getPrincipal();
 							claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));

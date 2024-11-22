@@ -28,7 +28,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenI
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.AuthenticationManagerToken;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import id.walt.mdoc.doc.MDoc;
 import id.walt.mdoc.issuersigned.IssuerSignedItem;
 import org.json.JSONException;
@@ -60,7 +60,7 @@ public class OpenIdForVPService {
      * @return an unauthenticated token with information about the user to authenticate
      * @throws VerifiablePresentationVerificationException exception thrown if the VP Token's verification failed
      */
-    public AuthenticationManagerToken loadUserFromVerifierResponse(String messageFromVerifier) throws VPTokenInvalidException,
+    public OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws VPTokenInvalidException,
           VerifiablePresentationVerificationException, NoSuchAlgorithmException {
         log.info("Starting to load VP Toke from response...");
         JSONObject vpToken;
@@ -83,7 +83,7 @@ public class OpenIdForVPService {
         UserOIDTemporaryInfo user = loadUserFromDocument(document);
         log.trace("Successfully created an object User with the information from the VP Token.");
 
-        return AuthenticationManagerToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
+        return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
     private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalidException, NoSuchAlgorithmException {

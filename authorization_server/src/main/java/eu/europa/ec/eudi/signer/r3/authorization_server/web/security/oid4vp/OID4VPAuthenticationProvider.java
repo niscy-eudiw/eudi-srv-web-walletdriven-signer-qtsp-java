@@ -24,24 +24,25 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public class AuthenticationManagerProvider implements AuthenticationProvider {
+public class OID4VPAuthenticationProvider implements AuthenticationProvider {
 
     private final CustomUserDetailsService userDetailsService;
-    private final Logger logger = LogManager.getLogger(AuthenticationManagerProvider.class);
 
-    public AuthenticationManagerProvider(CustomUserDetailsService userDetailsService){
+    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationProvider.class);
+
+    public OID4VPAuthenticationProvider(CustomUserDetailsService userDetailsService){
         this.userDetailsService = userDetailsService;
     }
 
     @Override
     public boolean supports(Class<?> authentication) {
-        return authentication.equals(AuthenticationManagerToken.class);
+        return authentication.equals(OID4VPAuthenticationToken.class);
     }
 
     @Override
     public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
         // gets the username from the unauthenticated
-        AuthenticationManagerToken auth = (AuthenticationManagerToken) authentication;
+        OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) authentication;
         String username = (auth.getPrincipal() == null) ? "NONE_PROVIDED" : auth.getUsername();
         logger.info("Recover the username from the AuthenticationManagerToken: {}", username);
 
@@ -53,8 +54,7 @@ public class AuthenticationManagerProvider implements AuthenticationProvider {
         logger.info("Found an User with the username {}", username);
 
         // returns an authenticated token
-        AuthenticationManagerToken result = AuthenticationManagerToken.authenticated(userDetails, userDetails.getAuthorities());
-        result.setScope(auth.getScope());
+        OID4VPAuthenticationToken result = OID4VPAuthenticationToken.authenticated(userDetails, userDetails.getAuthorities());
         result.setDetails(authentication.getDetails());
         logger.info("Generated authenticated AuthenticationManagerToken: {}", result.getHash());
 

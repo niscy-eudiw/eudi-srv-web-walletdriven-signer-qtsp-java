@@ -30,17 +30,17 @@ import java.io.IOException;
 import java.util.*;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
-@JsonDeserialize(using = AuthenticationManagerTokenDeserializer.class)
+@JsonDeserialize(using = OID4VPAuthenticationTokenDeserializer.class)
 @JsonAutoDetect(
       fieldVisibility = JsonAutoDetect.Visibility.ANY,
       getterVisibility = JsonAutoDetect.Visibility.NONE,
       isGetterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public abstract class AuthenticationManagerTokenMixIn {
+public abstract class OID4VPAuthenticationTokenMixIn {
 }
 
 
-class AuthenticationManagerTokenDeserializer extends JsonDeserializer<AuthenticationManagerToken> {
+class OID4VPAuthenticationTokenDeserializer extends JsonDeserializer<OID4VPAuthenticationToken> {
 
     private static final TypeReference<List<GrantedAuthority>> GRANTED_AUTHORITY_LIST = new TypeReference<>() {
     };
@@ -49,30 +49,51 @@ class AuthenticationManagerTokenDeserializer extends JsonDeserializer<Authentica
     };
 
     @Override
-    public AuthenticationManagerToken deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+    public OID4VPAuthenticationToken deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         ObjectMapper mapper = (ObjectMapper) parser.getCodec();
         JsonNode root = mapper.readTree(parser);
         return deserialize(parser, mapper, root);
     }
 
-    private AuthenticationManagerToken deserialize(JsonParser parser, ObjectMapper mapper, JsonNode root)
+    private OID4VPAuthenticationToken deserialize(JsonParser parser, ObjectMapper mapper, JsonNode root)
           throws IOException {
         boolean authenticated = readJsonNode(root, "authenticated").asBoolean();
 
         String hash = readJsonNode(root, "hash").asText();
         String username = readJsonNode(root, "username").asText();
-        String scope = readJsonNode(root, "scope").asText();
-
         JsonNode principalNode = readJsonNode(root, "principal");
         Object principal = getPrincipal(mapper, principalNode);
 
         List<GrantedAuthority> authorities = mapper.readValue(readJsonNode(root, "authorities").traverse(mapper), GRANTED_AUTHORITY_LIST);
 
-        AuthenticationManagerToken token = (!authenticated)
-              ? AuthenticationManagerToken.unauthenticated(hash, username)
-              : AuthenticationManagerToken.authenticated(principal, authorities);
+        OID4VPAuthenticationToken token = (!authenticated)
+              ? OID4VPAuthenticationToken.unauthenticated(hash, username)
+              : OID4VPAuthenticationToken.authenticated(principal, authorities);
 
-        token.setScope(scope);
+        JsonNode client_id_node = readJsonNode(root, "client_id");
+        if(!client_id_node.isMissingNode()) token.setClient_id(client_id_node.asText());
+
+        JsonNode redirect_uri_node = readJsonNode(root, "redirect_uri");
+        if(!redirect_uri_node.isMissingNode()) token.setRedirect_uri(redirect_uri_node.asText());
+
+        JsonNode scope_node = readJsonNode(root, "scope");
+        if(!scope_node.isMissingNode()) token.setScope(scope_node.asText());
+
+        JsonNode hashDocument_node = readJsonNode(root, "hashDocument");
+        if(!hashDocument_node.isMissingNode()) token.setHashDocument(hashDocument_node.asText());
+
+        JsonNode credentialID_node = readJsonNode(root, "credentialID");
+        if(!credentialID_node.isMissingNode()) token.setCredentialID(credentialID_node.asText());
+
+        JsonNode hashAlgorithmOID_node = readJsonNode(root, "hashAlgorithmOID");
+        if(!hashAlgorithmOID_node.isMissingNode()) token.setHashAlgorithmOID(hashAlgorithmOID_node.asText());
+
+        JsonNode numSignatures_node = readJsonNode(root, "numSignatures");
+        if(!numSignatures_node.isMissingNode()) token.setNumSignatures(numSignatures_node.asText());
+
+        JsonNode authorization_details_node = readJsonNode(root, "authorization_details");
+        if(!authorization_details_node.isMissingNode()) token.setAuthorization_details(authorization_details_node.asText());
+
         JsonNode detailsNode = readJsonNode(root, "details");
         if (detailsNode.isNull() || detailsNode.isMissingNode()) {
             token.setDetails(null);
