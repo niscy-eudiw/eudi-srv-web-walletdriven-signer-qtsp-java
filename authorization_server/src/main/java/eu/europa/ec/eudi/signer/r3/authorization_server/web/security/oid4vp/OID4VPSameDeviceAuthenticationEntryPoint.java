@@ -36,15 +36,15 @@ import org.springframework.security.web.RedirectStrategy;
  * Used by the Exception Translation Filter to commence a login authentication with OID4VP via the OID4VPAuthenticationTokenFilter.
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
-public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationEntryPoint.class);
+public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
+    private final Logger logger = LogManager.getLogger(OID4VPSameDeviceAuthenticationEntryPoint.class);
 
     private final VerifierClient verifierClient;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final OAuth2IssuerConfig issuerConfig;
     private final SessionUrlRelationList sessionUrlRelationList;
 
-    public OID4VPAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
+    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
         this.verifierClient = service;
         this.issuerConfig = issuerConfig;
         this.sessionUrlRelationList = sessionUrlRelationList;
@@ -52,43 +52,21 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-        logger.info("");
+        logger.info("Redirecting request to OID4VPAuthentication Entry Point.");
 
         String serviceUrl = this.issuerConfig.getUrl();
-        logger.trace("Authorization Server Url: {}", serviceUrl);
+        logger.trace("Entry Point of the Authorization Server in url: {}", serviceUrl);
 
         String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();
-        logger.info("Link to return to after authentication: {}", returnTo);
+        logger.info("Saved request {} to return to after authentication.", returnTo);
+
+        String cookieSession = getCookieSessionIdValue(request, response);
+        assert cookieSession != null;
+        String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
+        logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
         try{
-            Cookie[] cookies = request.getCookies();
-            String cookieSession = null;
-            if (cookies != null) {
-                for (Cookie cookie : cookies) {
-                    if ("JSESSIONID".equals(cookie.getName())) {
-                        cookieSession = cookie.getValue();
-                        break;
-                    }
-                }
-            }
-            if(cookieSession == null) {
-                String cookieHeader = response.getHeader("Set-Cookie");
-                if (cookieHeader != null) {
-                    String[] cookiesArray = cookieHeader.split(";");
-                    for (String c : cookiesArray) {
-                        if (c.trim().startsWith("JSESSIONID=")) {
-                            cookieSession = c.trim().substring("JSESSIONID=".length());
-                            break;
-                        }
-                    }
-                }
-            }
-            logger.info("Current Cookie Session: {}", cookieSession);
-
-            assert cookieSession != null;
-            String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
-
-            String redirectLink = this.verifierClient.initPresentationTransaction(sanitizeCookieString, serviceUrl);
+            String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
             this.sessionUrlRelationList.addSessionUrlRelation(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
@@ -96,5 +74,34 @@ public class OID4VPAuthenticationEntryPoint implements AuthenticationEntryPoint 
             logger.error(e.getMessage());
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
+    }
+
+    private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response){
+        String cookieSession = null;
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("JSESSIONID".equals(cookie.getName())) {
+                    cookieSession = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if(cookieSession == null) {
+            String cookieHeader = response.getHeader("Set-Cookie");
+            if (cookieHeader != null) {
+                String[] cookiesArray = cookieHeader.split(";");
+                for (String c : cookiesArray) {
+                    if (c.trim().startsWith("JSESSIONID=")) {
+                        cookieSession = c.trim().substring("JSESSIONID=".length());
+                        break;
+                    }
+                }
+            }
+        }
+        logger.info("Current Cookie Session: {}", cookieSession);
+
+        return cookieSession;
     }
 }

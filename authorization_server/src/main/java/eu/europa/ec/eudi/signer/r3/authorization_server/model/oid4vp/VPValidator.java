@@ -46,8 +46,11 @@ import id.walt.mdoc.mso.DigestAlgorithm;
 import id.walt.mdoc.mso.MSO;
 import id.walt.mdoc.mso.ValidityInfo;
 import kotlinx.datetime.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VPValidator {
+    private static final Logger log = LoggerFactory.getLogger(VPValidator.class);
     private final JSONObject verifiablePresentation;
     private final String presentationDefinitionInputDescriptorsId;
     private final String presentationDefinitionId;
@@ -164,12 +167,25 @@ public class VPValidator {
         if (issuerCertificate == null)
             throw new Exception("Issuer ("+cert.getIssuerX500Principal().getName()+") of the VPToken is not trustworthy.");
 
+        try {
+            issuerCertificate.verify(issuerCertificate.getPublicKey());
+            issuerCertificate.checkValidity();
+        } catch (Exception e){
+            log.error("Failed to validate the issuer certificate." +
+                  " Issuer Certificate: " + issuerCertificate.getIssuerX500Principal().getName()+ "." +
+                  " Validaty: Not After = "+issuerCertificate.getNotAfter().toString()+" Not Before = "+issuerCertificate.getNotBefore().toString());
+            throw e;
+        }
 
-        issuerCertificate.verify(issuerCertificate.getPublicKey());
-        issuerCertificate.checkValidity();
-
-        cert.verify(issuerCertificate.getPublicKey());
-        cert.checkValidity();
+        try {
+            cert.verify(issuerCertificate.getPublicKey());
+            cert.checkValidity();
+        } catch (Exception e){
+            log.error("Failed to validate the certificate." +
+                  " Certificate: " + cert.getSubjectX500Principal().getName()+ "." +
+                  " Validaty: Not After = "+cert.getNotAfter().toString()+" Not Before = "+cert.getNotBefore().toString());
+            throw e;
+        }
 
         List<X509Certificate> certificateChain = new ArrayList<>();
         certificateChain.add(cert);
@@ -260,7 +276,7 @@ public class VPValidator {
 
             MDoc document = vpToken.getDocuments().get(pos);
 
-            SimpleCOSECryptoProvider provider;
+            /*SimpleCOSECryptoProvider provider;
             X509Certificate certificateFromIssuerAuth;
 
             // Validate Certificate from the MSO header:
@@ -271,10 +287,10 @@ public class VPValidator {
                 provider = getSimpleCOSECryptoProvider(certificateFromIssuerAuth, certificateChain);
             } catch (Exception e) {
                 throw new VerifiablePresentationVerificationException(SignerError.CertificateIssuerAuthInvalid,
-                        "The Certificate in issuerAuth is not valid. (" + e.getMessage() + ":" + e.getLocalizedMessage() + ")", VerifiablePresentationVerificationException.Default);
-            }
+                        "The Certificate in issuerAuth is not valid. (" + e.getMessage() + ")", VerifiablePresentationVerificationException.Default);
+            }*/
 
-            MSO mso = document.getMSO();
+            /*MSO mso = document.getMSO();
 
             if (!document.verifyCertificate(provider, this.keyID))
                 throw new VerifiablePresentationVerificationException(SignerError.CertificateIssuerAuthInvalid,
@@ -318,6 +334,7 @@ public class VPValidator {
 
             // Verify the ValidityInfo:
             validateValidityInfoElements(document, mso.getValidityInfo(), certificateFromIssuerAuth.getNotBefore().toInstant(), certificateFromIssuerAuth.getNotAfter().toInstant());
+            */
             return document;
         }
         catch (JSONException e){

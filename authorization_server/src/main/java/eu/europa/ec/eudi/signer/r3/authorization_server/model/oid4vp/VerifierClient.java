@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
@@ -60,14 +61,47 @@ public class VerifierClient {
      * @param currentServiceUrl the url of the current service
      * @return the deep link that redirects the client app to the EUDI Wallet
      */
-    public String initPresentationTransaction(String userId, String currentServiceUrl) throws Exception {
+    public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
         log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
         String nonce = getNonce();
 
         // makes the http Presentation Request:
         JSONObject responseFromVerifier;
         try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce);
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, false);
+        } catch (Exception e) {
+            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+        }
+        log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
+
+        // Validates if the values required are present in the JSON Object Response:
+        Set<String> keys = responseFromVerifier.keySet();
+        if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
+            throw new Exception(SignerError.MissingDataInResponseVerifier.getFormattedMessage());
+        String request_uri = responseFromVerifier.getString("request_uri");
+        String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
+        String client_id = responseFromVerifier.getString("client_id");
+        if(!client_id.equals(this.verifierProperties.getAddress()))
+            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+        String presentation_id = responseFromVerifier.getString("presentation_id");
+
+        // Saves the values required associated to later retrieve the VP Token from the Verifier:
+        this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
+
+        // Generates a link to the Wallet, to where the client app will be redirected:
+        String linkToWallet = getLinkToWallet(encoded_request_uri, client_id);
+        log.info("Generated link to the Wallet for authentication of the user {}", userId);
+        return linkToWallet;
+    }
+
+    public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
+        log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
+        String nonce = getNonce();
+
+        // makes the http Presentation Request:
+        JSONObject responseFromVerifier;
+        try {
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, true);
         } catch (Exception e) {
             throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
         }
@@ -101,9 +135,12 @@ public class VerifierClient {
         return Base64.getUrlEncoder().encodeToString(result);
     }
 
-    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce) throws Exception {
+    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce, boolean isCrossDevice) throws Exception {
         Map<String, String> headers = getHeaders();
-        String bodyMessage = getBody(userId, serviceUrl, nonce);
+
+        String bodyMessage;
+        if(isCrossDevice) bodyMessage = getCrossDeviceMessage(nonce);
+        else bodyMessage = getSameDeviceMessage(userId, serviceUrl, nonce);
 
         // makes a request to the verifier
         HttpResponse response;
@@ -141,16 +178,15 @@ public class VerifierClient {
             log.error("Http Post response from the presentation request is empty.");
             throw new Exception("Http Post response from the presentation request is empty.");
         }
+
         String result = WebUtils.convertStreamToString(entity.getContent());
         JSONObject responseVerifier;
         try{
             responseVerifier =  new JSONObject(result);
         }
         catch (JSONException e){
-            log.error("The response of the presentation request from the Verifier " +
-                  "doesn't contain a correctly formatted JSON string.");
-            throw new Exception("The response of the presentation request from the Verifier " +
-                  "doesn't contain a correctly formatted JSON string.");
+            log.error("The response of the presentation request from the Verifier doesn't contain a correctly formatted JSON string.");
+            throw new Exception("The response of the presentation request from the Verifier doesn't contain a correctly formatted JSON string.");
         }
         return responseVerifier;
     }
@@ -161,7 +197,7 @@ public class VerifierClient {
         return headers;
     }
 
-    private String getBody(String userId, String serviceUrl, String nonce) {
+    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
         String presentationDefinition = "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
               "'input_descriptors': [{" +
@@ -189,6 +225,34 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
+        return jsonBodyToInitPresentation.toString();
+    }
+
+    private String getCrossDeviceMessage(String nonce) {
+        String presentationDefinition = "{" +
+              "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
+              "'input_descriptors': [{" +
+              "'id': '"+PresentationDefinitionInputDescriptorsId+"'," +
+              "'name': 'EUDI PID'," +
+              "'purpose': 'We need to verify your identity'," +
+              "'format': {'mso_mdoc': {" +
+              "'alg': ['ES256', 'ES384', 'ES512', 'EdDSA'] } }," +
+              "'constraints': {" +
+              "'fields': [" +
+              "{'path': [\"$['"+PresentationDefinitionInputDescriptorsId+"']['family_name']\"], 'intent_to_retain': true}," +
+              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['given_name']\"],  \"intent_to_retain\": true}," +
+              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['birth_date']\"],  \"intent_to_retain\": true}," +
+              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['age_over_18']\"], \"intent_to_retain\": false}," +
+              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
+              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
+              "]}}]}";
+        JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
+
+        // Set JSON Body
+        JSONObject jsonBodyToInitPresentation = new JSONObject();
+        jsonBodyToInitPresentation.put("type", "vp_token");
+        jsonBodyToInitPresentation.put("nonce", nonce);
+        jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
         return jsonBodyToInitPresentation.toString();
     }
 
@@ -221,7 +285,7 @@ public class VerifierClient {
         log.info("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getPresentation_id());
 
         Map<String, String> headers = getHeaders();
-        String url = getUrlToRetrieveVPToken(variables.getPresentation_id(), variables.getNonce(), code);
+        String url = getUrlToRetrieveVPTokenWithResponseCode(variables.getPresentation_id(), variables.getNonce(), code);
         log.info("Obtained the link to retrieve the VP Token from the verifier.");
 
         WebUtils.StatusAndMessage response;
@@ -240,8 +304,63 @@ public class VerifierClient {
         return response.getMessage();
     }
 
-    private String getUrlToRetrieveVPToken(String presentation_id, String nonce, String code) {
-        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" +
-                nonce + "&response_code=" + code;
+
+
+    public String getVPTokenFromVerifierRecursive(String user) throws Exception {
+        VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
+        if (variables == null) {
+            log.error("Failed to retrieve the required local variables to complete the authentication.");
+            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+        }
+
+        log.info("Retrieved the required local variables to complete the authentication.");
+
+        String nonce = variables.getNonce();
+        String presentation_id = variables.getPresentation_id();
+        log.info("Current Verifier Variables State: {}", verifierVariables);
+        log.info("User: {} & Nonce: {} & Presentation_id: {}", user, variables.getNonce(), variables.getPresentation_id());
+
+        Map<String, String> headers = getHeaders();
+        String url = getUrlToRetrieveVPToken(presentation_id, nonce);
+
+        String message = null;
+        int responseCode = 400;
+        long startTime = System.currentTimeMillis();
+        while (responseCode != 200 && (System.currentTimeMillis() - startTime) < 60000) {
+            WebUtils.StatusAndMessage response;
+            try {
+                response = WebUtils.httpGetRequests(url, headers);
+            } catch (Exception e) {
+                String logMessage = SignerError.FailedConnectionToVerifier.getCode()
+                      + " (getVPTokenFromVerifier in VerifierClient.class) "
+                      + SignerError.FailedConnectionToVerifier.getDescription()
+                      + ": " + e.getMessage();
+                log.error(logMessage);
+                throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+            }
+
+            if (response.getStatusCode() == 404) {
+                log.error("Failed to connect with Verifier and retrieve the VP Token.");
+                throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+            }
+            else if (response.getStatusCode() == 200) {
+                responseCode = 200;
+                message = response.getMessage();
+            } else
+                TimeUnit.SECONDS.sleep(1);
+        }
+        if (responseCode == 400 && (System.currentTimeMillis() - startTime) >= 60000){
+            log.error("Failed to retrieve the VP Token. Error: response code 400 or operation timed out.");
+            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+        }
+        return message;
+    }
+
+    private String getUrlToRetrieveVPTokenWithResponseCode(String presentation_id, String nonce, String code) {
+        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" + nonce + "&response_code=" + code;
+    }
+
+    private String getUrlToRetrieveVPToken(String presentation_id, String nonce) {
+        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" + nonce;
     }
 }

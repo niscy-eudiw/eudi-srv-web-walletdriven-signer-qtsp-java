@@ -42,15 +42,15 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 /**
  * Processes an authentication via OId4VP.
  */
-public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
+public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
     private static final AntPathRequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/callback", "GET");
     private final VerifierClient verifierClient;
     private final OpenIdForVPService openIdForVPService;
     private final SessionUrlRelationList sessionUrlRelationList;
-    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationFilter.class);
+    private final Logger logger = LogManager.getLogger(OID4VPSameDeviceAuthenticationFilter.class);
 
-    public OID4VPAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient, OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
+    public OID4VPSameDeviceAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient, OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
         super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
         this.verifierClient = verifierClient;
         this.openIdForVPService = openId4VPService;
@@ -58,8 +58,7 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
     }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-          throws AuthenticationException {
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         logger.info("Starting authentication from OID4VP Verifier...");
         logger.trace("Request received: {}", request.getRequestURL().toString());
 

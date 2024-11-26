@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>QTSP Authentication</title>
+</head>
+<body>
+    <h1>QR Code for Authentication</h1>
+    <div>
+        <img th:src="'data:image/png;base64,' + ${qrCode}" alt="QR Code"/>
+
+        <script th:inline="javascript">
+            var url = [[${url}]];
+
+            async function fetchAndRedirect() {
+                window.location.href = url;
+            }
+
+            // Automatically start the function when the page loads
+            window.onload = fetchAndRedirect;
+        </script>
+    </div>
+
+</body>
+</html>
