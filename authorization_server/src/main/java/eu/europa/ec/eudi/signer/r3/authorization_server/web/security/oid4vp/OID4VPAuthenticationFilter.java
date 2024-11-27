@@ -16,20 +16,18 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalidException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.URISyntaxException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -48,9 +46,11 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
     private final VerifierClient verifierClient;
     private final OpenIdForVPService openIdForVPService;
     private final SessionUrlRelationList sessionUrlRelationList;
+    private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
     private final Logger logger = LogManager.getLogger(OID4VPAuthenticationFilter.class);
 
-    public OID4VPAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient, OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
+    public OID4VPAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient,
+                                      OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
         super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
         this.verifierClient = verifierClient;
         this.openIdForVPService = openId4VPService;
@@ -58,132 +58,51 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
     }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
-          throws AuthenticationException {
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         logger.info("Starting authentication from OID4VP Verifier...");
         logger.trace("Request received: {}", request.getRequestURL().toString());
 
+        String code = request.getParameter("response_code");
+        logger.info("response_code from Request: {}", code);
+        String sessionId = request.getParameter("session_id");
+        logger.info("session_id from Request: {}", sessionId);
+
+        String sanitizedSessionId = WebUtils.getSanitizedCookieString(sessionId);
+
         try {
-            String code = request.getParameter("response_code");
-            logger.trace("Response_Code from Request: {}", code);
-            String sessionId = request.getParameter("session_id");
-            logger.trace("SessionID from Request: {}", sessionId);
-
-            String sanitizedSessionId = WebUtils.getSanitizedCookieString(sessionId);
-
+            // Returns OID4VPException with a correctly formatted messages from the Error.description
             String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sanitizedSessionId, code);
-            if (messageFromVerifier == null) {
-                String errorMessage = "It was not possible to retrieve a VP Token from the Verifier.";
-                logger.error(errorMessage);
-                throw new Exception(errorMessage);
-            }
-            logger.info("Successfully retrieved the VP Token from the Verifier.");
-            logger.trace("VP Token received: {}", messageFromVerifier);
+            logger.info("Retrieved the VP Token from the Verifier.");
+            logger.debug("VP Token received: {}", messageFromVerifier);
 
+            // Returns OID4VPException with a correctly formatted messages from the Error.description
             OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponse(messageFromVerifier);
             logger.info("Generated unauthenticated AuthenticationManagerToken: {}", unauthenticatedToken.getHash());
 
-            OID4VPAuthenticationToken authenticatedToken = (OID4VPAuthenticationToken)this.getAuthenticationManager().authenticate(unauthenticatedToken);
+            // Returns AuthenticationServiceException with a correctly formatted messages
+            OID4VPAuthenticationToken authenticatedToken = (OID4VPAuthenticationToken) this.getAuthenticationManager().authenticate(unauthenticatedToken);
+            logger.info("Generated authenticate AuthenticationManagerToken: {}", ((UserPrincipal)authenticatedToken.getPrincipal()).getUsername());
 
             String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId).getUrlToReturnTo();
-            Map<String, String> queryValues = getQueryValues(urlToReturnTo);
+            URI url = new URI(urlToReturnTo);
+            this.commonTokenSetting.setCommonParameters(authenticatedToken, url);
+            logger.info("Added additional parameters to the Authentication Token.");
 
-            String scope = getScopeFromOAuth2Request(queryValues);
-            authenticatedToken.setScope(scope);
-
-            String client_id = getClientIdFromOAuth2Request(queryValues);
-            if(client_id != null) authenticatedToken.setClient_id(client_id);
-
-            String redirect_uri = getRedirectUriFromOAuth2Request(queryValues);
-            if(redirect_uri != null) authenticatedToken.setRedirect_uri(redirect_uri);
-
-            String hashDocument = getHashDocumentFromOAuth2Request(queryValues);
-            if(hashDocument != null) authenticatedToken.setHashDocument(hashDocument);
-
-            String credentialId = getCredentialIDFromOAuth2Request(queryValues);
-            if(credentialId != null) authenticatedToken.setCredentialID(credentialId);
-
-            String hashAlgorithmOID = getHashAlgorithmOIDFromOAuth2Request(queryValues);
-            if(hashAlgorithmOID != null) authenticatedToken.setHashAlgorithmOID(hashAlgorithmOID);
-
-            String numSignatures = getNumSignaturesFromOAuth2Request(queryValues);
-            if(numSignatures != null) authenticatedToken.setNumSignatures(numSignatures);
-
-            String authorizationDetails = getAuthorizationDetailsFromOAuth2Request(queryValues);
-            System.out.println(authorizationDetails);
-            if(authorizationDetails != null) authenticatedToken.setAuthorization_details(authorizationDetails);
-
-            logger.info(authenticatedToken.toString());
-
-            logger.info("Obtained authenticated Authentication Token: {}", ((UserPrincipal)authenticatedToken.getPrincipal()).getUsername());
+            logger.debug(authenticatedToken.toString());
+            logger.info("Obtained authenticated Authentication Token for User: {}", ((UserPrincipal)authenticatedToken.getPrincipal()).getUsername());
             return authenticatedToken;
         }
-        catch (VPTokenInvalidException e){
+        catch (OID4VPException e){
+            logger.error(e.getFormattedMessage());
+            if(e.getError().equals(OID4VPEnumError.VPTokenMissingValues))
+                throw new AuthenticationServiceException(e.getMessage());
+            else throw new AuthenticationServiceException(e.getError().getFormattedMessage());
+        }
+        catch (URISyntaxException e){
+            logger.error("Unable to add additional information to Authentication Token, " +
+                  "because the URL to return to after OID4VP Authentication is incorrectly formatted.");
             logger.error(e.getMessage());
-            throw new AuthenticationServiceException(e.getError().getFormattedMessage());
+            throw new AuthenticationServiceException(OID4VPEnumError.UnexpectedError.getFormattedMessage());
         }
-        catch (VerifiablePresentationVerificationException e){
-            logger.error(e.getError().getFormattedMessage());
-            logger.error(e.getMessage());
-            throw new AuthenticationServiceException(e.getError().getFormattedMessage());
-        }
-        catch (Exception e){
-            logger.error(e.getMessage());
-            throw new AuthenticationServiceException(e.getMessage());
-        }
-    }
-
-    private Map<String, String> getQueryValues(String urlToReturnTo) throws Exception{
-        URI uri = new URI(urlToReturnTo);
-        String query = uri.getRawQuery();
-
-        Map<String, String> queryPairs = new HashMap<>();
-        String[] pairs = query.split("&");
-        for (String pair : pairs) {
-            int idx = pair.indexOf("=");
-            if(idx != -1) {
-                String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
-                String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
-                queryPairs.put(key, value);
-            }
-        }
-
-        return queryPairs;
-    }
-
-    private String getClientIdFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("client_id");
-    }
-
-    private String getRedirectUriFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("redirect_uri");
-    }
-
-    private String getScopeFromOAuth2Request(Map<String, String> queryPairs) {
-        String scope = queryPairs.get("scope");
-        if(scope == null && queryPairs.get("authorization_details") != null)
-            scope = "credential";
-
-        return scope;
-    }
-
-    private String getHashDocumentFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("hashes");
-    }
-
-    private String getCredentialIDFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("credentialID");
-    }
-
-    private String getHashAlgorithmOIDFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("hashAlgorithmOID");
-    }
-
-    private String getNumSignaturesFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("numSignatures");
-    }
-
-    private String getAuthorizationDetailsFromOAuth2Request(Map<String, String> queryPairs){
-        return queryPairs.get("authorization_details");
     }
 }

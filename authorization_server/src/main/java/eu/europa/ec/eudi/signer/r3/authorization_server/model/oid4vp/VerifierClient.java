@@ -16,9 +16,10 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariable;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import java.net.URLEncoder;
@@ -69,19 +70,19 @@ public class VerifierClient {
         try {
             responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce);
         } catch (Exception e) {
-            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+            throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
         }
         log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
         if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
-            throw new Exception(SignerError.MissingDataInResponseVerifier.getFormattedMessage());
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
         String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
         String client_id = responseFromVerifier.getString("client_id");
         if(!client_id.equals(this.verifierProperties.getAddress()))
-            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+            throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
         String presentation_id = responseFromVerifier.getString("presentation_id");
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
@@ -207,41 +208,49 @@ public class VerifierClient {
      * @param code the code returned by the verifier and required to retrieve the VP Token
      * @return a json formatted string with the vp token
      */
-    public String getVPTokenFromVerifier(String userId, String code) throws Exception {
-        log.info("Starting to retrieve the VP Token to authenticate the user {}...", userId);
+    public String getVPTokenFromVerifier(String userId, String code) throws OID4VPException {
+        log.info("Starting to retrieve the VP Token from the Verifier to authenticate the user {}...", userId);
 
         VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(userId);
         if (variables == null) {
             log.error("Failed to retrieve the required local variables to complete the authentication.");
-            throw new Exception(SignerError.UnexpectedError.getFormattedMessage());
+            throw new OID4VPException(OID4VPEnumError.UnexpectedError, "Something went wrong on our end during sign-in. Please try again in a few moments.");
         }
         log.info("Retrieved the required local variables to complete the authentication.");
 
         log.info("Current Verifier Variables State: {}", verifierVariables);
-        log.info("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getPresentation_id());
+        log.debug("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getPresentation_id());
 
         Map<String, String> headers = getHeaders();
         String url = getUrlToRetrieveVPToken(variables.getPresentation_id(), variables.getNonce(), code);
-        log.info("Obtained the link to retrieve the VP Token from the verifier.");
+        log.info("Obtained the link to retrieve the VP Token from the Verifier.");
+        log.debug("Link to retrieve the VP Token: {}", url);
 
         WebUtils.StatusAndMessage response;
         try {
             response = WebUtils.httpGetRequests(url, headers);
         } catch (Exception e) {
-            log.error("Failed to retrieve the VP Token. Error: {}", e.getMessage());
-            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+            log.error("Failed to retrieve the VP Token from the Verifier. Error: {}", e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.FailedConnectionToVerifier, "We couldn’t connect to the OID4VP Verifier server and authentication failed.");
         }
 
-        if (response.getStatusCode() == 404) {
-            log.error("Failed to connect with Verifier and retrieve the VP Token.");
-            throw new Exception(SignerError.FailedConnectionToVerifier.getFormattedMessage());
+        if(response.getStatusCode() == 200){
+            if(response.getMessage() == null || Objects.equals(response.getMessage(), "")){
+                String errorMessage = "It was not possible to retrieve a VP Token from the OID4VP Verifier Backend.";
+                log.error("{} The message retrieved from the OID4VP Verifier Backend is empty.", errorMessage);
+                throw new OID4VPException(OID4VPEnumError.MissingDataInResponseVerifier,
+                      "The server expected to receive a well-formatted VP Token from the OID4VP Verifier Backend. However, the response from the OID4VP Verifier Backend is empty.");
+            }
+            log.info("Retrieved the VP Token from the Verifier to authenticate the user {}.", userId);
+            return response.getMessage();
         }
-        log.info("Successfully retrieved the json string with the VP Token.");
-        return response.getMessage();
+        else{
+			log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", response.getStatusCode(), response.getMessage());
+            throw new OID4VPException(OID4VPEnumError.FailedConnectionToVerifier, "The OID4VP Verifier service is currently unavailable.");
+        }
     }
 
     private String getUrlToRetrieveVPToken(String presentation_id, String nonce, String code) {
-        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" +
-                nonce + "&response_code=" + code;
+        return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" + nonce + "&response_code=" + code;
     }
 }

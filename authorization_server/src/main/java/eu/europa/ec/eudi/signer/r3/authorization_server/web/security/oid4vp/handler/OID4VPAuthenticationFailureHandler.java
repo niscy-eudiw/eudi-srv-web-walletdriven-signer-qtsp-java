@@ -19,17 +19,21 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.han
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.http.HttpStatus;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
 public class OID4VPAuthenticationFailureHandler implements AuthenticationFailureHandler {
 
-    public OID4VPAuthenticationFailureHandler() {}
+    private static final Logger logger = LogManager.getLogger(OID4VPAuthenticationFailureHandler.class);
 
     @Override
-    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException {
-        response.sendError(HttpStatus.UNAUTHORIZED.value(), exception.getMessage());
+    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
+		logger.error("Error received after attempting authentication with OId4VP. Message: {}", exception.getMessage());
+        response.sendRedirect("/error-page?error=" + URLEncoder.encode(exception.getMessage(), StandardCharsets.UTF_8));
     }
 }

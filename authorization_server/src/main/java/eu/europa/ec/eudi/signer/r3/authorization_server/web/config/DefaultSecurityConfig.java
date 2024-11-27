@@ -30,6 +30,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.hand
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -44,24 +45,31 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
-public class DefaultSecurityConfig {
+public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig) throws Exception {
 		http
 			  .authorizeHttpRequests(authorize ->
 					authorize
-						  .requestMatchers("/swagger-ui/**").permitAll()
-						  .requestMatchers("/v3/api-docs/**").permitAll()
-						  .requestMatchers("/oid4vp/callback").permitAll()
-						  .requestMatchers("/error").permitAll()
-						  .requestMatchers("/login").permitAll()
+						  .requestMatchers("/swagger-ui/**").permitAll() // swagger ui endpoint
+						  .requestMatchers("/v3/api-docs/**").permitAll() // swagger ui endpoint
+						  .requestMatchers("/oid4vp/callback").permitAll() // authentication
+						  .requestMatchers("/login").permitAll() // authentication
+						  .requestMatchers("/error").permitAll() // error information
+						  .requestMatchers("/error-page").permitAll() // error page
+						  .requestMatchers("/images/**", "/scripts/**", "/fontawesome-free-5.15.4-web/**",
+								"/css/**", "/bootstrap-3.4.1-dist/**").permitAll() // Allow static resources
+
 						  .anyRequest().authenticated()
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)

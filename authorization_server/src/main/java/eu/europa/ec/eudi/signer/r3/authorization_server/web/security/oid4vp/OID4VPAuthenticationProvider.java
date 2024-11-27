@@ -41,15 +41,21 @@ public class OID4VPAuthenticationProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(final Authentication authentication) throws AuthenticationException {
-        // gets the username from the unauthenticated
         OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) authentication;
-        String username = (auth.getPrincipal() == null) ? "NONE_PROVIDED" : auth.getUsername();
-        logger.info("Recover the username from the AuthenticationManagerToken: {}", username);
 
-        // loads the user found with the given username (if it exists)
+        // Retrieve the username from the Authentication Manager Token
+        String username = (auth.getPrincipal() == null) ? "NONE_PROVIDED" : auth.getUsername();
+        if(username.equals("NONE_PROVIDED")){
+            logger.error("Impossible to retrieve the username from the Authentication Token.");
+            throw new AuthenticationServiceException("We could not process your login request. Please try again or contact support if the issue persists.");
+        }
+        logger.info("Retrieved the username from the AuthenticationManagerToken: {}", username);
+
+        // search the user with the given username (if it exists)
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (userDetails == null){
-            throw new AuthenticationServiceException("User authentication failed.");
+            logger.error("User not found.");
+            throw new AuthenticationServiceException("Your account could not be found. Please check your credentials and try again.");
         }
         logger.info("Found an User with the username {}", username);
 
@@ -57,7 +63,6 @@ public class OID4VPAuthenticationProvider implements AuthenticationProvider {
         OID4VPAuthenticationToken result = OID4VPAuthenticationToken.authenticated(userDetails, userDetails.getAuthorities());
         result.setDetails(authentication.getDetails());
         logger.info("Generated authenticated AuthenticationManagerToken: {}", result.getHash());
-
         return result;
     }
 }

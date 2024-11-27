@@ -27,9 +27,9 @@ public class VerifiablePresentationVerificationException extends Exception {
 
     private final int type;
 
-    private final SignerError error;
+    private final OID4VPEnumError error;
 
-    public VerifiablePresentationVerificationException(SignerError error, String message, int type) {
+    public VerifiablePresentationVerificationException(OID4VPEnumError error, String message, int type) {
         super("Verification of the Verifiable Presentation Failed: " + message);
 
         if (type == Signature) {
@@ -46,7 +46,7 @@ public class VerifiablePresentationVerificationException extends Exception {
         return this.type;
     }
 
-    public SignerError getError() {
+    public OID4VPEnumError getError() {
         return this.error;
     }
 }
