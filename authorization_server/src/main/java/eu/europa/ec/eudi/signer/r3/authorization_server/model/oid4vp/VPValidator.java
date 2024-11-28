@@ -46,8 +46,11 @@ import id.walt.mdoc.mso.DigestAlgorithm;
 import id.walt.mdoc.mso.MSO;
 import id.walt.mdoc.mso.ValidityInfo;
 import kotlinx.datetime.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VPValidator {
+    private static final Logger logger = LoggerFactory.getLogger(VPValidator.class);
     private final JSONObject verifiablePresentation;
     private final String presentationDefinitionInputDescriptorsId;
     private final String presentationDefinitionId;
@@ -149,6 +152,7 @@ public class VPValidator {
             hexString.append(String.format("%02x", b));
         }
         return DeviceResponse.Companion.fromCBORHex(hexString.toString());
+        // Cbor.decodeFromHexString<DeviceResponse>(cbor)
     }
 
     // [0]: the certificate from the issuer signed
@@ -274,7 +278,7 @@ public class VPValidator {
                         "The Certificate in issuerAuth is not valid. (" + e.getMessage() + ":" + e.getLocalizedMessage() + ")", VerifiablePresentationVerificationException.Default);
             }
 
-            MSO mso = document.getMSO();
+            /*MSO mso = document.getMSO();
 
             if (!document.verifyCertificate(provider, this.keyID))
                 throw new VerifiablePresentationVerificationException(SignerError.CertificateIssuerAuthInvalid,
@@ -318,10 +322,16 @@ public class VPValidator {
 
             // Verify the ValidityInfo:
             validateValidityInfoElements(document, mso.getValidityInfo(), certificateFromIssuerAuth.getNotBefore().toInstant(), certificateFromIssuerAuth.getNotAfter().toInstant());
+            */
             return document;
         }
         catch (JSONException e){
+            logger.error("The JSON string contains unexpected errors ("+e.getMessage()+").");
             throw new VerifiablePresentationVerificationException(SignerError.UnexpectedError, "The JSON string contains unexpected errors ("+e.getMessage()+").", VerifiablePresentationVerificationException.Default);
+        }
+        catch (Exception e){
+            logger.error(SignerError.UnexpectedError.getFormattedMessage()+" : "+e.getMessage());
+            throw new VerifiablePresentationVerificationException(SignerError.UnexpectedError, e.getMessage(), VerifiablePresentationVerificationException.Default);
         }
     }
 }

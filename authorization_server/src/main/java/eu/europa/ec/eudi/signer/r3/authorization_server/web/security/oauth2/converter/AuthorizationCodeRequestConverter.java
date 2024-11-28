@@ -145,6 +145,10 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
               !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
                     !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
 
+        System.out.println(authorizeRequest.getAuthorization_details());
+        System.out.println(token.getAuthorization_details());
+        System.out.println(Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
+
         boolean isInvalidCredential =
               !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
                     !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
@@ -156,23 +160,29 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         if(scopes.contains("service") && !Objects.equals(token.getScope(), "service")){
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("For the credential scope, the Authentication should have been performed for an credential scope.");
+            logger.warn("AuthenticationManagerToken: Request Scope = 'service' && Token Request Scope != 'service'");
         }
         // if the clientId in the request doesn't match the clientId in the authentication, it is invalid...
         else if(isInvalidBasic){
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("Error validating for the credential scope.");
+            logger.warn("AuthenticationManagerToken: Basic Validation Failed.");
         }
         // if the request is of the scope "credential" and the session does not contain the scope "credential", the authentication is invalid...
         else if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")) {
-            logger.warn("For the credential scope, the Authentication should have been performed for an credential scope.");
+            logger.warn("AuthenticationManagerToken: Request Scope = 'credential' && Token Request Scope != 'credential'");
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
         // if the request is of the scope "credential", but the requested information doesn't match the "authorized information", the authentication is invalid...
         else if(scopes.contains("credential") && isInvalidCredential){
-            logger.warn("Error validating for the credential scope.");
+            logger.warn("AuthenticationManagerToken: Credential Validation Failed.");
+			logger.warn("Authorization Details? {}", Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
+            logger.warn("Hashes? {}", Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()));
+            logger.warn("CredentialID? {}", Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) );
+            logger.warn("HashAlgorithmOID? {}", Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()));
+            logger.warn("NumSignatures? {}", Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures()));
+
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
@@ -187,6 +197,10 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
               !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
                     !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
 
+        System.out.println(authorizeRequest.getAuthorization_details());
+        System.out.println(token.getAuthorization_details());
+        System.out.println(Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
+
         boolean isInvalidCredential =
               !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
                     !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
@@ -198,23 +212,28 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         if(scopes.contains("service") && !Objects.equals(token.getScope(), "service")){
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("For the credential scope, the Authentication should have been performed for an credential scope.");
+            logger.warn("UsernamePasswordAuthenticationTokenExtended: Request Scope = 'service' && Token Request Scope != 'service'");
         }
         // if the clientId in the request doesn't match the clientId in the authentication, it is invalid...
         else if(isInvalidBasic){
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("Error validating for the credential scope.");
+            logger.warn("UsernamePasswordAuthenticationTokenExtended: Basic Validation Failed.");
         }
         // if the request is of the scope "credential" and the session does not contain the scope "credential", the authentication is invalid...
         else if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")) {
-            logger.warn("For the credential scope, the Authentication should have been performed for an credential scope.");
+            logger.warn("UsernamePasswordAuthenticationTokenExtended: Request Scope = 'credential' && Token Request Scope != 'credential'");
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
         // if the request is of the scope "credential", but the requested information doesn't match the "authorized information", the authentication is invalid...
         else if(scopes.contains("credential") && isInvalidCredential){
-            logger.warn("Error validating for the credential scope.");
+            logger.warn("UsernamePasswordAuthenticationTokenExtended: Credential Validation Failed.");
+            logger.warn("Authorization Details? {}", Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
+            logger.warn("Hashes? {}", Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()));
+            logger.warn("CredentialID? {}", Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) );
+            logger.warn("HashAlgorithmOID? {}", Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()));
+            logger.warn("NumSignatures? {}", Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures()));
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
