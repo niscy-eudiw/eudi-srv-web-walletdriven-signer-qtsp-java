@@ -1,11 +1,12 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.ICommonTokenStructure;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
 
-public class UsernamePasswordAuthenticationTokenExtended extends UsernamePasswordAuthenticationToken {
+public class UsernamePasswordAuthenticationTokenExtended extends UsernamePasswordAuthenticationToken implements ICommonTokenStructure {
 
 	private String client_id;
 	private String redirect_uri;
