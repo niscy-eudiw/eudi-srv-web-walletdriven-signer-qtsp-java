@@ -39,7 +39,11 @@
                     <h1>Something went wrong! </h1>
                     <div id="content" class="content-wrap1 content-center col-md-11 col-sm-11">
                         <div class="genericErrors" id="genericErrorsDesc"></div>
-                        <p th:text="${errormessage}">error message</p>
+                        <p th:text="${errormessage}" style="font-size: 21px;">error message</p>
+                        <p th:text="${erroradditionalinfo}"
+                           th:if="${erroradditionalinfo != null && !#strings.isEmpty(erroradditionalinfo)}"
+                           style="font-size: 16px; padding-top: 40px; color: #666;"
+                        >here</p>
                     </div>
                 </div>
             </div>

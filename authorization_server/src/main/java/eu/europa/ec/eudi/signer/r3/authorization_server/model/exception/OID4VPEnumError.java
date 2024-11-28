@@ -43,19 +43,21 @@ public enum OID4VPEnumError {
 
     // message to the user from the description
     PresentationSubmissionMissingData("presentation_submission_missing_data",
-          "Unable to complete the authentication. Please try again or contact support if the issue persists.\n" +
-                "Additional Information For Developers: Validation of the VP Token failed: the presentation_submission is invalid.",
+		  "Unable to complete the authentication. Please try again or contact support if the issue persists.",
+          "Additional Information For Developers: Validation of the VP Token failed: the presentation_submission is invalid.",
           432),
 
     // message to the user from the description
     StatusVPTokenInvalid("status_vptoken_invalid",
-          "Unable to complete the authentication. Please try again or contact support if the issue persists.\n" +
-                "Additional Information For Developers: Validation of the VP Token failed: The status present in the VP Token is invalid.", 433),
+		  "Unable to complete the authentication. Please try again or contact support if the issue persists.",
+          "Additional Information For Developers: Validation of the VP Token failed: The status present in the VP Token is invalid.",
+          433),
 
     // message to the user from the description
     CertificateIssuerAuthInvalid("certificate_issuerauth_invalid",
-          "Unable to complete the authentication. Please try again or contact support if the issue persists.\n" +
-                "Additional Information For Developers: Validation of the VP Token failed: The validation of the certificate in the IssuerAuth of the VP Token is failed.", 434),
+          "Unable to complete the authentication. Please try again or contact support if the issue persists.",
+          "Additional Information For Developers: Validation of the VP Token failed: The validation of the certificate in the IssuerAuth of the VP Token is failed.",
+          434),
 
 
 
@@ -84,10 +86,19 @@ public enum OID4VPEnumError {
     private final String code;
     private final int httpCode;
     private final String desc;
+    private final String additionalInformation;
 
     OID4VPEnumError(String code, String desc, int httpCode) {
         this.code = code;
         this.desc = desc;
+        this.additionalInformation = "";
+        this.httpCode = httpCode;
+    }
+
+    OID4VPEnumError(String code, String desc, String additionalInformation, int httpCode) {
+        this.code = code;
+        this.desc = desc;
+        this.additionalInformation = additionalInformation;
         this.httpCode = httpCode;
     }
 
@@ -111,6 +122,14 @@ public enum OID4VPEnumError {
      * @return a formatted message
      */
     public String getFormattedMessage() {
-        return "[ " + this.code + " ] " + this.desc;
+        return this.desc + this.additionalInformation;
+    }
+
+    public String getFormattedMessageWithoutAdditionalInformation() {
+        return this.desc;
+    }
+
+    public String getAdditionalInformation() {
+        return additionalInformation;
     }
 }

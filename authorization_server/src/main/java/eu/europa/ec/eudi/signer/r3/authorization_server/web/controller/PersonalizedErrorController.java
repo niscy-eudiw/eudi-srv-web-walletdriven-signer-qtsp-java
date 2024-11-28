@@ -16,22 +16,34 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.controller;
 
-import org.springframework.boot.web.servlet.error.ErrorController;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.util.HtmlUtils;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 @Controller
-public class PersonalizedErrorController implements ErrorController {
+public class PersonalizedErrorController {
 
 	@GetMapping(value="/error-page")
-	public String handleError(Model model, @RequestParam String error){
-		model.addAttribute("errormessage", URLDecoder.decode(error, StandardCharsets.UTF_8));
+	public String handleError(Model model, HttpSession session){
+		String errorMessage = (String) session.getAttribute("errorMessage");
+		String errorAdditionalInfo = session.getAttribute("errorMessageAdditionalInfo") != null ? (String) session.getAttribute("errorMessageAdditionalInfo") : "";
+
+		session.removeAttribute("errorMessage");
+		session.removeAttribute("errorMessageAdditionalInfo");
+
+		if (errorMessage == null)
+			errorMessage = "An unexpected error occurred. Please try again later.";
+		String safeMessage = HtmlUtils.htmlEscape(errorMessage);
+		model.addAttribute("errormessage", safeMessage);
+
+		if(!Objects.equals(errorAdditionalInfo, "")){
+			String safeAdditionalInfo = HtmlUtils.htmlEscape(errorAdditionalInfo);
+			model.addAttribute("erroradditionalinfo", safeAdditionalInfo);
+		}
 		return "error";
 	}
-
 }

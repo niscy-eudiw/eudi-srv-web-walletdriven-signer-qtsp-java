@@ -28,6 +28,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Objects;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -96,6 +98,9 @@ public class OID4VPAuthenticationFilter extends AbstractAuthenticationProcessing
             logger.error(e.getFormattedMessage());
             if(e.getError().equals(OID4VPEnumError.VPTokenMissingValues))
                 throw new AuthenticationServiceException(e.getMessage());
+            else if(!Objects.equals(e.getError().getAdditionalInformation(), "")){ // if there are additional information, sends the code to exception handler
+                throw new AuthenticationServiceException(e.getError().getCode());
+            }
             else throw new AuthenticationServiceException(e.getError().getFormattedMessage());
         }
         catch (URISyntaxException e){

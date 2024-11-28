@@ -35,6 +35,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -61,15 +62,13 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 		http
 			  .authorizeHttpRequests(authorize ->
 					authorize
-						  .requestMatchers("/swagger-ui/**").permitAll() // swagger ui endpoint
-						  .requestMatchers("/v3/api-docs/**").permitAll() // swagger ui endpoint
-						  .requestMatchers("/oid4vp/callback").permitAll() // authentication
-						  .requestMatchers("/login").permitAll() // authentication
-						  .requestMatchers("/error").permitAll() // error information
-						  .requestMatchers("/error-page").permitAll() // error page
-						  .requestMatchers("/images/**", "/scripts/**", "/fontawesome-free-5.15.4-web/**",
-								"/css/**", "/bootstrap-3.4.1-dist/**").permitAll() // Allow static resources
-
+						  .requestMatchers("/swagger-ui/**").permitAll()
+						  .requestMatchers("/v3/api-docs/**").permitAll()
+						  .requestMatchers("/oid4vp/callback").permitAll()
+						  .requestMatchers("/login").permitAll()
+						  .requestMatchers("/error").permitAll()
+						  .requestMatchers("/error-page").permitAll()
+						  .requestMatchers("/images/**", "/scripts/**", "/fontawesome-free-5.15.4-web/**", "/css/**", "/bootstrap-3.4.1-dist/**").permitAll()
 						  .anyRequest().authenticated()
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)
