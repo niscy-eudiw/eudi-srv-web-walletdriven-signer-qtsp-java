@@ -70,7 +70,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 						  .requestMatchers("/login").permitAll()
 						  .requestMatchers("/error").permitAll()
 						  .requestMatchers("/error-page").permitAll()
-						  .requestMatchers("/images/**", "/scripts/**", "/fontawesome-free-5.15.4-web/**", "/css/**", "/bootstrap-3.4.1-dist/**").permitAll()
+						  .requestMatchers("/static/**").permitAll()
 						  .anyRequest().authenticated()
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)

@@ -1,6 +1,6 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalidException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
@@ -96,7 +96,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 			logger.info("Obtained authenticated Authentication Token: {}", ((UserPrincipal)authenticatedToken.getPrincipal()).getUsername());
 			return authenticatedToken;
 		}
-		catch (VPTokenInvalidException e){
+		catch (OID4VPException e){
 			logger.error(e.getMessage());
 			throw new AuthenticationServiceException(e.getError().getFormattedMessage());
 		}
