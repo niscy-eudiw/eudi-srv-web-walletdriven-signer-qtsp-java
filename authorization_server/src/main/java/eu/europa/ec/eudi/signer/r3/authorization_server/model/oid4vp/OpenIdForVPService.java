@@ -16,21 +16,19 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VPTokenInvalidException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import id.walt.mdoc.doc.MDoc;
 import id.walt.mdoc.issuersigned.IssuerSignedItem;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -58,35 +56,31 @@ public class OpenIdForVPService {
      * Before creating the User object, the VP Token is validated.
      * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
      * @return an unauthenticated token with information about the user to authenticate
-     * @throws VerifiablePresentationVerificationException exception thrown if the VP Token's verification failed
      */
-    public OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws VPTokenInvalidException,
-          VerifiablePresentationVerificationException, NoSuchAlgorithmException {
-        log.info("Starting to load VP Toke from response...");
+    public OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws OID4VPException {
+        log.info("Starting to load VP Token from Verifier Response...");
+
         JSONObject vpToken;
         try{
             vpToken =  new JSONObject(messageFromVerifier);
         }
         catch (JSONException e){
-            log.error(e.getMessage());
-            throw new VPTokenInvalidException(SignerError.UnexpectedError,
-                  "The response from the Verifier doesn't contain a correctly formatted JSON string.");
+            log.error("The message from Verifier is not a well formatted JSON. {}",e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.ResponseVerifierWithInvalidFormat, "The message from Verifier is not a valid JSON.");
         }
-        log.trace("VP Token: {}", vpToken);
+        log.debug("VP Token: {}", vpToken);
 
-        VPValidator validator = new VPValidator(vpToken, VerifierClient.PresentationDefinitionId,
-                    VerifierClient.PresentationDefinitionInputDescriptorsId, this.trustedCertificatesConfig);
-        Map<Integer, String> logsMap = new HashMap<>();
-        MDoc document = validator.loadAndVerifyDocumentForVP(logsMap);
-        log.info("Successfully validated and loaded the VP Token from the verifier response.");
+        VPValidator validator = new VPValidator(vpToken, VerifierClient.PresentationDefinitionId, VerifierClient.PresentationDefinitionInputDescriptorsId, this.trustedCertificatesConfig);
+        MDoc document = validator.loadAndVerifyDocumentForVP();
+        log.info("Validated and loaded the VP Token from the Verifier response.");
 
         UserOIDTemporaryInfo user = loadUserFromDocument(document);
-        log.trace("Successfully created an object User with the information from the VP Token.");
+        log.trace("Created an object User with the information from the VP Token.");
 
         return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
-    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws VPTokenInvalidException, NoSuchAlgorithmException {
+    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws OID4VPException {
         List<IssuerSignedItem> l = document.getIssuerSignedItems(document.getDocType().getValue());
 
         String familyName = null;
@@ -107,22 +101,32 @@ public class OpenIdForVPService {
         }
 
         if (!ageOver18) {
-            log.error(SignerError.UserNotOver18.getDescription());
-            throw new VPTokenInvalidException(SignerError.UserNotOver18, SignerError.UserNotOver18.getFormattedMessage());
+            log.error(OID4VPEnumError.UserNotOver18.getDescription());
+            throw new OID4VPException(OID4VPEnumError.UserNotOver18, "The 'ageOver18' value from the VP Token is false.");
         }
-
-        if (familyName == null || givenName == null || birthDate == null || issuingCountry == null) {
-            log.error("{}(loadUserFromDocument in OpenId4VPService.class): {}",
-                  SignerError.VPTokenMissingValues.getCode(), SignerError.VPTokenMissingValues.getDescription());
-            throw new VPTokenInvalidException(SignerError.VPTokenMissingValues,
-                  "The VP token doesn't have all the required values.");
+        if(familyName == null){
+            log.error("The document in the VP Token is missing the family name.");
+            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your last name is missing from the submitted data. Please try again.");
         }
-        log.info("Successfully retrieve the required parameters from the VP Token.");
+        if(givenName == null){
+            log.error("The document in the VP Token is missing the given name.");
+            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your first name is missing from the submitted data. Please try again.");
+        }
+        if(birthDate == null){
+            log.error("The document in the VP Token is missing the birthdate.");
+            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your birth date is missing from the submitted data. Please try again.");
+        }
+        if(issuingCountry == null){
+            log.error("The document in the VP Token is missing the issuing country.");
+            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: The issuing country is missing from the submitted data. Please try again.");
+        }
+        log.info("Retrieved the required parameters from the VP Token.");
 
         User user = new User(familyName, givenName, birthDate, issuingCountry, issuanceAuthority, "user");
-        log.info("Successfully created an object User with the received VP Token.");
+        log.info("Created an object User with the received VP Token.");
+
         addUserToDatabase(user);
-        log.info("Added User to the database.");
+        log.info("Added an object User to the database.");
         return new UserOIDTemporaryInfo(user, givenName, familyName);
     }
 

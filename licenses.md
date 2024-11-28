@@ -131,63 +131,69 @@ _2024-11-11 14:27:20 CET_
 > -   **POM Project URL**: [https://commons.apache.org/proper/commons-text](https://commons.apache.org/proper/commons-text)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt)
 
+**26** **Group:** `org.springframework.boot` **Name:** `spring-boot-starter-thymeleaf` **Version:** `3.3.0`
+
+> -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
+> -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+
+
 ## BSD3
 
-**26** **Group:** `com.augustcellars.cose` **Name:** `cose-java` **Version:** `1.1.0`
+**27** **Group:** `com.augustcellars.cose` **Name:** `cose-java` **Version:** `1.1.0`
 
 > -   **POM Project URL**: [https://github.com/cose-wg/cose-java](https://github.com/cose-wg/cose-java)
 > -   **POM License**: BSD3 - [https://github.com/jimsch/COSE-JAVA/blob/master/LICENSE](https://github.com/jimsch/COSE-JAVA/blob/master/LICENSE)
 
 ## Bouncy Castle Licence
 
-**27** **Group:** `org.bouncycastle` **Name:** `bcprov-jdk15on` **Version:** `1.70`
+**28** **Group:** `org.bouncycastle` **Name:** `bcprov-jdk15on` **Version:** `1.70`
 
 > -   **POM Project URL**: [https://www.bouncycastle.org/java.html](https://www.bouncycastle.org/java.html)
 > -   **POM License**: Bouncy Castle Licence - [https://www.bouncycastle.org/licence.html](https://www.bouncycastle.org/licence.html)
 
-**28** **Group:** `org.bouncycastle` **Name:** `bcpkix-jdk15on` **Version:** `1.70`
+**29** **Group:** `org.bouncycastle` **Name:** `bcpkix-jdk15on` **Version:** `1.70`
 
 > -   **POM Project URL**: [https://www.bouncycastle.org/java.html](https://www.bouncycastle.org/java.html)
 > -   **POM License**: Bouncy Castle Licence - [https://www.bouncycastle.org/licence.html](https://www.bouncycastle.org/licence.html)
 
 ## MySQL Connector License
 
-**29** **Group:** `com.mysql` **Name:** `mysql-connector-j` **Version:** `9.0.0`
+**30** **Group:** `com.mysql` **Name:** `mysql-connector-j` **Version:** `9.0.0`
 
 > -   **POM Project URL**: [https://dev.mysql.com/doc/connector-j/en/](https://dev.mysql.com/doc/connector-j/en/)
 > -   **POM License**: [https://github.com/mysql/mysql-connector-j/blob/release/9.x/LICENSE](https://github.com/mysql/mysql-connector-j/blob/release/9.x/LICENSE)
 
 ## MIT License
 
-**30** **Group:** `org.signserver.jacknji11` **Name:** `jacknji11` **Version:** `1.2-pk3`
+**31** **Group:** `org.signserver.jacknji11` **Name:** `jacknji11` **Version:** `1.2-pk3`
 
 > -   **POM Project URL**: [https://github.com/joelhockey/jacknji11](https://github.com/joelhockey/jacknji11)
 > -   **POM License**: MIT License - [https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt](https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt)
 
 ## LGPL 2.1 License
 
-**31** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
+**32** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
 
 > -   **POM Project URL**: [https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS](https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS)
 > -   **POM License**: LGPL 2.1 - [https://opensource.org/license/LGPL-2.1](https://opensource.org/license/LGPL-2.1)
 
 ## Org.Json Public Domain License
 
-**32** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
+**33** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
 
 > -   **POM Project URL**: [https://github.com/douglascrockford/JSON-java](https://github.com/douglascrockford/JSON-java)
 > -   **POM License**: Public Domain - [https://github.com/stleary/JSON-java/blob/master/LICENSE](https://github.com/stleary/JSON-java/blob/master/LICENSE)
 
 ## EPL 1.0 License
 
-**33** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
+**34** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
 
 > -   **POM Project URL**: [http://junit.org](http://junit.org)
 > -   **POM License**: EPL 1.0 - [https://junit.org/junit4/license.html](https://junit.org/junit4/license.html)
 
 ## rQES R2 License
 
-**34** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
+**35** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
 
 > -   **POM Project URL**: [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java)
 > -   **POM License**: Apache License, Version 2.0 - [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt)

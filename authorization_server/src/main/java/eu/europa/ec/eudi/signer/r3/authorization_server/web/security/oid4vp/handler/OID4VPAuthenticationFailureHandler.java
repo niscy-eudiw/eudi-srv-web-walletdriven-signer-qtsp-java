@@ -16,20 +16,42 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.http.HttpStatus;
+
+import jakarta.servlet.http.HttpSession;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 
 public class OID4VPAuthenticationFailureHandler implements AuthenticationFailureHandler {
 
-    public OID4VPAuthenticationFailureHandler() {}
+    private static final Logger logger = LogManager.getLogger(OID4VPAuthenticationFailureHandler.class);
 
     @Override
-    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-                                        AuthenticationException exception) throws IOException {
-        response.sendError(HttpStatus.UNAUTHORIZED.value(), exception.getMessage());
+    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
+        OID4VPEnumError error = null;
+        if(exception.getMessage().equals("certificate_issuerauth_invalid")){
+            error = OID4VPEnumError.CertificateIssuerAuthInvalid;
+        }
+        else if(exception.getMessage().equals("status_vptoken_invalid")){
+            error = OID4VPEnumError.StatusVPTokenInvalid;
+        }
+        else if(exception.getMessage().equals("presentation_submission_missing_data")){
+            error = OID4VPEnumError.PresentationSubmissionMissingData;
+        }
+
+        logger.error("Error received after attempting authentication with OId4VP. Message: {}", error != null ? error.getFormattedMessage() : exception.getMessage());
+
+        HttpSession session = request.getSession();
+        if(error != null) session.setAttribute("errorMessage", error.getFormattedMessageWithoutAdditionalInformation());
+        else session.setAttribute("errorMessage", exception.getMessage());
+
+        if(error != null) session.setAttribute("errorMessageAdditionalInfo", error.getAdditionalInformation());
+
+        response.sendRedirect("/error-page");
     }
 }

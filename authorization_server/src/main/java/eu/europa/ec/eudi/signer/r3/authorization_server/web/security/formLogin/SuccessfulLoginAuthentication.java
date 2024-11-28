@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.LogManager;
@@ -35,23 +36,17 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 
 public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSuccessHandler {
 	private final Logger logger = LogManager.getLogger(SuccessfulLoginAuthentication.class);
 	private final SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
 	private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 	private final String baseUrl;
-
+	private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
 	private RequestCache requestCache = new HttpSessionRequestCache();
 
 	public SuccessfulLoginAuthentication(String baseUrl) {
 		this.baseUrl = baseUrl;
-
 	}
 
 	@Override
@@ -87,31 +82,7 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 			UsernamePasswordAuthenticationTokenExtended authenticatedToken =
 				  new UsernamePasswordAuthenticationTokenExtended(token.getPrincipal(), token.getCredentials(), token.getAuthorities());
 
-			Map<String, String> queryValues = getQueryValues(originalUri.getRawQuery());
-
-			String scope = getScopeFromOAuth2Request(queryValues);
-			authenticatedToken.setScope(scope);
-
-			String client_id = getClientIdFromOAuth2Request(queryValues);
-			if (client_id != null) authenticatedToken.setClient_id(client_id);
-
-			String redirect_uri = getRedirectUriFromOAuth2Request(queryValues);
-			if (redirect_uri != null) authenticatedToken.setRedirect_uri(redirect_uri);
-
-			String hashDocument = getHashDocumentFromOAuth2Request(queryValues);
-			if (hashDocument != null) authenticatedToken.setHashDocument(hashDocument);
-
-			String credentialId = getCredentialIDFromOAuth2Request(queryValues);
-			if (credentialId != null) authenticatedToken.setCredentialID(credentialId);
-
-			String hashAlgorithmOID = getHashAlgorithmOIDFromOAuth2Request(queryValues);
-			if (hashAlgorithmOID != null) authenticatedToken.setHashAlgorithmOID(hashAlgorithmOID);
-
-			String numSignatures = getNumSignaturesFromOAuth2Request(queryValues);
-			if (numSignatures != null) authenticatedToken.setNumSignatures(numSignatures);
-
-			String authorizationDetails = getAuthorizationDetailsFromOAuth2Request(queryValues);
-			if (authorizationDetails != null) authenticatedToken.setAuthorization_details(authorizationDetails);
+			this.commonTokenSetting.setCommonParameters(authenticatedToken, originalUri);
 
 			SecurityContext context = securityContextHolderStrategy.createEmptyContext();
 			context.setAuthentication(authenticatedToken);
@@ -122,10 +93,6 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 
 			getRedirectStrategy().sendRedirect(request, response, updatedUriString);
 		}
-		catch (URISyntaxException e){
-			logger.error(e.getMessage());
-			throw new IOException(e.getMessage());
-		}
 		catch (Exception e){
 			logger.error(e.getMessage());
 			throw new IOException(e.getMessage());
@@ -134,55 +101,5 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 
 	public void setRequestCache(RequestCache requestCache) {
 		this.requestCache = requestCache;
-	}
-
-	private Map<String, String> getQueryValues(String query){
-		Map<String, String> queryPairs = new HashMap<>();
-		String[] pairs = query.split("&");
-		for (String pair : pairs) {
-			int idx = pair.indexOf("=");
-			if(idx != -1) {
-				String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
-				String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
-				queryPairs.put(key, value);
-			}
-		}
-		return queryPairs;
-	}
-
-	private String getClientIdFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("client_id");
-	}
-
-	private String getRedirectUriFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("redirect_uri");
-	}
-
-	private String getScopeFromOAuth2Request(Map<String, String> queryPairs) {
-		String scope = queryPairs.get("scope");
-		if(scope == null && queryPairs.get("authorization_details") != null)
-			scope = "credential";
-
-		return scope;
-	}
-
-	private String getHashDocumentFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("hashes");
-	}
-
-	private String getCredentialIDFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("credentialID");
-	}
-
-	private String getHashAlgorithmOIDFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("hashAlgorithmOID");
-	}
-
-	private String getNumSignaturesFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("numSignatures");
-	}
-
-	private String getAuthorizationDetailsFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("authorization_details");
 	}
 }

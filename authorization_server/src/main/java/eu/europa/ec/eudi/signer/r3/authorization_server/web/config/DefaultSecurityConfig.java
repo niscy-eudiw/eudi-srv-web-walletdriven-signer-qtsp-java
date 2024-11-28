@@ -48,14 +48,13 @@ import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
-public class DefaultSecurityConfig {
+public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig,
@@ -68,8 +67,10 @@ public class DefaultSecurityConfig {
 						  .requestMatchers("/swagger-ui/**").permitAll()
 						  .requestMatchers("/v3/api-docs/**").permitAll()
 						  .requestMatchers("/oid4vp/*").permitAll()
-						  .requestMatchers("/error").permitAll()
 						  .requestMatchers("/login").permitAll()
+						  .requestMatchers("/error").permitAll()
+						  .requestMatchers("/error-page").permitAll()
+						  .requestMatchers("/images/**", "/scripts/**", "/fontawesome-free-5.15.4-web/**", "/css/**", "/bootstrap-3.4.1-dist/**").permitAll()
 						  .anyRequest().authenticated()
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)

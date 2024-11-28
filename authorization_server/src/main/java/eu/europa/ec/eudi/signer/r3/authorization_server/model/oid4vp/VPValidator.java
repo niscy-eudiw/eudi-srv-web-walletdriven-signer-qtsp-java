@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
@@ -26,8 +27,9 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.SignerError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 
 import org.json.JSONArray;
@@ -50,7 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class VPValidator {
-    private static final Logger log = LoggerFactory.getLogger(VPValidator.class);
+    private static final Logger logger = LoggerFactory.getLogger(VPValidator.class);
     private final JSONObject verifiablePresentation;
     private final String presentationDefinitionInputDescriptorsId;
     private final String presentationDefinitionId;
@@ -77,65 +79,67 @@ public class VPValidator {
      * @return the position in the array documents of the vp_token where the
      *         requested Verifiable Presentation is located.
      */
-    private int validatePresentationSubmission() throws VerifiablePresentationVerificationException, JSONException {
-
+    private int validatePresentationSubmission() throws OID4VPException, JSONException {
         JSONObject presentation_submission = this.verifiablePresentation.getJSONObject("presentation_submission");
 
-        if (!presentation_submission.getString("definition_id").equals(this.presentationDefinitionId))
-            throw new VerifiablePresentationVerificationException(SignerError.PresentationSubmissionMissingData,
-                    "definition_id in presentation_submission is not the expected.",
-                    VerifiablePresentationVerificationException.Default);
+        if (!presentation_submission.getString("definition_id").equals(this.presentationDefinitionId)) {
+            logger.error("The definition_id from the presentation_submission doesn't match the expected {}", this.presentationDefinitionId);
+            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+                  "The value of the definition_id in presentation_submission is not the supported.");
+        }
+        logger.info("Validated the definition_id of the presentation_submission.");
 
         JSONArray descriptor_map = presentation_submission.getJSONArray("descriptor_map");
-
         JSONObject descriptor_map_response = IntStream.range(0, descriptor_map.length())
                 .mapToObj(descriptor_map::getJSONObject)
                 .filter(jobj -> jobj.getString("id").equals(this.presentationDefinitionInputDescriptorsId))
                 .findFirst()
                 .orElse(null);
 
-        if (descriptor_map_response == null)
-            throw new VerifiablePresentationVerificationException(SignerError.PresentationSubmissionMissingData,
-                    "No descriptor_map in the presentation_submission contains information about the requested VP.",
-                    VerifiablePresentationVerificationException.Default);
+        if (descriptor_map_response == null) {
+            logger.error("None of the descriptor_map in the presentation_submission contains information about the requested VP Token.");
+            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+                  "None of the descriptor_map in the presentation_submission contains information about the requested VP Token.");
+        }
+        logger.info("Found the descriptor_map in the presentation_submission.");
 
-        if (!descriptor_map_response.getString("format").equals("mso_mdoc"))
-            throw new VerifiablePresentationVerificationException(SignerError.PresentationSubmissionMissingData,
-                    "The current program only supports vp_tokens in the format mso_mdoc.",
-                    VerifiablePresentationVerificationException.Default);
+        if (!descriptor_map_response.getString("format").equals("mso_mdoc")) {
+            logger.error("The VP Token format is {}. However, the current implementation only supports vp_token in the format mso_mdoc.",
+                  descriptor_map_response.getString("format"));
+            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+                  "VP Token received is not a mso_mdoc. The current implementation only supports vp_token in the format mso_mdoc.");
+        }
+        logger.info("Validated that the VP Token is in the supported format: mso_mdoc.");
 
         return getPathIntValue(descriptor_map_response);
     }
 
     /**
-     * Function that allows to obtained the position from the 'path' value from the
-     * descriptor_map
-     * 
+     * Function that allows to obtain the position from the 'path' value from the  descriptor_map
      * @param descriptor_map_response The JSON Object from the JSON Array
-     *                                descriptor_map from where to obtained the path
-     *                                value
+     *                                descriptor_map from where to obtain the path value
      * @return The position presented in the 'path' value in the descriptor_map
      */
-    private static int getPathIntValue(JSONObject descriptor_map_response)
-            throws VerifiablePresentationVerificationException {
-        int pos;
+    private static int getPathIntValue(JSONObject descriptor_map_response) throws OID4VPException {
         String path = descriptor_map_response.getString("path");
 
+        int pos;
         if (path.equals("$")) {
             pos = 0;
         } else {
             Matcher matcher = Pattern.compile("\\d+").matcher(path);
-            if (matcher.find()) {
+            if (matcher.find())
                 pos = Integer.parseInt(matcher.group());
-            } else
-                pos = -1;
+            else pos = -1;
         }
 
-        if (pos == -1)
-            throw new VerifiablePresentationVerificationException(SignerError.FailedToValidateVPToken,
-                    "The path value from presentation_submission is not valid.",
-                    VerifiablePresentationVerificationException.Default);
+        if (pos == -1){
+            logger.error("The path value was not found in the descriptor_map of the presentation_submission.");
+            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+                  "The path value was not found in the descriptor_map of the presentation_submission.");
+        }
 
+        logger.info("The path {} was retrieved from the descriptor_map of the presentation_submission.", pos);
         return pos;
     }
 
@@ -145,7 +149,6 @@ public class VPValidator {
      */
     private DeviceResponse loadVpTokenToDeviceResponse() {
         String deviceResponse = this.verifiablePresentation.getJSONArray("vp_token").getString(0);
-        //  deviceResponse = this.verifiablePresentation.getString("vp_token");
         byte[] decodedBytes = Base64.getUrlDecoder().decode(deviceResponse);
         StringBuilder hexString = new StringBuilder();
         for (byte b : decodedBytes) {
@@ -156,7 +159,7 @@ public class VPValidator {
 
     // [0]: the certificate from the issuer signed
     // [1...]: the Certificate list
-    private List<X509Certificate> getAndValidateCertificateFromIssuerAuth(MDoc document) throws Exception {
+    private List<X509Certificate> getAndValidateCertificateFromIssuerAuth(MDoc document) throws CertificateException, OID4VPException {
         COSESign1 issuerAuth = document.getIssuerSigned().getIssuerAuth();
         CertificateFactory factory = CertificateFactory.getInstance("x.509");
         assert issuerAuth != null;
@@ -164,27 +167,28 @@ public class VPValidator {
         X509Certificate cert = (X509Certificate) factory.generateCertificate(in);
 
         X509Certificate issuerCertificate = this.trustedIssuersCertificate.getTrustIssuersCertificates().get(cert.getIssuerX500Principal().toString());
-        if (issuerCertificate == null)
-            throw new Exception("Issuer ("+cert.getIssuerX500Principal().getName()+") of the VPToken is not trustworthy.");
+        if (issuerCertificate == null) {
+            logger.error("The issuer certificate of the IssuerAuth of the VP Token is not one of the trusted certificates.");
+            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid,
+                  "The issuer certificate of the IssuerAuth is not trustworthy.");
+        }
 
         try {
             issuerCertificate.verify(issuerCertificate.getPublicKey());
             issuerCertificate.checkValidity();
         } catch (Exception e){
-            log.error("Failed to validate the issuer certificate." +
-                  " Issuer Certificate: " + issuerCertificate.getIssuerX500Principal().getName()+ "." +
-                  " Validaty: Not After = "+issuerCertificate.getNotAfter().toString()+" Not Before = "+issuerCertificate.getNotBefore().toString());
-            throw e;
+			logger.error("Failed to validate the issuer certificate. Issuer Certificate: {}. Validaty: Not After = {} Not Before = {}",
+                  issuerCertificate.getIssuerX500Principal().getName(), issuerCertificate.getNotAfter().toString(), issuerCertificate.getNotBefore().toString());
+            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the issuer of the IssuerAuth is not valid.");
         }
 
         try {
             cert.verify(issuerCertificate.getPublicKey());
             cert.checkValidity();
-        } catch (Exception e){
-            log.error("Failed to validate the certificate." +
-                  " Certificate: " + cert.getSubjectX500Principal().getName()+ "." +
-                  " Validaty: Not After = "+cert.getNotAfter().toString()+" Not Before = "+cert.getNotBefore().toString());
-            throw e;
+        }catch (Exception e){
+			logger.error("Failed to validate the certificate. Certificate: {}. Validaty: Not After = {} Not Before = {}",
+                  cert.getSubjectX500Principal().getName(), cert.getNotAfter().toString(), cert.getNotBefore().toString());
+            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the IssuerAuth is not valid.");
         }
 
         List<X509Certificate> certificateChain = new ArrayList<>();
@@ -205,7 +209,7 @@ public class VPValidator {
         Instant validity_info_signed = validityInfo.getSigned().getValue();
 
         if (!document.verifyValidity()) { // This function verifies the Validity, based on validity info given in the MSO.
-            throw new VerifiablePresentationVerificationException(SignerError.ValidityInfoInvalid,
+            throw new VerifiablePresentationVerificationException(OID4VPEnumError.ValidityInfoInvalid,
                     "Failed the ValidityInfo verification step: the ValidFrom or the ValidUntil from the IssuerAuth is later than the current time.",
                     VerifiablePresentationVerificationException.Default);
         }
@@ -213,7 +217,7 @@ public class VPValidator {
         Instant certNotBefore = new Instant(notBefore);
         Instant certNotAfter = new Instant(notAfter);
         if (validity_info_signed.compareTo(certNotAfter) > 0 || validity_info_signed.compareTo(certNotBefore) < 0)
-            throw new VerifiablePresentationVerificationException(SignerError.ValidityInfoInvalid,
+            throw new VerifiablePresentationVerificationException(OID4VPEnumError.ValidityInfoInvalid,
                     "Failed the ValidityInfo verification step: the Signed in the IssuerAuth is not valid.", VerifiablePresentationVerificationException.Default);
     }
 
@@ -260,21 +264,27 @@ public class VPValidator {
         logs.put(9, integrity_log.toString());
     }
 
-    public MDoc loadAndVerifyDocumentForVP(Map<Integer, String> logs)
-            throws VerifiablePresentationVerificationException {
+    public MDoc loadAndVerifyDocumentForVP() throws OID4VPException {
         try {
-            // Validate the Presentation Submission and get the Path from the descriptor_map.
+            // Validate the Presentation Submission and get the Path value from the descriptor_map
             int pos = validatePresentationSubmission();
+            logger.info("Retrieved the position of the VP Token. Position: {}.", pos);
 
+            // Load VP Token from the Verifier Message
             DeviceResponse vpToken = loadVpTokenToDeviceResponse();
+            logger.info("Loaded the VP Token from the Verifier Response.");
 
             // Verify that the status in the vpToken is equal "success"
-            if (vpToken.getStatus().getValue().intValue() != 0)
-                throw new VerifiablePresentationVerificationException(SignerError.StatusVPTokenInvalid,
-                        "The vp_token's status is not equal to a successful status.",
-                        VerifiablePresentationVerificationException.Default);
+            if (vpToken.getStatus().getValue().intValue() != 0) {
+                logger.error("The value of status in the vp_token is {} and invalid.", vpToken.getStatus().getValue().intValue());
+                throw new OID4VPException(OID4VPEnumError.StatusVPTokenInvalid,
+                      "The vp_token's status is not equal to a successful status (0).");
+            }
+            logger.info("Validated the value of status in the vp_token.");
 
+            // retrieve the document in the position
             MDoc document = vpToken.getDocuments().get(pos);
+            logger.info("Retrieved the document from the vp_token in the position {}.", pos);
 
             /*SimpleCOSECryptoProvider provider;
             X509Certificate certificateFromIssuerAuth;
@@ -285,10 +295,11 @@ public class VPValidator {
                 certificateFromIssuerAuth = certificateList.get(0);
                 List<X509Certificate> certificateChain = certificateList.subList(1, certificateList.size());
                 provider = getSimpleCOSECryptoProvider(certificateFromIssuerAuth, certificateChain);
-            } catch (Exception e) {
-                throw new VerifiablePresentationVerificationException(SignerError.CertificateIssuerAuthInvalid,
-                        "The Certificate in issuerAuth is not valid. (" + e.getMessage() + ")", VerifiablePresentationVerificationException.Default);
-            }*/
+            } catch (CertificateException e) {
+				logger.error("Failed to validate the certificate in the IssuerAuth. Error: {}", e.getMessage());
+                throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "Unexpected Error when trying to validate the certificate in the IssuerAuth.");
+            }
+            logger.info("Validated the certificate in the IssuerAuth.");*/
 
             /*MSO mso = document.getMSO();
 
@@ -337,8 +348,16 @@ public class VPValidator {
             */
             return document;
         }
+        catch (OID4VPException e){
+            throw e;
+        }
         catch (JSONException e){
-            throw new VerifiablePresentationVerificationException(SignerError.UnexpectedError, "The JSON string contains unexpected errors ("+e.getMessage()+").", VerifiablePresentationVerificationException.Default);
+			logger.error("JSONException found. Error: {}", e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.UnexpectedError, "The JSON string contains unexpected errors ("+e.getMessage()+").");
+        }
+        catch (Exception e){
+			logger.error("{} : {}", OID4VPEnumError.UnexpectedError.getFormattedMessage(), e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.UnexpectedError, e.getMessage());
         }
     }
 }
