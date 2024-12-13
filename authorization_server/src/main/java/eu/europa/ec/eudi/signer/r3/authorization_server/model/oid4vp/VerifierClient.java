@@ -310,52 +310,57 @@ public class VerifierClient {
         }
     }
 
-    public String getVPTokenFromVerifierRecursive(String user) throws Exception {
+    public String getVPTokenFromVerifierRecursive(String user) throws OID4VPException, InterruptedException {
+        log.info("Starting to retrieve the VP Token from the Verifier to authenticate the user {}...", user);
+
         VerifierCreatedVariable variables = verifierVariables.getUsersVerifierCreatedVariable(user);
         if (variables == null) {
             log.error("Failed to retrieve the required local variables to complete the authentication.");
-            throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
+            throw new OID4VPException(OID4VPEnumError.UnexpectedError, "Something went wrong on our end during sign-in. Please try again in a few moments.");
         }
-
         log.info("Retrieved the required local variables to complete the authentication.");
 
-        String nonce = variables.getNonce();
-        String presentation_id = variables.getPresentation_id();
         log.info("Current Verifier Variables State: {}", verifierVariables);
-        log.info("User: {} & Nonce: {} & Presentation_id: {}", user, variables.getNonce(), variables.getPresentation_id());
+        log.debug("User: {} & Nonce: {} & Presentation_id: {}", user, variables.getNonce(), variables.getPresentation_id());
 
         Map<String, String> headers = getHeaders();
-        String url = getUrlToRetrieveVPToken(presentation_id, nonce);
+        String url = getUrlToRetrieveVPToken(variables.getPresentation_id(), variables.getNonce());
+        log.info("Obtained the link to retrieve the VP Token from the Verifier.");
+        log.debug("Link to retrieve the VP Token: {}", url);
 
         String message = null;
         int responseCode = 400;
         long startTime = System.currentTimeMillis();
-        while (responseCode != 200 && (System.currentTimeMillis() - startTime) < 60000) {
+
+        while (responseCode != 200 && (System.currentTimeMillis() - startTime) < 60000) { // enquanto que não teve sucesso ou ainda não passou 1 min...
             WebUtils.StatusAndMessage response;
             try {
                 response = WebUtils.httpGetRequests(url, headers);
             } catch (Exception e) {
-                String logMessage = OID4VPEnumError.FailedConnectionToVerifier.getCode()
-                      + " (getVPTokenFromVerifier in VerifierClient.class) "
-                      + OID4VPEnumError.FailedConnectionToVerifier.getDescription()
-                      + ": " + e.getMessage();
-                log.error(logMessage);
-                throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
+                log.error("Failed to retrieve the VP Token from the Verifier. Error: {}", e.getMessage());
+                throw new OID4VPException(OID4VPEnumError.FailedConnectionToVerifier, "We could not connect to the OID4VP Verifier server and authentication failed.");
             }
 
-            if (response.getStatusCode() == 404) {
-                log.error("Failed to connect with Verifier and retrieve the VP Token.");
-                throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
+            if (response.getStatusCode() == 404 || response.getStatusCode() == 500) { // if unable to connect or exception...
+                log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", response.getStatusCode(), response.getMessage());
+                throw new OID4VPException(OID4VPEnumError.FailedConnectionToVerifier, "The OID4VP Verifier service is currently unavailable.");
             }
-            else if (response.getStatusCode() == 200) {
+            else if (response.getStatusCode() == 200) { // if succcess...
                 responseCode = 200;
+                if(response.getMessage() == null || Objects.equals(response.getMessage(), "")){ // if message is empty throw exception...
+                    String errorMessage = "It was not possible to retrieve a VP Token from the OID4VP Verifier Backend.";
+                    log.error("{} The message retrieved from the OID4VP Verifier Backend is empty.", errorMessage);
+                    throw new OID4VPException(OID4VPEnumError.MissingDataInResponseVerifier, "The server expected to receive a well-formatted VP Token from the OID4VP Verifier Backend. However, the response from the OID4VP Verifier Backend is empty.");
+                }
+                log.info("Retrieved the VP Token from the Verifier to authenticate the user {}.", user);
                 message = response.getMessage();
             } else
                 TimeUnit.SECONDS.sleep(1);
         }
-        if (responseCode == 400 && (System.currentTimeMillis() - startTime) >= 60000){
+
+        if (responseCode == 400 && (System.currentTimeMillis() - startTime) >= 60000){ // if unsuccessful in period of time...
             log.error("Failed to retrieve the VP Token. Error: response code 400 or operation timed out.");
-            throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
+            throw new OID4VPException(OID4VPEnumError.ConnectionVerifierTimedOut, "The user should scan the QrCode and share the PID information in 1 min.");
         }
         return message;
     }

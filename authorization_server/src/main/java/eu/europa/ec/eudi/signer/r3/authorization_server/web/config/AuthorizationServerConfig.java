@@ -130,14 +130,14 @@ public class AuthorizationServerConfig {
 				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter("client_id");
-					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester") && !client_id.equals("rp-client");
+					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester") && !client_id.equals("rp-client") && !client_id.equals("rp-sca-client");
 				};
 				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
 				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherCrossDevice = request -> {
 					String client_id = request.getParameter("client_id");
-					return client_id.equals("rp-client");
+					return client_id.equals("rp-client") || client_id.equals("rp-sca-client");
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
