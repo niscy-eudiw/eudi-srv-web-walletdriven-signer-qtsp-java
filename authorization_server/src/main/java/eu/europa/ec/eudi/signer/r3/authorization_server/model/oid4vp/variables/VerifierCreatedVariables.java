@@ -34,8 +34,7 @@ public class VerifierCreatedVariables {
         if (vcv != null) {
             allVariables.remove(user);
             return vcv;
-        } else
-            return null;
+        } else return null;
     }
 
     public synchronized void addUsersVerifierCreatedVariable(String user, String nonce, String presentation_id) {

@@ -30,10 +30,12 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.hand
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -44,13 +46,16 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
-public class DefaultSecurityConfig {
+public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig) throws Exception {
@@ -60,8 +65,10 @@ public class DefaultSecurityConfig {
 						  .requestMatchers("/swagger-ui/**").permitAll()
 						  .requestMatchers("/v3/api-docs/**").permitAll()
 						  .requestMatchers("/oid4vp/callback").permitAll()
-						  .requestMatchers("/error").permitAll()
 						  .requestMatchers("/login").permitAll()
+						  .requestMatchers("/error").permitAll()
+						  .requestMatchers("/error-page").permitAll()
+						  .requestMatchers("/static/**").permitAll()
 						  .anyRequest().authenticated()
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)

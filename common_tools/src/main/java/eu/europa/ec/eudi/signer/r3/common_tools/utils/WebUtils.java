@@ -29,6 +29,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Map;
@@ -85,19 +86,26 @@ public class WebUtils {
 		return cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
     }
 
-    public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers) throws Exception {
+    public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers) throws Exception{
         try(CloseableHttpClient httpClient = HttpClients.createDefault() ) {
             HttpResponse response = httpGetRequestCommon(httpClient, url, headers);
-            if(response.getStatusLine().getStatusCode() == 200){
+
+            int statusCode = response.getStatusLine().getStatusCode();
+            if(statusCode == 200){
                 HttpEntity entity = response.getEntity();
-                if (entity == null) {
-                    throw new Exception("Presentation Response from Verifier is empty.");
-                }
+                if (entity == null) throw new Exception("Presentation Response from Verifier is empty.");
+
                 InputStream inStream = entity.getContent();
                 String message = WebUtils.convertStreamToString(inStream);
-                return new StatusAndMessage(response.getStatusLine().getStatusCode(), message);
+                return new StatusAndMessage(statusCode, message);
             }
-            else return new StatusAndMessage(response.getStatusLine().getStatusCode());
+            else return new StatusAndMessage(statusCode, "Request failed with status code: " + statusCode);
+        }
+        catch (IOException e){
+            return new StatusAndMessage(500, "Network error: Unable to connect to the server. Please try again.");
+        }
+        catch (Exception e) {
+            return new StatusAndMessage(500, "An unexpected error occurred: " + e.getMessage());
         }
     }
 
