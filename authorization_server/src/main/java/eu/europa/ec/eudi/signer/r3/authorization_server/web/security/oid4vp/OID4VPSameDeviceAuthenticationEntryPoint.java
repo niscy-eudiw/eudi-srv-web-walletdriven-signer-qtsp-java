@@ -67,7 +67,7 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
 
         try{
             String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
-            this.sessionUrlRelationList.addSessionUrlRelation(sanitizeCookieString, returnTo);
+            this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
         catch (Exception e){

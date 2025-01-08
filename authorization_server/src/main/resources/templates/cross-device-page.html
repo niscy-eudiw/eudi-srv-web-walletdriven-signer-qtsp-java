@@ -34,9 +34,22 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <div id="content" class="content-wrap1 content-center col-md-11 col-sm-11">
-                            <h1>Authenticate with EUDI Wallet</h1>
+                            <h1>QTSP Authentication with EUDI Wallet</h1>
+
                             <div class="genericErrors" id="genericErrorsDesc"></div>
-                            <img th:src="'data:image/png;base64,' + ${qrCode}" alt="QR Code"/>
+
+                            <div>
+                                <p style="font-size: 21px;  display: inline;">A program is requesting access to </p>
+                                <!--<p th:text="${link}" style="font-size: 21px; display: inline;">link</p>-->
+                                <!--<p style="font-size: 21px; display: inline;"> is requesting access to </p>-->
+                                <p th:text="${reason}" style="font-size: 21px; display: inline;">reason</p>
+                                <br/>
+                                <p style="font-size: 21px; display: inline;">If you authenticate with the EUDIW, you will grant access to </p>
+                                <p th:text="${resources}" style="font-size: 21px; ">the list of certificates</p>
+                                <img th:src="'data:image/png;base64,' + ${qrCode}" alt="QR Code"/>
+                            </div>
+
+
                         </div>
                     </div>
                 </div>

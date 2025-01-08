@@ -2,7 +2,6 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
@@ -22,10 +21,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
