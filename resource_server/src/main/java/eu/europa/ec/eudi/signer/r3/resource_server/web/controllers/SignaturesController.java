@@ -54,7 +54,7 @@ public class SignaturesController {
         for(Map.Entry<String, Object> c: claims.entrySet()){
             stringBuilder.append(c.getKey()).append(": ").append(c.getValue());
         }
-        logger.trace("Access Token Claims: {}", stringBuilder.toString());
+        logger.debug("Access Token Claims: {}", stringBuilder.toString());
     }
 
     /***
@@ -67,10 +67,10 @@ public class SignaturesController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
         Map<String, Object> claims = ((Jwt) principal).getClaims();
-        if(logger.isTraceEnabled()) auxDebugLogs(claims);
+        if(logger.isDebugEnabled()) auxDebugLogs(claims);
 
         String userHash = claims.get("sub").toString();
-        logger.trace("Request received at /csc/v2/credentials/list with the body {} from the user {}",
+        logger.debug("Request received at /csc/v2/credentials/list with the body {} from the user {}",
               signHashRequest.toString(), userHash);
 
         if(userHash == null){
@@ -85,13 +85,13 @@ public class SignaturesController {
         }
 
         String credentialIDAuthorized = claims.get("credentialID").toString();
-        logger.trace("credentialIDAuthorized: {}", credentialIDAuthorized);
+        logger.debug("credentialIDAuthorized: {}", credentialIDAuthorized);
         int numSignaturesAuthorized = Integer.parseInt(claims.get("numSignatures").toString());
-        logger.trace("numSignaturesAuthorized: {}", numSignaturesAuthorized);
+        logger.debug("numSignaturesAuthorized: {}", numSignaturesAuthorized);
         String hashAlgorithmOIDAuthorized = claims.get("hashAlgorithmOID").toString();
-        logger.trace("hashAlgorithmOIDAuthorized: {}", hashAlgorithmOIDAuthorized);
+        logger.debug("hashAlgorithmOIDAuthorized: {}", hashAlgorithmOIDAuthorized);
         String hashesString = claims.get("hashes").toString();
-        logger.trace("hashesString: {}", hashesString);
+        logger.debug("hashesString: {}", hashesString);
         String[] hashesAuthorizedArray = hashesString.split(",");
         Arrays.sort(hashesAuthorizedArray);
         List<String> hashesAuthorized = new ArrayList<>(Arrays.asList(hashesAuthorizedArray));
@@ -101,7 +101,7 @@ public class SignaturesController {
             Collections.sort(hashesRequestedEncoded);
             List<String> hashesRequested = new ArrayList<>();
             for(String s: hashesRequestedEncoded){
-                logger.trace(s);
+                logger.debug(s);
                 String urlDecodedHash = URLDecoder.decode(s, StandardCharsets.UTF_8);
                 hashesRequested.add(urlDecodedHash);
             }

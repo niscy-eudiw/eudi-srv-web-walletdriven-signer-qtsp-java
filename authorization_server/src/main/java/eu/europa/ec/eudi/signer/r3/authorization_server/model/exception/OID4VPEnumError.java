@@ -59,11 +59,10 @@ public enum OID4VPEnumError {
           "Additional Information For Developers: Validation of the VP Token failed: The validation of the certificate in the IssuerAuth of the VP Token is failed.",
           434),
 
-
-
-
-
-
+    // message to the user from the description
+    ConnectionVerifierTimedOut("connection_verifier_timed_out",
+          "Unable to complete the authentication. The process of waiting the response from the authentication service timed-out. Please try again.",
+          504), // 504 gateway timeout
 
 
     // Errors while validating the VP Token:

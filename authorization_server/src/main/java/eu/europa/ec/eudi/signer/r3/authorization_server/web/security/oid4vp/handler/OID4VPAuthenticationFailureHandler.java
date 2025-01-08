@@ -53,5 +53,6 @@ public class OID4VPAuthenticationFailureHandler implements AuthenticationFailure
         if(error != null) session.setAttribute("errorMessageAdditionalInfo", error.getAdditionalInformation());
 
         response.sendRedirect("/error-page");
+        logger.info("Redirecting to error-page.");
     }
 }

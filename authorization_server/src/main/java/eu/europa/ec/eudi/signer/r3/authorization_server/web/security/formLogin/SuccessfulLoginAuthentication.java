@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -70,17 +71,19 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 		clearAuthenticationAttributes(request);
 		String targetUrl = savedRequest.getRedirectUrl();
 
+		System.out.println("Target Url: "+ targetUrl);
+
 		String updatedUriString;
 		try {
 			URI originalUri = URI.create(targetUrl);
-			URI baseUri = URI.create(this.baseUrl);
-			URI updatedUri = new URI(baseUri.getScheme(), originalUri.getUserInfo(), baseUri.getHost(),
-				  baseUri.getPort(), originalUri.getPath(), originalUri.getRawQuery(), originalUri.getFragment());
-			updatedUriString = updatedUri.toString();
+
+			System.out.println(originalUri.getQuery());
+			System.out.println(originalUri.getRawQuery());
+
+			updatedUriString = this.baseUrl + originalUri.getPath() + "?" + originalUri.getRawQuery();
 
 			UsernamePasswordAuthenticationToken token = (UsernamePasswordAuthenticationToken) authentication;
-			UsernamePasswordAuthenticationTokenExtended authenticatedToken =
-				  new UsernamePasswordAuthenticationTokenExtended(token.getPrincipal(), token.getCredentials(), token.getAuthorities());
+			UsernamePasswordAuthenticationTokenExtended authenticatedToken = new UsernamePasswordAuthenticationTokenExtended(token.getPrincipal(), token.getCredentials(), token.getAuthorities());
 
 			this.commonTokenSetting.setCommonParameters(authenticatedToken, originalUri);
 
