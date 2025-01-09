@@ -5,6 +5,7 @@ _02 Dec 2024_
 
 ### Added:
 - Error page to display errors in the OID4VP authentication process.
+- Added support for the OID4VP cross-device flow
 
 ### Fixed
 - Bug that introduced the possibility of skipping authentication.

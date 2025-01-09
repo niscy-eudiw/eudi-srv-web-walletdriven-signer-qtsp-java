@@ -71,7 +71,8 @@ public class OID4VPController {
 			}
 			else if (scope.equals("service")){
 				model.addAttribute("reason", "your account.");
-				model.addAttribute("resources", "the list of certificates.");
+				model.addAttribute("resources", "your list of certificates and, " +
+					  "if no certificate exists, you will grant access to issue a new certificate");
 			}
 
 			return "cross-device-page";

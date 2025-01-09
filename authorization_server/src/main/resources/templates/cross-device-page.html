@@ -45,7 +45,8 @@
                                 <p th:text="${reason}" style="font-size: 21px; display: inline;">reason</p>
                                 <br/>
                                 <p style="font-size: 21px; display: inline;">If you authenticate with the EUDIW, you will grant access to </p>
-                                <p th:text="${resources}" style="font-size: 21px; ">the list of certificates</p>
+                                <p th:text="${resources}" style="font-size: 21px;  display: inline;">the list of certificates</p>
+                                <br/>
                                 <img th:src="'data:image/png;base64,' + ${qrCode}" alt="QR Code"/>
                             </div>
 
