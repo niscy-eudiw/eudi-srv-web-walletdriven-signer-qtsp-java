@@ -66,13 +66,13 @@ public class OID4VPController {
 			String scope = this.tokenSetting.getScopeFromOAuth2Request(queryValues);
 
 			if(scope.equals("credential")) {
-				model.addAttribute("reason", "use your keys to sign a document.");
-				model.addAttribute("resources", "the chosen signing key.");
+				model.addAttribute("reason", "use your keys to sign your document.");
+				model.addAttribute("resources", "the chosen signing key to sign your document.");
 			}
 			else if (scope.equals("service")){
 				model.addAttribute("reason", "your account.");
 				model.addAttribute("resources", "your list of certificates and, " +
-					  "if no certificate exists, you will grant access to issue a new certificate");
+					  "if no certificate exists, you will grant access to issue a new certificate and a new key pair");
 			}
 
 			return "cross-device-page";

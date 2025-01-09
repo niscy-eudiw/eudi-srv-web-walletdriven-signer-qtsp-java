@@ -27,6 +27,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
     - [Common Tools](#common-tools)
     - [Authorization Server (AS)](#authorization-server-as)
     - [Resource Server (RS)](#resource-server-rs)
+    - [Execution](#execution)
   - [How to contribute](#how-to-contribute)
   - [License](#license)
     - [Third-party component licenses](#third-party-component-licenses)
@@ -388,8 +389,18 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
    ```
 
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**,
-   and to set the database name in the **application.yml**.
+   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+   ```
+   auth:
+      datasourceUsername: # the username of the database user, with permissions to the define database
+      datasourcePassword: # the password of the database user, with permissions to the define database
+   ```
+
+   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+   ```
+   datasource:
+      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+   ```
 
 4. **Create tables in the database**
    
@@ -418,8 +429,15 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
 6. **Update the application.yml**
-    
-   In the **application.yml**, it is required to update the value of the configuration to the url of the Authorization Server.
+
+   In the **application.yml**, you can configure a different port for the Authorization Server, which runs on the port 8084 by default.
+   To change the port, edit the lines:
+   ```
+   server:
+      port: 8084
+   ```
+
+   Additionally, you must update the **oauth2-issuer-url** configuration to reflect the URL of the Authorization Server.
    ```
    oauth2-issuer-url:
       url: {url_authorization_server}
@@ -430,10 +448,20 @@ This secret key is required to encode certain values in JWT tokens.
    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
     
-8. **Run the Authorization Server**
-   After configuring the previously mentioned settings, navigate to the **tools** directory and run the script
+8. **Add Authentication through Login Form**
+
+   During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
+   To set this up, you need to add **application-user-login-form.yml** with the values:
    ```
-   ./deploy_as.sh
+   user-login-form:
+      enabled: true
+      family-name: 
+      given-name: 
+      birth-date: 
+      issuing-country: 
+      issuance-authority:
+      role: 
+      password: 
    ```
 
 ### Resource Server (RS)
@@ -480,7 +508,8 @@ This secret key is required to encode certain values in JWT tokens.
 
 3. **Create database and user with the required permissions**
 
-   The current program uses a MySQL database. To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
+   The current program uses a MySQL database. If you have already set up the database for the Authorization Server, you may use the same database, or create a new database. 
+   To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
 
    ```
    sudo apt install mysql-server -y
@@ -502,8 +531,18 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
    ```
 
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**,
-   and to set the database name in the **application.yml**.
+   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+   ```
+   auth:
+      datasourceUsername: # the username of the database user, with permissions to the define database
+      datasourcePassword: # the password of the database user, with permissions to the define database
+   ```
+
+   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+   ```
+   datasource:
+      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+   ```
     
 4. **Configure the HSM Module**
     
@@ -532,8 +571,17 @@ This secret key is required to encode certain values in JWT tokens.
                   issuer-uri: {url_authorization_server}
    ```
 
-6. **Run the Resource Server**
-   After configuring the previously mentioned settings, navigate to the **tools** directory and run the script
+### Execution
+
+After configuring the previously mentioned settings, navigate to the **tools** directory and run the scripts.
+It is important to run this scripts in the order presented:
+
+1. **Run the Authorization Server**
+   ```
+   ./deploy_as.sh
+   ```
+
+2. **Run the Resource Server**
    ```
    ./deploy_rs.sh
    ```

@@ -13,10 +13,9 @@
 # limitations under the License.
 
 server:
-  port: 8485
-  ssl:
-    bundle: resource_server
-    client-auth: need
+  port: 8085
+  error:
+    include-message: always
 
 spring:
   datasource:
@@ -43,22 +42,6 @@ spring:
   application:
     name: qtsp
     version: 0.0.1
-
-  ssl:
-    bundle:
-      jks:
-        resource_server:
-          key:
-            alias: messages-resource-sample
-            password: password
-          keystore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
-          truststore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
 
   security:
     oauth2:
@@ -89,8 +72,8 @@ info:
     algos:
       - "1.2.840.10045.2.1" # ecdsa or ecPublicKey
       - "1.2.840.10045.4.3.2" # ecdsa-with-SHA256
-      - "1.2.840.10045.4.3.3" # ecdsa-with-SHA384
-      - "1.2.840.10045.4.3.4" # ecdsa-with-SHA512
+      # - "1.2.840.10045.4.3.3" # ecdsa-with-SHA384
+      # - "1.2.840.10045.4.3.4" # ecdsa-with-SHA512
   signature_formats:
     P:
       - "Enveloped"

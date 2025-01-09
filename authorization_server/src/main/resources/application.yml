@@ -13,10 +13,7 @@
 # limitations under the License.
 
 server:
-  port: 8484
-  ssl:
-    bundle: demo-authorizationserver
-    client-auth: want
+  port: 8084
   error:
     include-message: always
 
@@ -31,22 +28,6 @@ trusted-issuers:
   folder: certificate_of_issuers
 
 spring:
-  ssl:
-    bundle:
-      jks:
-        demo-authorizationserver:
-          key:
-            alias: demo-authorizationserver-sample
-            password: password
-          keystore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
-          truststore:
-            location: classpath:keystore.p12
-            password: password
-            type: PKCS12
-
   datasource:
     url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
     driver-class-name: com.mysql.cj.jdbc.Driver

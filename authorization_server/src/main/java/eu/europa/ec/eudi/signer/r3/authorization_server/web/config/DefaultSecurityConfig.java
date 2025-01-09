@@ -117,10 +117,13 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	public CustomUserDetailsService userDetailsService(UserRepository userRepository, UserTestLoginFormConfig userTest){
-		User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
-		tester.setPassword(userTest.getPassword());
-		if(userRepository.findByHash(tester.getHash()).isEmpty())
-			userRepository.save(tester);
+		if(!userTest.isEmpty()){
+			User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
+			tester.setPassword(userTest.getPassword());
+
+			if(userRepository.findByHash(tester.getHash()).isEmpty())
+				userRepository.save(tester);
+		}
 		return new CustomUserDetailsService(userRepository);
 	}
 
