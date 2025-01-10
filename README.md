@@ -223,7 +223,6 @@ sequenceDiagram
     participant RP as Web Page (RP)
     participant RS as Resource Server (QTSP)
     
-
     RP->>+RS: Get credentials list (/credentials/list)
     opt is credential list empty
         RS->>+RS: Issue credential
@@ -231,8 +230,8 @@ sequenceDiagram
     RS-->>-RP: credentials list
 
     opt is a single credential info requested
-        SCC->>+RS: Get credential's info (/credentials/info)
-        RS->>-SCC: credential's information
+        RP->>+RS: Get credential's info (/credentials/info)
+        RS->>-RP: credential's information
    end
 ```
 
