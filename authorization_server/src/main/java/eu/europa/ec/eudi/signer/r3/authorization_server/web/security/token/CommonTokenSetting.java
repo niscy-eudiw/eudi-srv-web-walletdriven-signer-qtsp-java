@@ -55,7 +55,7 @@ public class CommonTokenSetting {
 		if(authorizationDetails != null) token.setAuthorization_details(authorizationDetails);
 	}
 
-	private Map<String, String> getQueryValues(URI url){
+	public Map<String, String> getQueryValues(URI url){
 		String query = url.getRawQuery();
 
 		Map<String, String> queryPairs = new HashMap<>();
@@ -80,7 +80,7 @@ public class CommonTokenSetting {
 		return queryPairs.get("redirect_uri");
 	}
 
-	private String getScopeFromOAuth2Request(Map<String, String> queryPairs) {
+	public String getScopeFromOAuth2Request(Map<String, String> queryPairs) {
 		String scope = queryPairs.get("scope");
 		if(scope == null && queryPairs.get("authorization_details") != null)
 			scope = "credential";

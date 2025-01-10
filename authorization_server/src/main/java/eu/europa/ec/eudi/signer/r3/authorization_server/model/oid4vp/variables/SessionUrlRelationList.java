@@ -18,7 +18,6 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.springframework.stereotype.Component;
 
 @Component
@@ -38,7 +37,7 @@ public class SessionUrlRelationList {
         this.listOfVariables.remove(sessionId);
     }
 
-    public synchronized void addSessionUrlRelation(String user, String url){
+    public synchronized void addSessionReturnToUrl(String user, String url){
         this.listOfVariables.put(user, new SessionUrlRelation(url, user));
     }
 }

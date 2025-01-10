@@ -1,4 +1,4 @@
-# EUDI Wallet-driven signer QTSP
+# EUDI Wallet-Driven & RP-Centric signer QTSP
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
@@ -9,20 +9,25 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 
 ## Table of contents
 
-- [EUDI Wallet-driven signer QTSP](#eudi-wallet-driven-signer-qtsp)
+- [EUDI Wallet-Driven & RP-Centric signer QTSP](#eudi-wallet-driven--rp-centric-signer-qtsp)
   - [Table of contents](#table-of-contents)
   - [Overview](#overview)
   - [Disclaimer](#disclaimer)
-  - [Sequence Diagrams](#sequence-diagrams)
+  - [Wallet-Driven Sequence Diagrams](#wallet-driven-sequence-diagrams)
     - [Service Authentication](#service-authentication)
     - [Credentials Listing](#credentials-listing)
     - [Credential Authorization](#credential-authorization)
+  - [RP-Centric Sequence Diagrams](#rp-centric-sequence-diagrams)
+      - [Service Authentication](#service-authentication-1)
+      - [Credentials Listing](#credentials-listing-1)
+      - [Credential Authorization](#credential-authorization-1)
   - [Endpoints](#endpoints)
   - [Deployment](#deployment)
     - [Requirements](#requirements)
     - [Common Tools](#common-tools)
     - [Authorization Server (AS)](#authorization-server-as)
     - [Resource Server (RS)](#resource-server-rs)
+    - [Execution](#execution)
   - [How to contribute](#how-to-contribute)
   - [License](#license)
     - [Third-party component licenses](#third-party-component-licenses)
@@ -31,7 +36,7 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 
 ## Overview
 
-This is a REST API server that implements a wallet-driven QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
+This is a REST API server that implements a wallet-driven and rp-centric QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
 The QTSP provides endpoints based on the CSC API v2.0 specification and supports authentication via OpenID4VP.
 
 Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [deploy](#deployment) it in your environment.
@@ -60,7 +65,7 @@ The released software is an initial development release version:
 -   We strongly recommend not putting this version of the software into production use.
 -   Only the latest version of the software will be supported
 
-## Sequence Diagrams
+## Wallet-Driven Sequence Diagrams
 
 ### Service Authentication
 ```mermaid
@@ -169,6 +174,115 @@ sequenceDiagram
     SCA->>-EW: signed document
 ```
 
+## RP-Centric Sequence Diagrams
+
+### Service Authentication
+```mermaid
+sequenceDiagram
+    title Service (QTSP) Authentication
+
+    actor U as UserAgent
+    participant EW as EUDI Wallet
+    participant RP as Web Page (RP)
+    participant PC as Presentation Component (RP)
+    participant AS as Authorization Server (QTSP)
+    participant OIDV as OID4VP Verifier
+    
+    U->>+RP: Authenticate using OID4VP
+
+    RP->>+RP: Load document
+    RP->>+PC: Present document
+    U->>+RP: Consent to sign document
+
+    RP->>+AS: /oauth2/authorize
+    AS->>+OIDV: Authorization Request (POST {verifier}/ui/presentations)
+    OIDV-->>-AS: Authorization Request returns
+    AS->>+AS: Generate link to Wallet
+    AS-->>-RP: Render link as QrCode
+
+    EW->>+RP: Scan QrCode 
+    EW->>+OIDV: Share requested information
+
+    AS->>+OIDV: Request VP Token
+    OIDV-->>-AS: Get and validate VP Token
+
+    AS-->>-RP: Redirects to /oauth2/authorize (with session token)
+    RP->>+AS: /oauth2/authorize [Cookie JSession]
+    AS-->>-RP: Redirect to {redirect_uri}?code={code}
+    RP->>+AS: /oauth2/token?code={code}
+    AS-->>-RP: Access Token
+```
+
+### Credentials Listing
+
+```mermaid
+sequenceDiagram
+    title Credentials Listing
+    
+    actor U as UserAgent
+    participant RP as Web Page (RP)
+    participant RS as Resource Server (QTSP)
+    
+
+    RP->>+RS: Get credentials list (/credentials/list)
+    opt is credential list empty
+        RS->>+RS: Issue credential
+    end
+    RS-->>-RP: credentials list
+
+    opt is a single credential info requested
+        SCC->>+RS: Get credential's info (/credentials/info)
+        RS->>-SCC: credential's information
+   end
+```
+
+### Credential Authorization
+
+```mermaid
+sequenceDiagram
+title Document Signing
+
+    actor U as UserAgent
+    participant EW as EUDI Wallet    
+    participant BR as Browser
+    participant RP as Web Page (RP)
+    participant SCA as Signature Creation Application (RP)
+    participant AS as Authorization Server (QTSP)
+    participant RS as Resource Server (QTSP)
+    participant OIDV as OID4VP Verifier
+
+    U->>+RP: Choose credential to use
+    RP->>+SCA: Request document signing
+    SCA->>+RS: Get certificate of the chosen credential (credentials/info)
+    SCA->>+SCA: Get document's hash
+
+    SCA->>+AS: /oauth2/authorize
+    AS->>+OIDV: Authorization Request (POST {verifier}/ui/presentations)
+    OIDV-->>-AS: Authorization Request returns
+    AS->>+AS: Generate link to Wallet
+    AS-->>-BR: Render link as QrCode
+
+    EW->>+BR: Scan QrCode 
+    EW->>+OIDV: Share requested information
+
+    AS->>+OIDV: Request VP Token
+    OIDV-->>-AS: Get and validate VP Token
+
+    AS-->>-BR: Redirects to /oauth2/authorize (with session token)
+    BR->>+AS: /oauth2/authorize [Cookie JSession]
+    AS-->>-BR: Redirect to {sca_redirect_uri}?code={code}
+
+    BR->>+SCA: {sca_redirect_uri}?code={code}
+    SCA->>+AS: /oauth2/token?code={code}
+    AS-->>-SCA: access token authorizing credentials use (SAD/R)
+
+    SCA->>+RS: Sign hash request (/signatures/signHash)
+    RS-->>-SCA: signature
+
+    SCA->>+SCA: generate signed document 
+    SCA-->>-RP: returns signed document
+```
+
 ## Endpoints
 
 The endpoints presented below are based on the CSC API v2.0 specifications.
@@ -275,8 +389,18 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
    ```
 
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**,
-   and to set the database name in the **application.yml**.
+   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+   ```
+   auth:
+      datasourceUsername: # the username of the database user, with permissions to the define database
+      datasourcePassword: # the password of the database user, with permissions to the define database
+   ```
+
+   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+   ```
+   datasource:
+      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+   ```
 
 4. **Create tables in the database**
    
@@ -305,8 +429,15 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
 6. **Update the application.yml**
-    
-   In the **application.yml**, it is required to update the value of the configuration to the url of the Authorization Server.
+
+   In the **application.yml**, you can configure a different port for the Authorization Server, which runs on the port 8084 by default.
+   To change the port, edit the lines:
+   ```
+   server:
+      port: 8084
+   ```
+
+   Additionally, you must update the **oauth2-issuer-url** configuration to reflect the URL of the Authorization Server.
    ```
    oauth2-issuer-url:
       url: {url_authorization_server}
@@ -317,10 +448,20 @@ This secret key is required to encode certain values in JWT tokens.
    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
     
-8. **Run the Authorization Server**
-   After configuring the previously mentioned settings, navigate to the **tools** directory and run the script
+8. **Add Authentication through Login Form**
+
+   During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
+   To set this up, you need to add **application-user-login-form.yml** with the values:
    ```
-   ./deploy_as.sh
+   user-login-form:
+      enabled: true
+      family-name: 
+      given-name: 
+      birth-date: 
+      issuing-country: 
+      issuance-authority:
+      role: 
+      password: 
    ```
 
 ### Resource Server (RS)
@@ -367,7 +508,8 @@ This secret key is required to encode certain values in JWT tokens.
 
 3. **Create database and user with the required permissions**
 
-   The current program uses a MySQL database. To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
+   The current program uses a MySQL database. If you have already set up the database for the Authorization Server, you may use the same database, or create a new database. 
+   To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
 
    ```
    sudo apt install mysql-server -y
@@ -389,8 +531,18 @@ This secret key is required to encode certain values in JWT tokens.
    GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
    ```
 
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**,
-   and to set the database name in the **application.yml**.
+   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+   ```
+   auth:
+      datasourceUsername: # the username of the database user, with permissions to the define database
+      datasourcePassword: # the password of the database user, with permissions to the define database
+   ```
+
+   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+   ```
+   datasource:
+      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+   ```
     
 4. **Configure the HSM Module**
     
@@ -419,8 +571,17 @@ This secret key is required to encode certain values in JWT tokens.
                   issuer-uri: {url_authorization_server}
    ```
 
-6. **Run the Resource Server**
-   After configuring the previously mentioned settings, navigate to the **tools** directory and run the script
+### Execution
+
+After configuring the previously mentioned settings, navigate to the **tools** directory and run the scripts.
+It is important to run this scripts in the order presented:
+
+1. **Run the Authorization Server**
+   ```
+   ./deploy_as.sh
+   ```
+
+2. **Run the Resource Server**
    ```
    ./deploy_rs.sh
    ```

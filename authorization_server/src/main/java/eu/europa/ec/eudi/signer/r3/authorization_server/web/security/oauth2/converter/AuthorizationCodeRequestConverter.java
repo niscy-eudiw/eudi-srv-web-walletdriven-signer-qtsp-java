@@ -76,6 +76,7 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
     @Override
     public Authentication convert(HttpServletRequest request){
         logger.info("Request received at {}", request.getRequestURL().toString());
+        logger.info(request.getQueryString());
 
         if (!this.authenticationServiceRequestMatcher.matches(request) &&
               !this.authorizationCredentialRequestMatcher.matches(request) &&

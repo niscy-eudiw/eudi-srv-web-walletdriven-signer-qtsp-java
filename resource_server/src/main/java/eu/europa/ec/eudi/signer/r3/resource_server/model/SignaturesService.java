@@ -86,6 +86,8 @@ public class SignaturesService {
             return false;
         }
         if(!hashesRequested.equals(hashesAuthorized)){
+            System.out.println("Hashes Requested: "+hashesRequested);
+            System.out.println("Hashes Authorized: "+hashesAuthorized);
             logger.error("The hashes requested are different from the hashes authorized.");
             return false;
         }

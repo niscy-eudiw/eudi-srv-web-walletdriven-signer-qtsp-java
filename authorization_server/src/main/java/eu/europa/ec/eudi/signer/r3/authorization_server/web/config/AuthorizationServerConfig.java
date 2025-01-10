@@ -84,25 +84,20 @@ import org.springframework.security.oauth2.server.authorization.settings.ClientS
 import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
-
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
 	private final CryptoUtils cryptoUtils = new CryptoUtils();
 
-	public AuthorizationServerConfig() throws Exception {
-
-	}
+	public AuthorizationServerConfig() throws Exception {}
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-																	  OID4VPAuthenticationFilter authenticationFilter, OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
-																	  UserRepository userRepository) throws Exception
+																	  OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
 	{
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
@@ -131,14 +126,20 @@ public class AuthorizationServerConfig {
 						  .authenticationProvider(tokenRequestProvider));
 
 		http
-			.addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			.exceptionHandling((exceptions) -> {
-				OID4VPAuthenticationEntryPoint entryPoint = new OID4VPAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
+				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter("client_id");
-					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester");
+					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester") && !client_id.equals("rp-client") && !client_id.equals("rp-sca-client");
 				};
 				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
+
+				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
+				RequestMatcher requestMatcherCrossDevice = request -> {
+					String client_id = request.getParameter("client_id");
+					return client_id.equals("rp-client") || client_id.equals("rp-sca-client");
+				};
+				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
 					String client_id = request.getParameter("client_id");

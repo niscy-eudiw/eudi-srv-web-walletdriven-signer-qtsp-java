@@ -30,12 +30,10 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.hand
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.CacheControl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -44,12 +42,13 @@ import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,13 +57,16 @@ import java.util.List;
 public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
-	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig) throws Exception {
-		http
+	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig,
+														  OID4VPSameDeviceAuthenticationFilter sameDeviceAuthenticationFilter,
+														  OID4VPCrossDeviceAuthenticationFilter crossDeviceAuthenticationFilter,
+														  CorsConfigurationSource corsConfigurationSource) throws Exception {
+		http.cors(c->c.configurationSource(corsConfigurationSource))
 			  .authorizeHttpRequests(authorize ->
 					authorize
 						  .requestMatchers("/swagger-ui/**").permitAll()
 						  .requestMatchers("/v3/api-docs/**").permitAll()
-						  .requestMatchers("/oid4vp/callback").permitAll()
+						  .requestMatchers("/oid4vp/*").permitAll()
 						  .requestMatchers("/login").permitAll()
 						  .requestMatchers("/error").permitAll()
 						  .requestMatchers("/error-page").permitAll()
@@ -73,6 +75,8 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 			  )
 			  .csrf(AbstractHttpConfigurer::disable)
 			  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+			  .addFilterBefore(sameDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			  .addFilterBefore(crossDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())))
 			  .exceptionHandling(ex ->
 					ex
@@ -89,6 +93,19 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 	}
 
 	@Bean
+	CorsConfigurationSource corsConfigurationSource() {
+		System.out.println("CorsConfigurationSource...");
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(List.of("*"));
+		configuration.setAllowedMethods(List.of("*"));
+		configuration.setAllowedHeaders(List.of("*"));
+		configuration.setExposedHeaders(List.of("Location"));
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
+	}
+
+	@Bean
 	public SessionRegistry sessionRegistry() {
 		return new SessionRegistryImpl();
 	}
@@ -100,10 +117,13 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	public CustomUserDetailsService userDetailsService(UserRepository userRepository, UserTestLoginFormConfig userTest){
-		User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
-		tester.setPassword(userTest.getPassword());
-		if(userRepository.findByHash(tester.getHash()).isEmpty())
-			userRepository.save(tester);
+		if(!userTest.isEmpty()){
+			User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
+			tester.setPassword(userTest.getPassword());
+
+			if(userRepository.findByHash(tester.getHash()).isEmpty())
+				userRepository.save(tester);
+		}
 		return new CustomUserDetailsService(userRepository);
 	}
 
@@ -134,12 +154,25 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 	}
 
 	@Bean
-	public OID4VPAuthenticationFilter authenticationFilter(
+	public OID4VPSameDeviceAuthenticationFilter authenticationFilter(
 		AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
 		OID4VPAuthenticationFailureHandler authenticationFailureHandler, VerifierClient verifierClient,
 		OpenIdForVPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
 
-		OID4VPAuthenticationFilter filter = new OID4VPAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
+		OID4VPSameDeviceAuthenticationFilter filter = new OID4VPSameDeviceAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
+		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
+		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
+		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
+		return filter;
+	}
+
+	@Bean
+	public OID4VPCrossDeviceAuthenticationFilter crossDeviceAuthenticationFilter(
+		  AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
+		  OID4VPAuthenticationFailureHandler authenticationFailureHandler, VerifierClient verifierClient,
+		  OpenIdForVPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
+
+		OID4VPCrossDeviceAuthenticationFilter filter = new OID4VPCrossDeviceAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		filter.setAuthenticationFailureHandler(authenticationFailureHandler);

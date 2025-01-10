@@ -86,7 +86,7 @@ public class WebUtils {
 		return cookieSession.replaceAll("[^a-zA-Z0-9 \\-_.=;,~]", "").replaceAll("[\\r\\n]", "").trim();
     }
 
-    public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers) throws Exception{
+    public static StatusAndMessage httpGetRequests(String url, Map<String, String> headers){
         try(CloseableHttpClient httpClient = HttpClients.createDefault() ) {
             HttpResponse response = httpGetRequestCommon(httpClient, url, headers);
 

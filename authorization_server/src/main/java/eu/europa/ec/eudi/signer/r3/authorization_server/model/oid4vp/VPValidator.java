@@ -176,19 +176,19 @@ public class VPValidator {
         try {
             issuerCertificate.verify(issuerCertificate.getPublicKey());
             issuerCertificate.checkValidity();
-        }catch (Exception e){
-            logger.error("The certificate of the issuer is not valid.");
-            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid,
-                  "The certificate of the issuer of the IssuerAuth is not valid.");
+        } catch (Exception e){
+			logger.error("Failed to validate the issuer certificate. Issuer Certificate: {}. Validaty: Not After = {} Not Before = {}",
+                  issuerCertificate.getIssuerX500Principal().getName(), issuerCertificate.getNotAfter().toString(), issuerCertificate.getNotBefore().toString());
+            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the issuer of the IssuerAuth is not valid.");
         }
 
         try {
             cert.verify(issuerCertificate.getPublicKey());
             cert.checkValidity();
         }catch (Exception e){
-            logger.error("The certificate of the IssuerAuth is not valid.");
-            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid,
-                  "The certificate of the IssuerAuth is not valid.");
+			logger.error("Failed to validate the certificate. Certificate: {}. Validaty: Not After = {} Not Before = {}",
+                  cert.getSubjectX500Principal().getName(), cert.getNotAfter().toString(), cert.getNotBefore().toString());
+            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the IssuerAuth is not valid.");
         }
 
         List<X509Certificate> certificateChain = new ArrayList<>();
@@ -286,7 +286,7 @@ public class VPValidator {
             MDoc document = vpToken.getDocuments().get(pos);
             logger.info("Retrieved the document from the vp_token in the position {}.", pos);
 
-            SimpleCOSECryptoProvider provider;
+            /*SimpleCOSECryptoProvider provider;
             X509Certificate certificateFromIssuerAuth;
 
             // Validate Certificate from the MSO header:
@@ -299,7 +299,7 @@ public class VPValidator {
 				logger.error("Failed to validate the certificate in the IssuerAuth. Error: {}", e.getMessage());
                 throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "Unexpected Error when trying to validate the certificate in the IssuerAuth.");
             }
-            logger.info("Validated the certificate in the IssuerAuth.");
+            logger.info("Validated the certificate in the IssuerAuth.");*/
 
             /*MSO mso = document.getMSO();
 
