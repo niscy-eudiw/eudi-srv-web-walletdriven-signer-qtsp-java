@@ -53,6 +53,7 @@ public class OAuth2ClientRegistrationConfig {
         private Set<String> redirectUris;
         private Set<String> scopes;
         private boolean requireAuthorizationConsent;
+        private AuthenticationForm authenticationForm;
 
         public String getClientId() {
             return clientId;
@@ -108,6 +109,36 @@ public class OAuth2ClientRegistrationConfig {
 
         public void setRequireAuthorizationConsent(boolean requireAuthorizationConsent) {
             this.requireAuthorizationConsent = requireAuthorizationConsent;
+        }
+
+        public AuthenticationForm getAuthenticationForm() {
+            return authenticationForm;
+        }
+
+        public void setAuthenticationForm(AuthenticationForm authenticationForm) {
+            this.authenticationForm = authenticationForm;
+        }
+    }
+
+    public enum AuthenticationForm {
+        LOGIN_FORM(1, "login-form"),
+        SAME_DEVICE_FLOW(2, "same-device-flow"),
+        CROSS_DEVICE_FLOW(3, "cross-device-flow");
+
+        private final int id;
+        private final String value;
+
+        AuthenticationForm(int id, String value) {
+            this.id = id;
+            this.value = value;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public String getValue() {
+            return value;
         }
     }
 }
