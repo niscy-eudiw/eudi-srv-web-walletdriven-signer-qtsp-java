@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.bouncycastle.util.encoders.Base64Encoder;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -198,7 +200,7 @@ public class VerifierClient {
         return headers;
     }
 
-    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
+    private JSONObject getPresentationDefinitionJSON(){
         String presentationDefinition = "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
               "'input_descriptors': [{" +
@@ -216,8 +218,42 @@ public class VerifierClient {
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
               "]}}]}";
-        JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
+		return new JSONObject(presentationDefinition);
+    }
 
+    private List<String> getTransactionData(String credentialID){
+        List<String> transaction_data = new ArrayList<>();
+
+        JSONObject transaction_data_object = new JSONObject();
+        transaction_data_object.put("type", "qes_authorization");
+
+        List<String> credentials_ids = new ArrayList<>();
+        credentials_ids.add(PresentationDefinitionInputDescriptorsId);
+        transaction_data_object.put("credentials_ids", credentials_ids);
+
+        transaction_data_object.put("credentialID", credentialID);
+        transaction_data_object.put("signatureQualifier", "");
+
+        JSONArray documentDigests = new JSONArray();
+        JSONObject documentDigestSingle = new JSONObject();
+        documentDigestSingle.put("label", "");
+        documentDigestSingle.put("hash", "");
+        documentDigestSingle.put("hashAlgorithmOID", "");
+        documentDigests.put(documentDigestSingle);
+        transaction_data_object.put("documentDigests", documentDigests);
+
+        transaction_data_object.put("processID", "");
+
+
+        String transaction_data_string_base64 = Base64.getEncoder().encodeToString(transaction_data_object.toString().getBytes());
+        transaction_data.add(transaction_data_string_base64);
+
+        return transaction_data;
+    }
+
+
+    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
+        JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
         // Set JSON Body
@@ -230,24 +266,7 @@ public class VerifierClient {
     }
 
     private String getCrossDeviceMessage(String nonce) {
-        String presentationDefinition = "{" +
-              "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
-              "'input_descriptors': [{" +
-              "'id': '"+PresentationDefinitionInputDescriptorsId+"'," +
-              "'name': 'EUDI PID'," +
-              "'purpose': 'We need to verify your identity'," +
-              "'format': {'mso_mdoc': {" +
-              "'alg': ['ES256', 'ES384', 'ES512', 'EdDSA'] } }," +
-              "'constraints': {" +
-              "'fields': [" +
-              "{'path': [\"$['"+PresentationDefinitionInputDescriptorsId+"']['family_name']\"], 'intent_to_retain': true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['given_name']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['age_over_18']\"], \"intent_to_retain\": false}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
-              "]}}]}";
-        JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
+        JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
