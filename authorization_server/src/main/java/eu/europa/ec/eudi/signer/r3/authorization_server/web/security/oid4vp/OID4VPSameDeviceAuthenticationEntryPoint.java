@@ -19,15 +19,25 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
@@ -66,7 +76,8 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
         try{
-            String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
+            JSONArray transaction_data = getTransactionData(request);
+            String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl, transaction_data);
             this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
@@ -74,6 +85,45 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
             logger.error(e.getMessage());
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
         }
+    }
+
+    private JSONArray getTransactionData(HttpServletRequest request){
+        OAuth2AuthorizeRequest authorizeRequest = OAuth2AuthorizeRequest.from(request);
+        logger.info("Request received: {}", authorizeRequest);
+
+        if(authorizeRequest.getScope().equals("credential")){
+            String credentialId = authorizeRequest.getCredentialID();
+            String signatureQualifier = authorizeRequest.getSignatureQualifier();
+            String hashes = authorizeRequest.getHashes();
+            String hashAlgorithmOID = authorizeRequest.getHashAlgorithmOID();
+            String description = authorizeRequest.getDescription();
+            String label;
+            if(description == null) label = "Document to Sign";
+            else label = description;
+
+            String[] hashArray = hashes.split(",");
+            JSONArray documentDigests = new JSONArray();
+            for(String hash: hashArray){
+                JSONObject documentDigestObj = new JSONObject();
+                documentDigestObj.put("hash", hash);
+                documentDigestObj.put("label", label);
+                documentDigests.put(documentDigestObj);
+            }
+            return verifierClient.getTransactionData(credentialId, hashAlgorithmOID, documentDigests);
+        }
+        else if(authorizeRequest.getAuthorization_details() != null){
+            String authDetailsAuthorization = URLDecoder.decode(authorizeRequest.getAuthorization_details(), StandardCharsets.UTF_8);
+            JSONArray authorizationDetailsArray = new JSONArray(authDetailsAuthorization);
+            JSONObject authorizationDetailsJSON = authorizationDetailsArray.getJSONObject(0);
+            String credentialID = authorizationDetailsJSON.getString("credentialID");
+            String signatureQualifier = authorizationDetailsJSON.getString("signatureQualifier");
+            String hashAlgorithmOID = authorizationDetailsJSON.getString("hashAlgorithmOID");
+            JSONArray documentDigests = authorizationDetailsJSON.getJSONArray("documentDigests");
+            JSONArray locations = authorizationDetailsJSON.getJSONArray("locations");
+            return verifierClient.getTransactionData(credentialID, hashAlgorithmOID, documentDigests);
+        }
+
+        return null;
     }
 
     private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response){

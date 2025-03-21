@@ -97,7 +97,7 @@ public class SignaturesController {
         List<String> hashesAuthorized = new ArrayList<>(Arrays.asList(hashesAuthorizedArray));
 
         try {
-            List<String> hashesRequestedEncoded = signHashRequest.getHashes();
+            List<String> hashesRequestedEncoded = new ArrayList<>(signHashRequest.getHashes());
             Collections.sort(hashesRequestedEncoded);
             List<String> hashesRequested = new ArrayList<>();
             for(String s: hashesRequestedEncoded){

@@ -7,10 +7,14 @@ import com.google.zxing.qrcode.QRCodeWriter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,7 +23,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -45,7 +53,10 @@ public class OID4VPController {
 			String sanitizeCookieString = WebUtils.getSanitizedCookieString(sessionId);
 			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-			String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
+			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookieString).getUrlToReturnTo();
+
+			JSONArray transaction_data = getTransactionData(urlToReturnTo);
+			String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl, transaction_data);
 
 			QRCodeWriter barcodeWriter = new QRCodeWriter();
 			BitMatrix bitMatrix = barcodeWriter.encode(redirectLink, BarcodeFormat.QR_CODE, 200, 200);
@@ -60,7 +71,6 @@ public class OID4VPController {
 			String urlCrossDeviceCallback = serviceUrl+"/oid4vp/cross-device/callback?session_id="+sessionId;
 			model.addAttribute("url", urlCrossDeviceCallback);
 
-			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookieString).getUrlToReturnTo();
 			URI url = new URI(urlToReturnTo);
 			Map<String, String> queryValues = this.tokenSetting.getQueryValues(url);
 			String scope = this.tokenSetting.getScopeFromOAuth2Request(queryValues);
@@ -81,4 +91,43 @@ public class OID4VPController {
 			return "error";
 		}
 	}
+
+
+	private JSONArray getTransactionData(String oauth2AuthorizeRequestUrl) throws URISyntaxException {
+		URI url = new URI(oauth2AuthorizeRequestUrl);
+		Map<String, String> queryValues = this.tokenSetting.getQueryValues(url);
+
+		if (this.tokenSetting.getScopeFromOAuth2Request(queryValues).equals("credential")) {
+			if (queryValues.get("authorization_details") == null) {
+				String credentialId = queryValues.get("credentialID");
+				String hashes = queryValues.get("hashes");
+				String hashAlgorithmOID = queryValues.get("hashAlgorithmOID");
+				String description = queryValues.get("description");
+				String label;
+				if(description == null) label = "Document to Sign";
+				else label = description;
+
+				String[] hashArray = hashes.split(",");
+				JSONArray documentDigests = new JSONArray();
+				for (String hash : hashArray) {
+					JSONObject documentDigestObj = new JSONObject();
+					documentDigestObj.put("hash", hash);
+					documentDigestObj.put("label", label);
+					documentDigests.put(documentDigestObj);
+				}
+				return verifierClient.getTransactionData(credentialId, hashAlgorithmOID, documentDigests);
+			}
+			else {
+				String authDetailsAuthorization = URLDecoder.decode(queryValues.get("authorization_details"), StandardCharsets.UTF_8);
+				JSONArray authorizationDetailsArray = new JSONArray(authDetailsAuthorization);
+				JSONObject authorizationDetailsJSON = authorizationDetailsArray.getJSONObject(0);
+				String credentialID = authorizationDetailsJSON.getString("credentialID");
+				String hashAlgorithmOID = authorizationDetailsJSON.getString("hashAlgorithmOID");
+				JSONArray documentDigests = authorizationDetailsJSON.getJSONArray("documentDigests");
+				return verifierClient.getTransactionData(credentialID, hashAlgorithmOID, documentDigests);
+			}
+		}
+		return null;
+	}
+
 }

@@ -32,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.bouncycastle.util.encoders.Base64Encoder;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -57,54 +56,22 @@ public class VerifierClient {
         this.verifierVariables = new VerifierCreatedVariables();
     }
 
-    /**
-     * Function that allows to make a Presentation Request to the OpenID for Verifiable Presentations Verifier,
-     * following the OpenID for Verifiable Presentations - draft 20.
-     * @param userId an identifier of the user that made the request
-     * @param currentServiceUrl the url of the current service
-     * @return the deep link that redirects the client app to the EUDI Wallet
-     */
-    public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
-        log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
-        String nonce = getNonce();
-
-        // makes the http Presentation Request:
-        JSONObject responseFromVerifier;
-        try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, false);
-        } catch (Exception e) {
-            throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
-        }
-        log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
-
-        // Validates if the values required are present in the JSON Object Response:
-        Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
-            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
-        String request_uri = responseFromVerifier.getString("request_uri");
-        String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
-        String client_id = responseFromVerifier.getString("client_id");
-        if(!client_id.equals(this.verifierProperties.getAddress()))
-            throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
-        String presentation_id = responseFromVerifier.getString("presentation_id");
-
-        // Saves the values required associated to later retrieve the VP Token from the Verifier:
-        this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
-
-        // Generates a link to the Wallet, to where the client app will be redirected:
-        String linkToWallet = getLinkToWallet(encoded_request_uri, client_id);
-        log.info("Generated link to the Wallet for authentication of the user {}", userId);
-        return linkToWallet;
+    public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
+        return initTransactionToVerifier(userId, currentServiceUrl, false);
     }
 
-    public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
+    public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
+        return initTransactionToVerifier(userId, currentServiceUrl, true);
+    }
+
+    private String initTransactionToVerifier(String userId, String currentServiceUrl, boolean isCrossDevice) throws Exception {
         log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
         String nonce = getNonce();
 
         // makes the http Presentation Request:
         JSONObject responseFromVerifier;
         try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, true);
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, isCrossDevice);
         } catch (Exception e) {
             throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
         }
@@ -221,8 +188,9 @@ public class VerifierClient {
 		return new JSONObject(presentationDefinition);
     }
 
-    private List<String> getTransactionData(String credentialID){
-        List<String> transaction_data = new ArrayList<>();
+    public JSONArray getTransactionData(
+          String credentialID, String hashAlgorithmOID, JSONArray documentDigestsRequested){
+        JSONArray transaction_data = new JSONArray();
 
         JSONObject transaction_data_object = new JSONObject();
         transaction_data_object.put("type", "qes_authorization");
@@ -232,25 +200,23 @@ public class VerifierClient {
         transaction_data_object.put("credentials_ids", credentials_ids);
 
         transaction_data_object.put("credentialID", credentialID);
-        transaction_data_object.put("signatureQualifier", "");
 
         JSONArray documentDigests = new JSONArray();
-        JSONObject documentDigestSingle = new JSONObject();
-        documentDigestSingle.put("label", "");
-        documentDigestSingle.put("hash", "");
-        documentDigestSingle.put("hashAlgorithmOID", "");
-        documentDigests.put(documentDigestSingle);
+        for(int i = 0; i < documentDigestsRequested.length(); i++){
+            JSONObject jsonObject = documentDigestsRequested.getJSONObject(i);
+            JSONObject documentDigestSingle = new JSONObject();
+            documentDigestSingle.put("label", jsonObject.get("label"));
+            documentDigestSingle.put("DTBS/R", jsonObject.get("hash"));
+            documentDigestSingle.put("DTBS/RHashAlgorithmOID", hashAlgorithmOID);
+            documentDigests.put(documentDigestSingle);
+        }
         transaction_data_object.put("documentDigests", documentDigests);
-
         transaction_data_object.put("processID", "");
 
-
         String transaction_data_string_base64 = Base64.getEncoder().encodeToString(transaction_data_object.toString().getBytes());
-        transaction_data.add(transaction_data_string_base64);
-
+        transaction_data.put(transaction_data_string_base64);
         return transaction_data;
     }
-
 
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
         JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
@@ -281,12 +247,6 @@ public class VerifierClient {
                 client_id + "&request_uri=" + request_uri;
     }
 
-    /**
-     * Function that allows to retrieve the VP Token from the Verifier
-     * @param userId an identifier of the user that made the request
-     * @param code the code returned by the verifier and required to retrieve the VP Token
-     * @return a json formatted string with the vp token
-     */
     public String getVPTokenFromVerifier(String userId, String code) throws OID4VPException {
         log.info("Starting to retrieve the VP Token from the Verifier to authenticate the user {}...", userId);
 
