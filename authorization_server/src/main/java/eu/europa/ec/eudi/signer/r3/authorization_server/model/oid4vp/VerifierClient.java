@@ -77,14 +77,30 @@ public class VerifierClient {
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
+        if (!keys.contains("request_uri")){
+            log.error("Missing 'request_uri' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("client_id")){
+            log.error("Missing 'client_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("transaction_id")){
+            log.error("Missing 'transaction_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+
         String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
+        log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString("client_id");
-        if(!client_id.equals(this.verifierProperties.getAddress()))
+        log.info("Client Id: "+ client_id);
+        if(!client_id.equals(this.verifierProperties.getClientId())) {
+            log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
-        String presentation_id = responseFromVerifier.getString("presentation_id");
+        }
+        String presentation_id = responseFromVerifier.getString("transaction_id");
+        log.info("Transaction Id: "+presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
         this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
