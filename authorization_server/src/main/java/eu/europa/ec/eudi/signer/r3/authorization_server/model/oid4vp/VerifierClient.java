@@ -89,6 +89,7 @@ public class VerifierClient {
             log.error("Missing 'transaction_id' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
         }
+        log.info("All keys are present.");
 
         String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
@@ -126,14 +127,27 @@ public class VerifierClient {
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
+        if (!keys.contains("request_uri")){
+            log.error("Missing 'request_uri' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("client_id")){
+            log.error("Missing 'client_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("transaction_id")){
+            log.error("Missing 'transaction_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
         String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
+        log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString("client_id");
-        if(!client_id.equals(this.verifierProperties.getAddress()))
+        log.info("Client Id: "+ client_id);
+        if(!client_id.equals(this.verifierProperties.getClientId()))
             throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
-        String presentation_id = responseFromVerifier.getString("presentation_id");
+        String presentation_id = responseFromVerifier.getString("transaction_id");
+        log.info("Transaction Id: "+presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
         this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
@@ -214,8 +228,8 @@ public class VerifierClient {
         return headers;
     }
 
-    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
-        String presentationDefinition = "{" +
+    private String getPresentationDefinition(){
+		return "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
               "'input_descriptors': [{" +
               "'id': '"+PresentationDefinitionInputDescriptorsId+"'," +
@@ -228,10 +242,13 @@ public class VerifierClient {
               "{'path': [\"$['"+PresentationDefinitionInputDescriptorsId+"']['family_name']\"], 'intent_to_retain': true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['given_name']\"],  \"intent_to_retain\": true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['age_over_18']\"], \"intent_to_retain\": false}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
               "]}}]}";
+    }
+
+    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
+        String presentationDefinition = getPresentationDefinition();
         JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
 
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
@@ -246,23 +263,7 @@ public class VerifierClient {
     }
 
     private String getCrossDeviceMessage(String nonce) {
-        String presentationDefinition = "{" +
-              "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
-              "'input_descriptors': [{" +
-              "'id': '"+PresentationDefinitionInputDescriptorsId+"'," +
-              "'name': 'EUDI PID'," +
-              "'purpose': 'We need to verify your identity'," +
-              "'format': {'mso_mdoc': {" +
-              "'alg': ['ES256', 'ES384', 'ES512', 'EdDSA'] } }," +
-              "'constraints': {" +
-              "'fields': [" +
-              "{'path': [\"$['"+PresentationDefinitionInputDescriptorsId+"']['family_name']\"], 'intent_to_retain': true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['given_name']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['age_over_18']\"], \"intent_to_retain\": false}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
-              "]}}]}";
+        String presentationDefinition = getPresentationDefinition();
         JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
 
         // Set JSON Body
