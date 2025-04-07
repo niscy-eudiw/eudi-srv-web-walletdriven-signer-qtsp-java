@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class VerifierConfig {
     private String url;
     private String address;
+    private String clientId;
 
     public String getUrl() {
         return url;
@@ -37,5 +38,13 @@ public class VerifierConfig {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }
