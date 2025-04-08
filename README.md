@@ -2,10 +2,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
-
 :heavy_exclamation_mark: **Important!** Before you proceed, please read
 the [EUDI Wallet Reference Implementation project description](https://github.com/eu-digital-identity-wallet/.github/blob/main/profile/reference-implementation.md)
-
 
 ## Table of contents
 
@@ -18,9 +16,9 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
     - [Credentials Listing](#credentials-listing)
     - [Credential Authorization](#credential-authorization)
   - [RP-Centric Sequence Diagrams](#rp-centric-sequence-diagrams)
-      - [Service Authentication](#service-authentication-1)
-      - [Credentials Listing](#credentials-listing-1)
-      - [Credential Authorization](#credential-authorization-1)
+    - [Service Authentication](#service-authentication-1)
+    - [Credentials Listing](#credentials-listing-1)
+    - [Credential Authorization](#credential-authorization-1)
   - [Endpoints](#endpoints)
   - [Deployment](#deployment)
     - [Requirements](#requirements)
@@ -32,7 +30,6 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
   - [License](#license)
     - [Third-party component licenses](#third-party-component-licenses)
     - [License details](#license-details)
-
 
 ## Overview
 
@@ -47,27 +44,28 @@ The Wallet Centric rQES Specification can be found [here](docs/rqes-walledriven.
 
 The released software is an initial development release version:
 
--   The initial development release is an early endeavor reflecting the efforts of a short timeboxed
-    period, and by no means can be considered as the final product.
--   The initial development release may be changed substantially over time, might introduce new
-    features but also may change or remove existing ones, potentially breaking compatibility with your
-    existing code.
--   The initial development release is limited in functional scope.
--   The initial development release may contain errors or design flaws and other problems that could
-    cause system or other failures and data loss.
--   The initial development release has reduced security, privacy, availability, and reliability
-    standards relative to future releases. This could make the software slower, less reliable, or more
-    vulnerable to attacks than mature software.
--   The initial development release is not yet comprehensively documented.
--   Users of the software must perform sufficient engineering and additional testing in order to
-    properly evaluate their application and determine whether any of the open-sourced components is
-    suitable for use in that application.
--   We strongly recommend not putting this version of the software into production use.
--   Only the latest version of the software will be supported
+- The initial development release is an early endeavor reflecting the efforts of a short timeboxed
+  period, and by no means can be considered as the final product.
+- The initial development release may be changed substantially over time, might introduce new
+  features but also may change or remove existing ones, potentially breaking compatibility with your
+  existing code.
+- The initial development release is limited in functional scope.
+- The initial development release may contain errors or design flaws and other problems that could
+  cause system or other failures and data loss.
+- The initial development release has reduced security, privacy, availability, and reliability
+  standards relative to future releases. This could make the software slower, less reliable, or more
+  vulnerable to attacks than mature software.
+- The initial development release is not yet comprehensively documented.
+- Users of the software must perform sufficient engineering and additional testing in order to
+  properly evaluate their application and determine whether any of the open-sourced components is
+  suitable for use in that application.
+- We strongly recommend not putting this version of the software into production use.
+- Only the latest version of the software will be supported
 
 ## Wallet-Driven Sequence Diagrams
 
 ### Service Authentication
+
 ```mermaid
 sequenceDiagram
     title Service (QTSP) Authentication
@@ -103,6 +101,7 @@ sequenceDiagram
 ```
 
 ### Credentials Listing
+
 ```mermaid
 sequenceDiagram
     title Credential Listing
@@ -110,7 +109,7 @@ sequenceDiagram
     actor U as UserAgent
     participant SCC as Signature Creation Component (EUDIW)
     participant RS as Resource Server (QTSP)
-    
+
     U->>+SCC: Request list of available credentials
     SCC->>+RS: /credentials/list
     opt credential list is empty
@@ -122,10 +121,10 @@ sequenceDiagram
     opt is a single credential info requested
         U->>+SCC: Request the information of a single credential
         SCC->>+RS: /credentials/info
-        RS->>-SCC: credential's information    
+        RS->>-SCC: credential's information
         SCC->>-U: Present the credential's information
    end
-    
+
 ```
 
 ### Credential Authorization
@@ -177,6 +176,7 @@ sequenceDiagram
 ## RP-Centric Sequence Diagrams
 
 ### Service Authentication
+
 ```mermaid
 sequenceDiagram
     title Service (QTSP) Authentication
@@ -187,7 +187,7 @@ sequenceDiagram
     participant PC as Presentation Component (RP)
     participant AS as Authorization Server (QTSP)
     participant OIDV as OID4VP Verifier
-    
+
     U->>+RP: Authenticate using OID4VP
 
     RP->>+RP: Load document
@@ -200,7 +200,7 @@ sequenceDiagram
     AS->>+AS: Generate link to Wallet
     AS-->>-RP: Render link as QrCode
 
-    EW->>+RP: Scan QrCode 
+    EW->>+RP: Scan QrCode
     EW->>+OIDV: Share requested information
 
     AS->>+OIDV: Request VP Token
@@ -218,11 +218,11 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     title Credentials Listing
-    
+
     actor U as UserAgent
     participant RP as Web Page (RP)
     participant RS as Resource Server (QTSP)
-    
+
     RP->>+RS: Get credentials list (/credentials/list)
     opt is credential list empty
         RS->>+RS: Issue credential
@@ -242,7 +242,7 @@ sequenceDiagram
 title Document Signing
 
     actor U as UserAgent
-    participant EW as EUDI Wallet    
+    participant EW as EUDI Wallet
     participant BR as Browser
     participant RP as Web Page (RP)
     participant SCA as Signature Creation Application (RP)
@@ -261,7 +261,7 @@ title Document Signing
     AS->>+AS: Generate link to Wallet
     AS-->>-BR: Render link as QrCode
 
-    EW->>+BR: Scan QrCode 
+    EW->>+BR: Scan QrCode
     EW->>+OIDV: Share requested information
 
     AS->>+OIDV: Request VP Token
@@ -278,7 +278,7 @@ title Document Signing
     SCA->>+RS: Sign hash request (/signatures/signHash)
     RS-->>-SCA: signature
 
-    SCA->>+SCA: generate signed document 
+    SCA->>+SCA: generate signed document
     SCA-->>-RP: returns signed document
 ```
 
@@ -286,26 +286,27 @@ title Document Signing
 
 The endpoints presented below are based on the CSC API v2.0 specifications.
 
-* /oauth2/authorize
-* /oauth2/token
-* /csc/v2/info
-* /csc/v2/credentials/list
-* /csc/v2/credentials/info
-* /csc/v2/signatures/signHash
+- /oauth2/authorize
+- /oauth2/token
+- /csc/v2/info
+- /csc/v2/credentials/list
+- /csc/v2/credentials/info
+- /csc/v2/signatures/signHash
 
 ## Deployment
 
 ### Requirements
-* Java version 17
-* Apache Maven 3.6.3
-* MySQL
+
+- Java version 17
+- Apache Maven 3.6.3
+- MySQL
 
 ### Common Tools
 
 1. **Create the application-crypto.yml file**
 
 The **application-crypto.yml** file must be created in the **common_tools/src/main/resources** folder.
-    
+
 ```
 symmetric-secret-key: # a BASE64-encoded value of an AES secret key
 ```
@@ -316,53 +317,62 @@ This secret key is required to encode certain values in JWT tokens.
 
 1. **Create the application-auth.yml file**
 
-   It is required to create an **application-auth.yml** file in the folder **authorization_server/src/main/resources**. 
+   It is required to create an **application-auth.yml** file in the folder **authorization_server/src/main/resources**.
    This file allows to define the access credentials of a user of the database for this server. The file should follow the format:
 
    ```
    auth:
-      datasourceUsername: # the username of the database user, with permissions to the define database
-      datasourcePassword: # the password of the database user, with permissions to the define database
+     	datasourceUsername: # the username of the database user, with permissions to the define database
+     	datasourcePassword: # the password of the database user, with permissions to the define database
    ```
 
 2. **Create the application-client-registration.yml file**
 
    It is required to create an **application-client-registration.yml** file in the folder **authorization_server/src/main/resources**.
-   This file allows to define the OAuth2.0 client of the Authorization Server. This file should follow the format:
+   This file allows to configure one or more OAuth2.0 clients of the Authorization Server and must follow the structure below:
 
    ```
    authorizationserver:
-      client:
-         {client-id}:
-            registration:
-               client-id: "{client-id}"
-               client-secret: "{noop}{client-secret}"
-               client-authentication-methods:
-                  - "client_secret_basic"
-               authorization-grant-types:
-                  - "authorization_code"
-               redirect-uris:
-                  - "{redirect-uris}"
-               scopes:
-                  - "service"
-                  - "credential"
-               require-authorization-consent: false
+     client:
+        {client-id}:
+           registration:
+              client-id: "{client-id}"
+              client-secret: "{noop}{client-secret}"
+              client-authentication-methods:
+                 - "client_secret_basic"
+              authorization-grant-types:
+                 - "authorization_code"
+              redirect-uris:
+                 - "{redirect-uris}"
+              scopes:
+                 - "service"
+                 - "credential"
+              require-authorization-consent: false
+              authentication-form: {authentication-method}
 
-         {client-id}:
-            registration:
-               client-id: "{client-id}"
-               client-secret: "{noop}{client-secret}"
-               client-authentication-methods:
-                  - "client_secret_basic"
-               authorization-grant-types:
-                  - "authorization_code"
-               redirect-uris:
-                  - "{redirect-uris}"
-               scopes:
-                  - "service"
-                  - "credential"
-               require-authorization-consent: false
+        {client-id}:
+           registration:
+              client-id: "{client-id}"
+              client-secret: "{noop}{client-secret}"
+              client-authentication-methods:
+                 - "client_secret_basic"
+              authorization-grant-types:
+                 - "authorization_code"
+              redirect-uris:
+                 - "{redirect-uris}"
+              scopes:
+                 - "service"
+                 - "credential"
+              require-authorization-consent: false
+              authentication-form: {authentication-method}
    ```
+
+   > **Note:**
+   > The **authentication-form** value must be one of the supported formats defined in the AuthenticationFormEnum:
+   >
+   > - "login-form"
+   > - "same-device-flow"
+   > - "cross-device-flow"
 
 3. **Create database and user with the required permissions**
 
@@ -389,6 +399,7 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
    Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+
    ```
    auth:
       datasourceUsername: # the username of the database user, with permissions to the define database
@@ -396,47 +407,53 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
    and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+
    ```
    datasource:
       url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
    ```
 
 4. **Create tables in the database**
-   
+
    There are a few tables that are required to be defined to use the OAuth2.0 from Spring Boot, that need to be created in the previously created database. The tables are:
-   * https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql
-   * https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-schema.sql
-   * https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-consent-schema.sql
+
+   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql
+   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-schema.sql
+   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-consent-schema.sql
 
 5. **Set parameters value for authentication using OpenId4VP**
 
-   This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet. 
+   This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet.
    To enable this feature (authentication using PID), communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
 
    ```
    verifier:
       url:
       address:
-   ```   
+      client_id:
+   ```
 
    By default, this configuration is set to a backend server based on the code from the github 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
 
    ```
    verifier:
-      url: https://dev.verifier-backend.eudiw.dev/ui/presentations
-      address: dev.verifier-backend.eudiw.dev
+      url: https://verifier-backend.eudiw.dev/ui/presentations
+      address: verifier-backend.eudiw.dev
+      client_id: x509_san_dns:verifier-backend.eudiw.dev
    ```
 
 6. **Update the application.yml**
 
    In the **application.yml**, you can configure a different port for the Authorization Server, which runs on the port 8084 by default.
    To change the port, edit the lines:
+
    ```
    server:
       port: 8084
    ```
 
    Additionally, you must update the **oauth2-issuer-url** configuration to reflect the URL of the Authorization Server.
+
    ```
    oauth2-issuer-url:
       url: {url_authorization_server}
@@ -446,21 +463,22 @@ This secret key is required to encode certain values in JWT tokens.
 
    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
-    
+
 8. **Add Authentication through Login Form**
 
    During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
    To set this up, you need to add **application-user-login-form.yml** with the values:
+
    ```
    user-login-form:
       enabled: true
-      family-name: 
-      given-name: 
-      birth-date: 
-      issuing-country: 
+      family-name:
+      given-name:
+      birth-date:
+      issuing-country:
       issuance-authority:
-      role: 
-      password: 
+      role:
+      password:
    ```
 
 ### Resource Server (RS)
@@ -507,7 +525,7 @@ This secret key is required to encode certain values in JWT tokens.
 
 3. **Create database and user with the required permissions**
 
-   The current program uses a MySQL database. If you have already set up the database for the Authorization Server, you may use the same database, or create a new database. 
+   The current program uses a MySQL database. If you have already set up the database for the Authorization Server, you may use the same database, or create a new database.
    To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
 
    ```
@@ -531,6 +549,7 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
    Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
+
    ```
    auth:
       datasourceUsername: # the username of the database user, with permissions to the define database
@@ -538,15 +557,16 @@ This secret key is required to encode certain values in JWT tokens.
    ```
 
    and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
+
    ```
    datasource:
       url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
    ```
-    
+
 4. **Configure the HSM Module**
-    
+
    The current implementation uses a Hardware Secure Module to create and use the signature keys. The library jacknji11 in https://github.com/joelhockey/jacknji11 allows to make this requests to an HSM distribution. To use this library it is required to define the environmental variables:
-    
+
    ```
    JACKNJI11_PKCS11_LIB_PATH={path_to_so}
    JACKNJI11_TEST_TESTSLOT={slot}
@@ -560,6 +580,7 @@ This secret key is required to encode certain values in JWT tokens.
 5. **Update the application.yml**
 
    In the **application.yml**, it is required to update the value of the configuration to the url of the Authorization Server.
+
    ```
    spring:
       security:
@@ -576,6 +597,7 @@ After configuring the previously mentioned settings, navigate to the **tools** d
 It is important to run this scripts in the order presented:
 
 1. **Run the Authorization Server**
+
    ```
    ./deploy_as.sh
    ```

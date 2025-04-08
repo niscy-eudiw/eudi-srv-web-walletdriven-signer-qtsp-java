@@ -53,6 +53,7 @@ public class OAuth2ClientRegistrationConfig {
         private Set<String> redirectUris;
         private Set<String> scopes;
         private boolean requireAuthorizationConsent;
+        private AuthenticationFormEnum authenticationForm;
 
         public String getClientId() {
             return clientId;
@@ -108,6 +109,14 @@ public class OAuth2ClientRegistrationConfig {
 
         public void setRequireAuthorizationConsent(boolean requireAuthorizationConsent) {
             this.requireAuthorizationConsent = requireAuthorizationConsent;
+        }
+
+        public AuthenticationFormEnum getAuthenticationForm() {
+            return authenticationForm;
+        }
+
+        public void setAuthenticationForm(AuthenticationFormEnum authenticationForm) {
+            this.authenticationForm = authenticationForm;
         }
     }
 }
