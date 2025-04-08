@@ -22,6 +22,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFormEnum;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
@@ -49,8 +50,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Consumer;
 import org.json.JSONArray;
@@ -134,8 +133,7 @@ public class AuthorizationServerConfig {
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == 2;
-					//return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester") && !client_id.equals("rp-client") && !client_id.equals("rp-sca-client");
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.SAME_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
@@ -143,16 +141,14 @@ public class AuthorizationServerConfig {
 				RequestMatcher requestMatcherCrossDevice = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == 3;
-					// return client_id.equals("rp-client") || client_id.equals("rp-sca-client");
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.CROSS_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == 1;
-					// return client_id.equals("wallet-client-tester") || client_id.equals("sca-client-tester");
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.LOGIN_FORM.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getUrl()+"/login"), requestMatcher);
 			})
@@ -165,7 +161,6 @@ public class AuthorizationServerConfig {
 			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
 			while (iterator.hasNext()) {
 				AuthenticationProvider authenticationProvider = iterator.next();
-				System.out.println(authenticationProvider.getClass());
 				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class)) {
 					iterator.remove();
 				}
@@ -211,7 +206,6 @@ public class AuthorizationServerConfig {
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
 				.clientSecret(registration.getClientSecret())
-				.clientSecretExpiresAt(Instant.now().plus(Duration.ofDays(7)))
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
@@ -224,7 +218,7 @@ public class AuthorizationServerConfig {
 			RegisteredClient client = clientBuilder.build();
 			registeredClientRepository.save(client);
 
-			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getClientId(), registration.getAuthenticationForm().getId());
+			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationForm().getId());
 			registeredClientExtendedRepository.save(registeredClientAuthenticationForm);
 		}
 

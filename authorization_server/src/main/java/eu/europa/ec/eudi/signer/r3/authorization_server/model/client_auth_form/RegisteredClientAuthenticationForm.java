@@ -22,8 +22,8 @@ public class RegisteredClientAuthenticationForm{
 		this.id = UUID.randomUUID().toString();
 	}
 
-	public RegisteredClientAuthenticationForm(String clientId, int authenticationFormId) {
-		this.id = UUID.randomUUID().toString();
+	public RegisteredClientAuthenticationForm(String id, String clientId, int authenticationFormId) {
+		this.id = id;
 		this.clientId = clientId;
 		this.authenticationFormId = authenticationFormId;
 	}
