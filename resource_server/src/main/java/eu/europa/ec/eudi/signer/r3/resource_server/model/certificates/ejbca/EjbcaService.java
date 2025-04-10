@@ -79,6 +79,7 @@ public class EjbcaService {
         HttpResponse response = WebUtils.httpPostRequestsWithCustomSSLContext(trustManagerCA, keyStorePKCS12, postUrl, certificateRequestBody, headers);
 
         if (response.getStatusLine().getStatusCode() != 201) {
+            log.error(WebUtils.convertStreamToString(response.getEntity().getContent()));
             throw new Exception("Certificate was not created by EJBCA");
         }
         HttpEntity entity = response.getEntity();
