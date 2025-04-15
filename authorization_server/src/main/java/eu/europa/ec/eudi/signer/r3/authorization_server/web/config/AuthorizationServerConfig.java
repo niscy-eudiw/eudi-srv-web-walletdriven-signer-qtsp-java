@@ -27,6 +27,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegis
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
@@ -99,14 +100,15 @@ public class AuthorizationServerConfig {
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
 																	  OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
-																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository) throws Exception
+																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
+																	  CredentialsService credentialDatabase) throws Exception
 	{
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 		authorizationServerConfigurer.oidc(Customizer.withDefaults());
 
 		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
-		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization);
+		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
 
@@ -158,13 +160,7 @@ public class AuthorizationServerConfig {
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
 		return (authenticationProviders) -> {
-			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
-			while (iterator.hasNext()) {
-				AuthenticationProvider authenticationProvider = iterator.next();
-				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class)) {
-					iterator.remove();
-				}
-			}
+			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
 		};
 	}
 

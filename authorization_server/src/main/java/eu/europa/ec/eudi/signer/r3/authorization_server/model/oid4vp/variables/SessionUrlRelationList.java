@@ -16,14 +16,18 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
+import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SessionUrlRelationList {
 
     private final ConcurrentMap<String, SessionUrlRelation> listOfVariables;
+    private final long EXPIRY_DURATION_MINUTES = 60; // Example expiry time
 
     public SessionUrlRelationList() {
         this.listOfVariables = new ConcurrentHashMap<>();
@@ -37,7 +41,31 @@ public class SessionUrlRelationList {
         this.listOfVariables.remove(sessionId);
     }
 
-    public synchronized void addSessionReturnToUrl(String user, String url){
-        this.listOfVariables.put(user, new SessionUrlRelation(url, user));
+    public synchronized void addSessionReturnToUrl(String sessionId, String url){
+        this.listOfVariables.put(sessionId, new SessionUrlRelation(url, LocalDateTime.now()));
+    }
+
+    @Scheduled(fixedRate = 3600 * 1000) // Run every hour
+    public void cleanupExpiredEntries() {
+        LocalDateTime now = LocalDateTime.now();
+        listOfVariables.entrySet().removeIf(entry -> entry.getValue().getTimestamp().plusMinutes(EXPIRY_DURATION_MINUTES).isBefore(now));
+    }
+
+    public static class SessionUrlRelation {
+        private final String urlToReturnTo;
+        private final LocalDateTime timestamp;
+
+        public SessionUrlRelation(String urlToReturnTo, LocalDateTime timestamp) {
+            this.urlToReturnTo = urlToReturnTo;
+            this.timestamp = timestamp;
+        }
+
+        public String getUrlToReturnTo() {
+            return urlToReturnTo;
+        }
+
+        public LocalDateTime getTimestamp() {
+            return timestamp;
+        }
     }
 }

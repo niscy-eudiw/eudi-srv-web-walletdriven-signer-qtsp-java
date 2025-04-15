@@ -16,11 +16,18 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
+
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Set;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
@@ -61,6 +68,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
     private final OAuth2TokenGenerator<OAuth2AuthorizationCode> authorizationCodeGenerator = new OAuth2AuthorizationCodeGenerator();
     private final OAuth2AuthorizationService authorizationService;
     private final ManageOAuth2Authorization manageOAuth2Authorization;
+    private final CredentialsService credentialsService;
     private final Logger logger = LogManager.getLogger(AuthorizationRequestProvider.class);
 
     private static class OAuth2AuthorizationCodeGenerator implements OAuth2TokenGenerator<OAuth2AuthorizationCode> {
@@ -81,10 +89,12 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     public AuthorizationRequestProvider(RegisteredClientRepository registeredClientRepository,
                                         OAuth2AuthorizationService authorizationService,
-                                        ManageOAuth2Authorization manageOAuth2Authorization) {
+                                        ManageOAuth2Authorization manageOAuth2Authorization,
+                                        CredentialsService credentialsService) {
         this.registeredClientRepository = registeredClientRepository;
         this.authorizationService = authorizationService;
         this.manageOAuth2Authorization = manageOAuth2Authorization;
+        this.credentialsService = credentialsService;
     }
 
     @Override
@@ -105,8 +115,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
         RegisteredClient registeredClient = this.registeredClientRepository.findByClientId(authenticationToken.getClientId());
         if (registeredClient == null) {
-            OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                  "ClientID " + authenticationToken.getClientId() + " from the request not found.");
+            OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "ClientID " + authenticationToken.getClientId() + " from the request not found.");
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
         }
         logger.info("ClientID from AuthenticationToken is registered.");
@@ -127,18 +136,43 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         }
         logger.info("Principal of type {} is authenticated.", principal.getClass().getName());
 
+        Map<String, Object> additionalParameters = authenticationToken.getAdditionalParameters();
+
+        // if is the scope credential, the credentialID is not defined and a signatureQualifier is defined, I need to choose a credential to use
+        Object signatureQualifier = authenticationToken.getAdditionalParameters().get("signatureQualifier");
+        Object credentialId = authenticationToken.getAdditionalParameters().get("credentialID");
+        if(authenticationToken.getScopes().contains("credential") && credentialId == null && signatureQualifier != null){
+            OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) principal;
+            String userHash = auth.getHash();
+            String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, signatureQualifier.toString());
+			logger.info("CredentialId Selected: {}", credentialIdChosen);
+            additionalParameters.put("credentialID", credentialIdChosen);
+        }
+        else if(authenticationToken.getScopes().contains("credential") && authenticationToken.getAdditionalParameters().get("authorization_details") != null){
+            Object authorization_details = authenticationToken.getAdditionalParameters().get("authorization_details");
+            String authorization_details_decode = URLDecoder.decode(authorization_details.toString(), StandardCharsets.UTF_8);
+            JSONArray authorization_details_json_array = new JSONArray(authorization_details_decode);
+            JSONObject authorization_details_json = authorization_details_json_array.getJSONObject(0);
+            if(authorization_details_json.get("credentialID") == null && authorization_details_json.get("signatureQualifier") != null){
+                OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) principal;
+                String userHash = auth.getHash();
+                String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
+                logger.info("CredentialId Selected: {}", credentialIdChosen);
+                additionalParameters.put("credentialID", credentialIdChosen);
+            }
+        }
+
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
               .authorizationUri(authenticationToken.getAuthorizationUri())
               .clientId(registeredClient.getClientId())
               .redirectUri(redirectUri)
               .scopes(requestedScopes)
               .state(authenticationToken.getState())
-              .additionalParameters(authenticationToken.getAdditionalParameters())
+              .additionalParameters(additionalParameters)
               .build();
         logger.info("Generated OAuth2AuthorizationRequest: {}.", authorizationRequest.toString());
 
-        OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal,
-              requestedScopes, authenticationToken);
+        OAuth2AuthorizationCode authorizationCode = generateAuthorizationCode(registeredClient, principal, requestedScopes, authenticationToken);
         logger.info("Generated OAuth2AuthorizationCode: {}", authorizationCode.getTokenValue());
 
         this.manageOAuth2Authorization.removePreviousOAuth2AuthorizationOfUser(principal.getName(), requestedScopes);

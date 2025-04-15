@@ -43,7 +43,6 @@ public class InfoController {
 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
-
         String lang;
         if(requestMessage.containsKey("lang"))
             lang = validateLangValue(requestMessage.get("lang").toString());
@@ -55,7 +54,7 @@ public class InfoController {
 
         List<List<String>> envelope_properties = new ArrayList<>();
         for (String o : keySet) {
-            System.out.println(o);
+			log.info("signature_format: {}", o);
             List<String> env_properties = this.infoProperties.getSignature_formats().get(o);
             envelope_properties.add(env_properties);
         }
