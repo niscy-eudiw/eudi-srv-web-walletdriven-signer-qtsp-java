@@ -17,8 +17,8 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariable;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables.VerifierCreatedVariable;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
@@ -47,6 +47,10 @@ import org.springframework.stereotype.Component;
 public class VerifierClient {
     public static final String PresentationDefinitionId = "32f54163-7166-48f1-93d8-ff217bdb0653";
     public static final String PresentationDefinitionInputDescriptorsId = "eu.europa.ec.eudi.pid.1";
+
+    private static final String VERIFIER_INIT_TRANSACTION_NONCE = "nonce";
+    private static final String VERIFIER_INIT_TRANSACTION_TRANSACTION_ID = "transaction_id";
+
     private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
     private final VerifierConfig verifierProperties;
     private final VerifierCreatedVariables verifierVariables;
@@ -79,14 +83,31 @@ public class VerifierClient {
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains("request_uri") || !keys.contains("client_id") || !keys.contains("presentation_id"))
+        if (!keys.contains("request_uri")){
+            log.error("Missing 'request_uri' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("client_id")){
+            log.error("Missing 'client_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        if(!keys.contains("transaction_id")){
+            log.error("Missing 'transaction_id' from InitTransaction Response");
+            throw new Exception(OID4VPEnumError.MissingDataInResponseVerifier.getFormattedMessage());
+        }
+        log.info("All keys are present.");
+
         String request_uri = responseFromVerifier.getString("request_uri");
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
+        log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString("client_id");
-        if(!client_id.equals(this.verifierProperties.getAddress()))
+        log.info("Client Id: "+ client_id);
+        if(!client_id.equals(this.verifierProperties.getClientId())) {
+            log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UnexpectedError.getFormattedMessage());
-        String presentation_id = responseFromVerifier.getString("presentation_id");
+        }
+        String presentation_id = responseFromVerifier.getString("transaction_id");
+        log.info("Transaction Id: "+presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
         this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
@@ -167,6 +188,7 @@ public class VerifierClient {
         return headers;
     }
 
+
     private JSONObject getPresentationDefinitionJSON(){
         String presentationDefinition = "{" +
               "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
@@ -181,11 +203,10 @@ public class VerifierClient {
               "{'path': [\"$['"+PresentationDefinitionInputDescriptorsId+"']['family_name']\"], 'intent_to_retain': true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['given_name']\"],  \"intent_to_retain\": true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['age_over_18']\"], \"intent_to_retain\": false}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_authority']\"], \"intent_to_retain\": true}," +
               "{\"path\": [\"$['"+PresentationDefinitionInputDescriptorsId+"']['issuing_country']\"], \"intent_to_retain\": true}" +
               "]}}]}";
-		return new JSONObject(presentationDefinition);
+        return new JSONObject(presentationDefinition);
     }
 
     public JSONArray getTransactionData(
@@ -258,10 +279,10 @@ public class VerifierClient {
         log.info("Retrieved the required local variables to complete the authentication.");
 
         log.info("Current Verifier Variables State: {}", verifierVariables);
-        log.debug("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getPresentation_id());
+        log.debug("User: {} & Nonce: {} & Presentation_id: {}", userId, variables.getNonce(), variables.getTransaction_id());
 
         Map<String, String> headers = getHeaders();
-        String url = getUrlToRetrieveVPTokenWithResponseCode(variables.getPresentation_id(), variables.getNonce(), code);
+        String url = getUrlToRetrieveVPTokenWithResponseCode(variables.getTransaction_id(), variables.getNonce(), code);
         log.info("Obtained the link to retrieve the VP Token from the Verifier.");
         log.debug("Link to retrieve the VP Token: {}", url);
 
@@ -300,10 +321,10 @@ public class VerifierClient {
         log.info("Retrieved the required local variables to complete the authentication.");
 
         log.info("Current Verifier Variables State: {}", verifierVariables);
-        log.debug("User: {} & Nonce: {} & Presentation_id: {}", user, variables.getNonce(), variables.getPresentation_id());
+        log.debug("User: {} & Nonce: {} & Presentation_id: {}", user, variables.getNonce(), variables.getTransaction_id());
 
         Map<String, String> headers = getHeaders();
-        String url = getUrlToRetrieveVPToken(variables.getPresentation_id(), variables.getNonce());
+        String url = getUrlToRetrieveVPToken(variables.getTransaction_id(), variables.getNonce());
         log.info("Obtained the link to retrieve the VP Token from the Verifier.");
         log.debug("Link to retrieve the VP Token: {}", url);
 

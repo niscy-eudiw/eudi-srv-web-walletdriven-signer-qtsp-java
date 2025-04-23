@@ -19,15 +19,12 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.VerifiablePresentationVerificationException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import id.walt.mdoc.doc.MDoc;
 import id.walt.mdoc.issuersigned.IssuerSignedItem;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -88,22 +85,16 @@ public class OpenIdForVPService {
         String birthDate = null;
         String issuingCountry = null;
         String issuanceAuthority = null;
-        boolean ageOver18 = false;
         for (IssuerSignedItem el : l) {
             switch (el.getElementIdentifier().getValue()) {
                 case "family_name" -> familyName = el.getElementValue().getValue().toString();
                 case "given_name" -> givenName = el.getElementValue().getValue().toString();
                 case "birth_date" -> birthDate = el.getElementValue().getValue().toString();
-                case "age_over_18" -> ageOver18 = (boolean) el.getElementValue().getValue();
                 case "issuing_authority" -> issuanceAuthority = el.getElementValue().getValue().toString();
                 case "issuing_country" -> issuingCountry = el.getElementValue().getValue().toString();
             }
         }
 
-        if (!ageOver18) {
-            log.error(OID4VPEnumError.UserNotOver18.getDescription());
-            throw new OID4VPException(OID4VPEnumError.UserNotOver18, "The 'ageOver18' value from the VP Token is false.");
-        }
         if(familyName == null){
             log.error("The document in the VP Token is missing the family name.");
             throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your last name is missing from the submitted data. Please try again.");

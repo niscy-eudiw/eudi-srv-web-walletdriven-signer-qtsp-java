@@ -20,9 +20,11 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class, OAuth2IssuerConfig.class, UserTestLoginFormConfig.class})
+@EnableScheduling
 public class AuthorizationServerApplication {
 
     public static void main(String[] args) {
