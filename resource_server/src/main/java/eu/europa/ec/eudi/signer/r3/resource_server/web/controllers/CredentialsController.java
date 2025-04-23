@@ -97,7 +97,6 @@ public class CredentialsController {
                 String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
                 String surnameDecrypted = this.cryptoUtils.decryptString(surname);
 
-                // this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
                 this.credentialsService.createECDSAP256Credential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
             }
@@ -116,6 +115,7 @@ public class CredentialsController {
             return credentialsListResponse;
         }
         catch (Exception e){
+            e.printStackTrace();
             logger.error(e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request");
         }

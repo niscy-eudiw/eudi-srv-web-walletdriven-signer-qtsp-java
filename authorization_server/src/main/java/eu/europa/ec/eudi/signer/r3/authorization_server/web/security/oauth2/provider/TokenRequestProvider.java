@@ -301,6 +301,13 @@ public class TokenRequestProvider implements AuthenticationProvider {
             additionalParameters.put("authorization_details", authDetailsList);
             accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
         }
+        else if(authorizationCodeAuthentication.getAdditionalParameters().get("signatureQualifier") != null){
+            System.out.println("HERE: Signature Qualifier Found.");
+            Map<String, Object> additionalParameters = new HashMap<>();
+            String credentialID = authorizationCodeAuthentication.getAdditionalParameters().get("credentialID").toString();
+            additionalParameters.put("credentialID", credentialID);
+            accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
+        }
         else accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null);
         logger.info("Authenticate TokenRequest and generated an OAuth2AccessTokenAuthenticationToken.");
         return accessTokenAuthenticationToken;

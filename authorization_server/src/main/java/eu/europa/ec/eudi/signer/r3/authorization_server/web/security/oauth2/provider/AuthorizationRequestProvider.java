@@ -20,10 +20,12 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.Creden
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -136,7 +138,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         }
         logger.info("Principal of type {} is authenticated.", principal.getClass().getName());
 
-        Map<String, Object> additionalParameters = authenticationToken.getAdditionalParameters();
+		Map<String, Object> additionalParameters = new HashMap<>(authenticationToken.getAdditionalParameters());
 
         // if is the scope credential, the credentialID is not defined and a signatureQualifier is defined, I need to choose a credential to use
         Object signatureQualifier = authenticationToken.getAdditionalParameters().get("signatureQualifier");
@@ -153,12 +155,20 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             String authorization_details_decode = URLDecoder.decode(authorization_details.toString(), StandardCharsets.UTF_8);
             JSONArray authorization_details_json_array = new JSONArray(authorization_details_decode);
             JSONObject authorization_details_json = authorization_details_json_array.getJSONObject(0);
-            if(authorization_details_json.get("credentialID") == null && authorization_details_json.get("signatureQualifier") != null){
+            System.out.println(authorization_details_json);
+            if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
                 OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) principal;
                 String userHash = auth.getHash();
                 String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
                 logger.info("CredentialId Selected: {}", credentialIdChosen);
-                additionalParameters.put("credentialID", credentialIdChosen);
+
+                authorization_details_json.put("credentialID", credentialIdChosen);
+                JSONArray authorization_details_array_new = new JSONArray(authorization_details_json);
+
+                String authorization_details_encode = URLEncoder.encode(authorization_details_array_new.toString(), StandardCharsets.UTF_8);
+                System.out.println(authorization_details_encode);
+
+                additionalParameters.put("authorization_details", authorization_details_encode);
             }
         }
 
