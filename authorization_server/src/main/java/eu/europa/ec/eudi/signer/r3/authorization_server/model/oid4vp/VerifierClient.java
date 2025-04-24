@@ -61,21 +61,21 @@ public class VerifierClient {
     }
 
     public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
-        return initTransactionToVerifier(userId, currentServiceUrl, false);
+        return initTransactionToVerifier(userId, currentServiceUrl, false, transaction_data);
     }
 
     public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
-        return initTransactionToVerifier(userId, currentServiceUrl, true);
+        return initTransactionToVerifier(userId, currentServiceUrl, true, transaction_data);
     }
 
-    private String initTransactionToVerifier(String userId, String currentServiceUrl, boolean isCrossDevice) throws Exception {
+    private String initTransactionToVerifier(String userId, String currentServiceUrl, boolean isCrossDevice, JSONArray transaction_data) throws Exception {
         log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
         String nonce = getNonce();
 
         // makes the http Presentation Request:
         JSONObject responseFromVerifier;
         try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, isCrossDevice);
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, isCrossDevice, transaction_data);
         } catch (Exception e) {
             throw new Exception(OID4VPEnumError.FailedConnectionToVerifier.getFormattedMessage());
         }
@@ -126,12 +126,16 @@ public class VerifierClient {
         return Base64.getUrlEncoder().encodeToString(result);
     }
 
-    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce, boolean isCrossDevice) throws Exception {
+    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce, boolean isCrossDevice, JSONArray transaction_data) throws Exception {
         Map<String, String> headers = getHeaders();
 
         String bodyMessage;
-        if(isCrossDevice) bodyMessage = getCrossDeviceMessage(nonce);
-        else bodyMessage = getSameDeviceMessage(userId, serviceUrl, nonce);
+
+        log.info("Transaction_data: {}", transaction_data);
+        if(isCrossDevice) bodyMessage = getCrossDeviceMessage(nonce, transaction_data);
+        else bodyMessage = getSameDeviceMessage(userId, serviceUrl, nonce, transaction_data);
+
+        log.info("Message to Verifier: {}", bodyMessage);
 
         // makes a request to the verifier
         HttpResponse response;
@@ -218,7 +222,7 @@ public class VerifierClient {
 
         List<String> credentials_ids = new ArrayList<>();
         credentials_ids.add(PresentationDefinitionInputDescriptorsId);
-        transaction_data_object.put("credentials_ids", credentials_ids);
+        transaction_data_object.put("credential_ids", credentials_ids);
 
         transaction_data_object.put("credentialID", credentialID);
 
@@ -232,14 +236,13 @@ public class VerifierClient {
             documentDigests.put(documentDigestSingle);
         }
         transaction_data_object.put("documentDigests", documentDigests);
-        transaction_data_object.put("processID", "");
 
-        String transaction_data_string_base64 = Base64.getEncoder().encodeToString(transaction_data_object.toString().getBytes());
-        transaction_data.put(transaction_data_string_base64);
+        // String transaction_data_string_base64 = Base64.getEncoder().encodeToString(transaction_data_object.toString().getBytes());
+        transaction_data.put(transaction_data_object);
         return transaction_data;
     }
 
-    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
+    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
         JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
@@ -249,10 +252,12 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
+        if(transaction_data != null)
+            jsonBodyToInitPresentation.put("transaction_data", transaction_data);
         return jsonBodyToInitPresentation.toString();
     }
 
-    private String getCrossDeviceMessage(String nonce) {
+    private String getCrossDeviceMessage(String nonce, JSONArray transaction_data) {
         JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
 
         // Set JSON Body
@@ -260,6 +265,8 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
+        if(transaction_data != null)
+            jsonBodyToInitPresentation.put("transaction_data", transaction_data);
         return jsonBodyToInitPresentation.toString();
     }
 

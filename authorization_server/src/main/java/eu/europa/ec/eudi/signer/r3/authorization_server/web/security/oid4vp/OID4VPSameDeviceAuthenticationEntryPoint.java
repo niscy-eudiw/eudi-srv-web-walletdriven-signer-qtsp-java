@@ -72,6 +72,7 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
 
         try{
             JSONArray transaction_data = getTransactionData(request);
+            logger.info("Transaction_Data: "+ transaction_data);
             String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl, transaction_data);
             this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
