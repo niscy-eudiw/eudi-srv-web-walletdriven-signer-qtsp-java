@@ -97,9 +97,11 @@ public class CredentialsController {
                 String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
                 String surnameDecrypted = this.cryptoUtils.decryptString(surname);
 
-                // this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
+                logger.info("Creating Credential for User {} {}", givenNameDecrypted, surnameDecrypted);
                 this.credentialsService.createECDSAP256Credential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
+                logger.info("Issued new Credential.");
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
+                logger.info("Retrieved list of available Credentials.");
             }
             credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);
             logger.info("Added the list of available credentials ID to the response.");
