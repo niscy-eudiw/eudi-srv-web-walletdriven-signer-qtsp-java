@@ -17,6 +17,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 
 import java.net.URLDecoder;
@@ -29,7 +30,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
@@ -38,6 +41,7 @@ import org.json.JSONObject;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
@@ -144,8 +148,14 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         Object signatureQualifier = authenticationToken.getAdditionalParameters().get("signatureQualifier");
         Object credentialId = authenticationToken.getAdditionalParameters().get("credentialID");
         if(authenticationToken.getScopes().contains("credential") && credentialId == null && signatureQualifier != null){
-            OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) principal;
-            String userHash = auth.getHash();
+            String userHash = null;
+            if(principal instanceof OID4VPAuthenticationToken auth){
+				userHash = auth.getHash();
+            }
+            else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
+                UserPrincipal user = (UserPrincipal) auth.getPrincipal();
+                userHash = user.getUsername();
+            }
             String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, signatureQualifier.toString());
 			logger.info("CredentialId Selected: {}", credentialIdChosen);
             additionalParameters.put("credentialID", credentialIdChosen);
@@ -155,10 +165,17 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             String authorization_details_decode = URLDecoder.decode(authorization_details.toString(), StandardCharsets.UTF_8);
             JSONArray authorization_details_json_array = new JSONArray(authorization_details_decode);
             JSONObject authorization_details_json = authorization_details_json_array.getJSONObject(0);
-            System.out.println(authorization_details_json);
             if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
-                OID4VPAuthenticationToken auth = (OID4VPAuthenticationToken) principal;
-                String userHash = auth.getHash();
+
+                String userHash = null;
+                if(principal instanceof OID4VPAuthenticationToken auth){
+                    userHash = auth.getHash();
+                }
+                else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
+                    UserPrincipal user = (UserPrincipal) auth.getPrincipal();
+                    userHash = user.getUsername();
+                }
+
                 String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
                 logger.info("CredentialId Selected: {}", credentialIdChosen);
 
@@ -166,8 +183,6 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
                 JSONArray authorization_details_array_new = new JSONArray(authorization_details_json);
 
                 String authorization_details_encode = URLEncoder.encode(authorization_details_array_new.toString(), StandardCharsets.UTF_8);
-                System.out.println(authorization_details_encode);
-
                 additionalParameters.put("authorization_details", authorization_details_encode);
             }
         }
@@ -346,7 +361,6 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
         }
     }
-
 
     private static boolean isPrincipalAuthenticated(Authentication principal) {
         return principal != null && !AnonymousAuthenticationToken.class.isAssignableFrom(principal.getClass()) && principal.isAuthenticated();

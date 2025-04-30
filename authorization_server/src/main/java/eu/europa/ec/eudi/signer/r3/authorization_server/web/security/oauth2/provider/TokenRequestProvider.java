@@ -64,37 +64,29 @@ public class TokenRequestProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication =
-              (OAuth2AuthorizationCodeAuthenticationToken) authentication;
-        OAuth2ClientAuthenticationToken clientPrincipal =
-              getAuthenticatedClientElseThrowInvalidClient(authorizationCodeAuthentication);
+        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication = (OAuth2AuthorizationCodeAuthenticationToken) authentication;
+        OAuth2ClientAuthenticationToken clientPrincipal = getAuthenticatedClientElseThrowInvalidClient(authorizationCodeAuthentication);
 
         // get the registered client that made the token request
         RegisteredClient registeredClient = clientPrincipal.getRegisteredClient();
-        logger.info("Authenticating OAuth2AuthorizationCodeAuthenticationToken from clientID: {}",
-              registeredClient.getClientId());
+        logger.info("Authenticating OAuth2AuthorizationCodeAuthenticationToken from clientID: {}", registeredClient.getClientId());
 
         // load the authorization request with the code received
-        OAuth2Authorization authorization = this.authorizationService.findByToken(
-              authorizationCodeAuthentication.getCode(), new OAuth2TokenType(OAuth2ParameterNames.CODE));
+        OAuth2Authorization authorization = this.authorizationService.findByToken(authorizationCodeAuthentication.getCode(), new OAuth2TokenType(OAuth2ParameterNames.CODE));
         if (authorization == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameter code."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameter code."));
         }
-        logger.info("Retrieved authorization with authorization code: {}",
-              authorization.getToken(OAuth2AuthorizationCode.class));
+        logger.info("Retrieved authorization with authorization code: {}", authorization.getToken(OAuth2AuthorizationCode.class));
 
         // get the authorization request itself
         OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode = authorization.getToken(OAuth2AuthorizationCode.class);
         if(authorizationCode == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Authorization code is invalid or expired."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Authorization code is invalid or expired."));
         }
 
         OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
         if(authorizationRequest == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "No authorization request found."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "No authorization request found."));
         }
 
         // verifies that the client that requested the code is the same to the one requesting the access token
@@ -102,20 +94,15 @@ public class TokenRequestProvider implements AuthenticationProvider {
             if (!authorizationCode.isInvalidated()) {
                 authorization = invalidate(authorization, authorizationCode.getToken());
                 this.authorizationService.save(authorization);
-                logger.error("Invalidated authorization code used by registered client {}",
-                      registeredClient.getId());
+                logger.error("Invalidated authorization code used by registered client {}", registeredClient.getId());
             }
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The client that requested the code is " +
-                        "not the same as the one requesting the access token"));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The client that requested the code is not the same as the one requesting the access token"));
         }
         logger.info("Validated that the client that requested the code is the same as the one requesting the access token.");
 
         // Validates that the redirect uri in the token request is equal to the one in the authorization request
         if (StringUtils.hasText(authorizationRequest.getRedirectUri()) && !authorizationRequest.getRedirectUri().equals(authorizationCodeAuthentication.getRedirectUri())) {
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "redirect_uri does not" +
-                        " match the redirect_uri parameter of authorization request."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "redirect_uri does not match the redirect_uri parameter of authorization request."));
         }
         logger.info("Validated that the redirect_uri matches the registered client redirect_uri.");
 
@@ -138,10 +125,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
         String code_challenge_method = authorizationRequest.getAdditionalParameters().get("code_challenge_method").toString();
         String code_verifier = authorizationCodeAuthentication.getAdditionalParameters().get("code_verifier").toString();
         if (code_challenge == null || code_challenge_method == null || code_verifier == null)
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Code_challenge or Code_verifier missing."));
-        logger.info("Code_Challenge: {}; Code_Challenge_Method: {}; Code_Verifier: {}", code_challenge,
-              code_challenge_method, code_verifier);
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Code_challenge or Code_verifier missing."));
+        logger.info("Code_Challenge: {}; Code_Challenge_Method: {}; Code_Verifier: {}", code_challenge, code_challenge_method, code_verifier);
 
         // Validate PKCE
         if (code_challenge_method.equals("S256")) {
@@ -169,8 +154,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         // Validate Authorization Details: if the authorization details are set in the previous request, that should know be also present and be equal
         if(authorization.getAuthorizedScopes().contains("credential") && authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
             if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null && authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") == null) {
-                throw new OAuth2AuthenticationException(
-                      getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
+                throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
             } else {
                 String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
                 String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
@@ -182,8 +166,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
                 JSONObject authDetailsTokenJSON = authDetailsTokenArray.getJSONObject(0);
 
                 if (!authDetailsAuthorizationJSON.similar(authDetailsTokenJSON)) {
-                    throw new OAuth2AuthenticationException(
-                          getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
+                    throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
                 }
             }
             logger.info("Validated Authorization_details");
@@ -191,8 +174,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         logger.info("Token Request is valid.");
 
         // ----- Access token -----
-        return accessTokenGeneration(authorization, registeredClient, authorizationCodeAuthentication,
-              authorizationCode, clientPrincipal);
+        return accessTokenGeneration(authorization, registeredClient, authorizationCodeAuthentication, authorizationCode, clientPrincipal, authorizationRequest);
     }
 
     @Override
@@ -240,7 +222,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
           OAuth2Authorization authorization, RegisteredClient registeredClient,
           OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication,
           OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode,
-          OAuth2ClientAuthenticationToken clientPrincipal){
+          OAuth2ClientAuthenticationToken clientPrincipal, OAuth2AuthorizationRequest authorizationRequest){
 
         Authentication principal = authorization.getAttribute(Principal.class.getName());
 		logger.info("Principal Info: {}", principal.toString());
@@ -293,6 +275,10 @@ public class TokenRequestProvider implements AuthenticationProvider {
         logger.info("Saved Authorization");
 
         OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;
+
+        System.out.println(authorizationCodeAuthentication.getAdditionalParameters().toString());
+        System.out.println(authorizationRequest.getAdditionalParameters().get("signatureQualifier"));
+
         if(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") != null) {
             String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
             Map<String, Object> additionalParameters = new HashMap<>();
@@ -301,10 +287,9 @@ public class TokenRequestProvider implements AuthenticationProvider {
             additionalParameters.put("authorization_details", authDetailsList);
             accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
         }
-        else if(authorizationCodeAuthentication.getAdditionalParameters().get("signatureQualifier") != null){
-            System.out.println("HERE: Signature Qualifier Found.");
+        else if(authorizationRequest.getAdditionalParameters().get("signatureQualifier") != null){
             Map<String, Object> additionalParameters = new HashMap<>();
-            String credentialID = authorizationCodeAuthentication.getAdditionalParameters().get("credentialID").toString();
+            String credentialID = authorizationRequest.getAdditionalParameters().get("credentialID").toString();
             additionalParameters.put("credentialID", credentialID);
             accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
         }
