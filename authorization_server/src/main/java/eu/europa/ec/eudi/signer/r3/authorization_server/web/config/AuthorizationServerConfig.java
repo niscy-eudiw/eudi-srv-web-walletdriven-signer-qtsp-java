@@ -110,7 +110,7 @@ public class AuthorizationServerConfig {
 		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
-		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
+		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
 		authorizationServerConfigurer
 			  .registeredClientRepository(registeredClientRepository)

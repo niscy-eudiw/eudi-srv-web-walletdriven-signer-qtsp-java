@@ -17,12 +17,18 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.Principal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
@@ -49,6 +55,7 @@ import org.springframework.util.StringUtils;
 public class TokenRequestProvider implements AuthenticationProvider {
     private final OAuth2AuthorizationService authorizationService;
     private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
+    private final CredentialsService credentialsService;
     private final Logger logger = LogManager.getLogger(TokenRequestProvider.class);
 
     private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
@@ -57,44 +64,38 @@ public class TokenRequestProvider implements AuthenticationProvider {
     }
 
     public TokenRequestProvider(OAuth2AuthorizationService authorizationService,
-                                OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator) {
+                                OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
+                                CredentialsService credentialsService) {
         this.authorizationService = authorizationService;
         this.tokenGenerator = tokenGenerator;
+        this.credentialsService = credentialsService;
     }
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication =
-              (OAuth2AuthorizationCodeAuthenticationToken) authentication;
-        OAuth2ClientAuthenticationToken clientPrincipal =
-              getAuthenticatedClientElseThrowInvalidClient(authorizationCodeAuthentication);
+        OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication = (OAuth2AuthorizationCodeAuthenticationToken) authentication;
+        OAuth2ClientAuthenticationToken clientPrincipal = getAuthenticatedClientElseThrowInvalidClient(authorizationCodeAuthentication);
 
         // get the registered client that made the token request
         RegisteredClient registeredClient = clientPrincipal.getRegisteredClient();
-        logger.info("Authenticating OAuth2AuthorizationCodeAuthenticationToken from clientID: {}",
-              registeredClient.getClientId());
+        logger.info("Authenticating OAuth2AuthorizationCodeAuthenticationToken from clientID: {}", registeredClient.getClientId());
 
         // load the authorization request with the code received
-        OAuth2Authorization authorization = this.authorizationService.findByToken(
-              authorizationCodeAuthentication.getCode(), new OAuth2TokenType(OAuth2ParameterNames.CODE));
+        OAuth2Authorization authorization = this.authorizationService.findByToken(authorizationCodeAuthentication.getCode(), new OAuth2TokenType(OAuth2ParameterNames.CODE));
         if (authorization == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameter code."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Invalid parameter code."));
         }
-        logger.info("Retrieved authorization with authorization code: {}",
-              authorization.getToken(OAuth2AuthorizationCode.class));
+        logger.info("Retrieved authorization with authorization code: {}", authorization.getToken(OAuth2AuthorizationCode.class));
 
         // get the authorization request itself
         OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode = authorization.getToken(OAuth2AuthorizationCode.class);
         if(authorizationCode == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Authorization code is invalid or expired."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Authorization code is invalid or expired."));
         }
 
         OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
         if(authorizationRequest == null){
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "No authorization request found."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "No authorization request found."));
         }
 
         // verifies that the client that requested the code is the same to the one requesting the access token
@@ -102,20 +103,15 @@ public class TokenRequestProvider implements AuthenticationProvider {
             if (!authorizationCode.isInvalidated()) {
                 authorization = invalidate(authorization, authorizationCode.getToken());
                 this.authorizationService.save(authorization);
-                logger.error("Invalidated authorization code used by registered client {}",
-                      registeredClient.getId());
+                logger.error("Invalidated authorization code used by registered client {}", registeredClient.getId());
             }
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The client that requested the code is " +
-                        "not the same as the one requesting the access token"));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The client that requested the code is not the same as the one requesting the access token"));
         }
         logger.info("Validated that the client that requested the code is the same as the one requesting the access token.");
 
         // Validates that the redirect uri in the token request is equal to the one in the authorization request
         if (StringUtils.hasText(authorizationRequest.getRedirectUri()) && !authorizationRequest.getRedirectUri().equals(authorizationCodeAuthentication.getRedirectUri())) {
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "redirect_uri does not" +
-                        " match the redirect_uri parameter of authorization request."));
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "redirect_uri does not match the redirect_uri parameter of authorization request."));
         }
         logger.info("Validated that the redirect_uri matches the registered client redirect_uri.");
 
@@ -138,10 +134,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
         String code_challenge_method = authorizationRequest.getAdditionalParameters().get("code_challenge_method").toString();
         String code_verifier = authorizationCodeAuthentication.getAdditionalParameters().get("code_verifier").toString();
         if (code_challenge == null || code_challenge_method == null || code_verifier == null)
-            throw new OAuth2AuthenticationException(
-                  getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Code_challenge or Code_verifier missing."));
-        logger.info("Code_Challenge: {}; Code_Challenge_Method: {}; Code_Verifier: {}", code_challenge,
-              code_challenge_method, code_verifier);
+            throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "Code_challenge or Code_verifier missing."));
+        logger.info("Code_Challenge: {}; Code_Challenge_Method: {}; Code_Verifier: {}", code_challenge, code_challenge_method, code_verifier);
 
         // Validate PKCE
         if (code_challenge_method.equals("S256")) {
@@ -169,8 +163,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         // Validate Authorization Details: if the authorization details are set in the previous request, that should know be also present and be equal
         if(authorization.getAuthorizedScopes().contains("credential") && authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
             if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null && authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") == null) {
-                throw new OAuth2AuthenticationException(
-                      getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
+                throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
             } else {
                 String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
                 String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
@@ -182,22 +175,56 @@ public class TokenRequestProvider implements AuthenticationProvider {
                 JSONObject authDetailsTokenJSON = authDetailsTokenArray.getJSONObject(0);
 
                 if (!authDetailsAuthorizationJSON.similar(authDetailsTokenJSON)) {
-                    throw new OAuth2AuthenticationException(
-                          getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
+                    throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
                 }
             }
             logger.info("Validated Authorization_details");
         }
         logger.info("Token Request is valid.");
 
+        OAuth2Authorization newAuthorization = addCredentialIDToAuthorizationDetails(authorization, authorizationRequest);
         // ----- Access token -----
-        return accessTokenGeneration(authorization, registeredClient, authorizationCodeAuthentication,
-              authorizationCode, clientPrincipal);
+        return accessTokenGeneration(newAuthorization, registeredClient, authorizationCodeAuthentication, authorizationCode, clientPrincipal);
     }
 
     @Override
     public boolean supports(Class<?> authentication) {
         return OAuth2AuthorizationCodeAuthenticationToken.class.isAssignableFrom(authentication);
+    }
+
+    private OAuth2Authorization addCredentialIDToAuthorizationDetails(OAuth2Authorization authorization, OAuth2AuthorizationRequest authorizationRequest){
+        Authentication principal = authorization.getAttribute(Principal.class.getName());
+        Map<String, Object> additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
+
+        if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+            JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
+            JSONObject authorization_details_json = authDetailsTokenArray.getJSONObject(0);
+            if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
+                String userHash = null;
+                if(principal instanceof OID4VPAuthenticationToken auth){
+                    userHash = auth.getHash();
+                }
+                else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
+                    UserPrincipal user = (UserPrincipal) auth.getPrincipal();
+                    userHash = user.getUsername();
+                }
+
+                String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
+                logger.info("CredentialId Selected: {}", credentialIdChosen);
+
+                authorization_details_json.remove("signatureQualifier");
+                authorization_details_json.put("credentialID", credentialIdChosen);
+                authDetailsTokenArray = new JSONArray();
+                authDetailsTokenArray.put(authorization_details_json);
+                authDetailsToken = URLEncoder.encode(String.valueOf(authDetailsTokenArray), StandardCharsets.UTF_8);
+                additionalParameters.remove("authorization_details");
+                additionalParameters.put("authorization_details", authDetailsToken);
+                OAuth2AuthorizationRequest newAuthorizationRequest = OAuth2AuthorizationRequest.from(authorizationRequest).additionalParameters(additionalParameters).build();
+                return OAuth2Authorization.from(authorization).attribute(OAuth2AuthorizationRequest.class.getName(), newAuthorizationRequest).build();
+            }
+        }
+        return authorization;
     }
 
     private OAuth2ClientAuthenticationToken getAuthenticatedClientElseThrowInvalidClient(Authentication authentication) {
@@ -241,6 +268,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
           OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication,
           OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode,
           OAuth2ClientAuthenticationToken clientPrincipal){
+
+        OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
 
         Authentication principal = authorization.getAttribute(Principal.class.getName());
 		logger.info("Principal Info: {}", principal.toString());
@@ -293,12 +322,19 @@ public class TokenRequestProvider implements AuthenticationProvider {
         logger.info("Saved Authorization");
 
         OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;
-        if(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") != null) {
-            String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+
+        if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
             Map<String, Object> additionalParameters = new HashMap<>();
             JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
             List<Object> authDetailsList = authDetailsTokenArray.toList();
             additionalParameters.put("authorization_details", authDetailsList);
+            accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
+        }
+        else if(authorizationRequest.getAdditionalParameters().get("signatureQualifier") != null){
+            Map<String, Object> additionalParameters = new HashMap<>();
+            String credentialID = authorizationRequest.getAdditionalParameters().get("credentialID").toString();
+            additionalParameters.put("credentialID", credentialID);
             accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null, additionalParameters);
         }
         else accessTokenAuthenticationToken = new OAuth2AccessTokenAuthenticationToken(registeredClient, clientPrincipal, accessToken, null);
