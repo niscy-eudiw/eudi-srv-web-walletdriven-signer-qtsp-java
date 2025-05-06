@@ -41,7 +41,6 @@ import org.json.JSONObject;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.keygen.Base64StringKeyGenerator;
@@ -115,8 +114,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken =
-              (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
+        OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken = (OAuth2AuthorizationCodeRequestAuthenticationToken) authentication;
         logger.info("Authenticating an Authorization Code Request for the clientID: {}.", authenticationToken.getClientId());
 
         RegisteredClient registeredClient = this.registeredClientRepository.findByClientId(authenticationToken.getClientId());
@@ -143,49 +141,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         logger.info("Principal of type {} is authenticated.", principal.getClass().getName());
 
 		Map<String, Object> additionalParameters = new HashMap<>(authenticationToken.getAdditionalParameters());
-
-        // if is the scope credential, the credentialID is not defined and a signatureQualifier is defined, I need to choose a credential to use
-        Object signatureQualifier = authenticationToken.getAdditionalParameters().get("signatureQualifier");
-        Object credentialId = authenticationToken.getAdditionalParameters().get("credentialID");
-        if(authenticationToken.getScopes().contains("credential") && credentialId == null && signatureQualifier != null){
-            String userHash = null;
-            if(principal instanceof OID4VPAuthenticationToken auth){
-				userHash = auth.getHash();
-            }
-            else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
-                UserPrincipal user = (UserPrincipal) auth.getPrincipal();
-                userHash = user.getUsername();
-            }
-            String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, signatureQualifier.toString());
-			logger.info("CredentialId Selected: {}", credentialIdChosen);
-            additionalParameters.put("credentialID", credentialIdChosen);
-        }
-        else if(authenticationToken.getScopes().contains("credential") && authenticationToken.getAdditionalParameters().get("authorization_details") != null){
-            Object authorization_details = authenticationToken.getAdditionalParameters().get("authorization_details");
-            String authorization_details_decode = URLDecoder.decode(authorization_details.toString(), StandardCharsets.UTF_8);
-            JSONArray authorization_details_json_array = new JSONArray(authorization_details_decode);
-            JSONObject authorization_details_json = authorization_details_json_array.getJSONObject(0);
-            if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
-
-                String userHash = null;
-                if(principal instanceof OID4VPAuthenticationToken auth){
-                    userHash = auth.getHash();
-                }
-                else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
-                    UserPrincipal user = (UserPrincipal) auth.getPrincipal();
-                    userHash = user.getUsername();
-                }
-
-                String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
-                logger.info("CredentialId Selected: {}", credentialIdChosen);
-
-                authorization_details_json.put("credentialID", credentialIdChosen);
-                JSONArray authorization_details_array_new = new JSONArray(authorization_details_json);
-
-                String authorization_details_encode = URLEncoder.encode(authorization_details_array_new.toString(), StandardCharsets.UTF_8);
-                additionalParameters.put("authorization_details", authorization_details_encode);
-            }
-        }
+        retrieveCredentialIDFromSignatureQualifier(authenticationToken, principal, additionalParameters);
 
         OAuth2AuthorizationRequest authorizationRequest = OAuth2AuthorizationRequest.authorizationCode()
               .authorizationUri(authenticationToken.getAuthorizationUri())
@@ -296,27 +252,23 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         logger.info("Validated code_challenge & code_challenge_method.");
     }
 
-    private void validateAuthorizationDetails(String authorizationDetails,
-                                              OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken){
+    private void validateAuthorizationDetails(String authorizationDetails, OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken){
         try{
             JSONArray authorizationDetailsArray = new JSONArray(authorizationDetails);
             if(authorizationDetailsArray.isEmpty()){
-                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                      "Authorization Details Object is missing.");
+                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "Authorization Details Object is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
 
             JSONObject authorizationDetailsJSON = authorizationDetailsArray.getJSONObject(0);
 
             if(!authorizationDetailsJSON.has("type")){
-                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                      "The 'type' in the 'authorization_details' parameter is missing.");
+                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The 'type' in the 'authorization_details' parameter is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
             String type = authorizationDetailsJSON.getString("type");
             if(!type.equals("credential")){
-                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                      "The 'type' in the 'authorization_details' parameter is invalid.");
+                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The 'type' in the 'authorization_details' parameter is invalid.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
 
@@ -341,15 +293,13 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
             }
 
             if(!authorizationDetailsJSON.has("documentDigests")){
-                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                      "The 'documentDigests' in the 'authorization_details' parameter is missing.");
+                OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The 'documentDigests' in the 'authorization_details' parameter is missing.");
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
             }
             for (Object jsonObject: authorizationDetailsJSON.getJSONArray("documentDigests")){
                 JSONObject j = (JSONObject) jsonObject;
                 if(!j.has("hash")){
-                    OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST,
-                          "The 'hash' in the 'documentDigests' in 'authorization_details' parameter is missing.");
+                    OAuth2Error error = getOAuth2Error(OAuth2ErrorCodes.INVALID_REQUEST, "The 'hash' in the 'documentDigests' in 'authorization_details' parameter is missing.");
                     throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
                 }
             }
@@ -364,6 +314,26 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
     private static boolean isPrincipalAuthenticated(Authentication principal) {
         return principal != null && !AnonymousAuthenticationToken.class.isAssignableFrom(principal.getClass()) && principal.isAuthenticated();
+    }
+
+    private void retrieveCredentialIDFromSignatureQualifier(OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken, Authentication principal, Map<String, Object> additionalParameters){
+        // if is the scope credential, the credentialID is not defined and a signatureQualifier is defined, I need to choose a credential to use
+        Object signatureQualifier = authenticationToken.getAdditionalParameters().get("signatureQualifier");
+        Object credentialId = authenticationToken.getAdditionalParameters().get("credentialID");
+        Object authorizationDetails = authenticationToken.getAdditionalParameters().get("authorization_details");
+        if(authenticationToken.getScopes().contains("credential") && authorizationDetails == null && credentialId == null && signatureQualifier != null){
+            String userHash = null;
+            if(principal instanceof OID4VPAuthenticationToken auth){
+                userHash = auth.getHash();
+            }
+            else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
+                UserPrincipal user = (UserPrincipal) auth.getPrincipal();
+                userHash = user.getUsername();
+            }
+            String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, signatureQualifier.toString());
+            logger.info("CredentialId Selected: {}", credentialIdChosen);
+            additionalParameters.put("credentialID", credentialIdChosen);
+        }
     }
 
     // Generate the authorization code

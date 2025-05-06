@@ -17,12 +17,18 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.Principal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
@@ -49,6 +55,7 @@ import org.springframework.util.StringUtils;
 public class TokenRequestProvider implements AuthenticationProvider {
     private final OAuth2AuthorizationService authorizationService;
     private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
+    private final CredentialsService credentialsService;
     private final Logger logger = LogManager.getLogger(TokenRequestProvider.class);
 
     private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
@@ -57,9 +64,11 @@ public class TokenRequestProvider implements AuthenticationProvider {
     }
 
     public TokenRequestProvider(OAuth2AuthorizationService authorizationService,
-                                OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator) {
+                                OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator,
+                                CredentialsService credentialsService) {
         this.authorizationService = authorizationService;
         this.tokenGenerator = tokenGenerator;
+        this.credentialsService = credentialsService;
     }
 
     @Override
@@ -173,13 +182,49 @@ public class TokenRequestProvider implements AuthenticationProvider {
         }
         logger.info("Token Request is valid.");
 
+        OAuth2Authorization newAuthorization = addCredentialIDToAuthorizationDetails(authorization, authorizationRequest);
         // ----- Access token -----
-        return accessTokenGeneration(authorization, registeredClient, authorizationCodeAuthentication, authorizationCode, clientPrincipal, authorizationRequest);
+        return accessTokenGeneration(newAuthorization, registeredClient, authorizationCodeAuthentication, authorizationCode, clientPrincipal);
     }
 
     @Override
     public boolean supports(Class<?> authentication) {
         return OAuth2AuthorizationCodeAuthenticationToken.class.isAssignableFrom(authentication);
+    }
+
+    private OAuth2Authorization addCredentialIDToAuthorizationDetails(OAuth2Authorization authorization, OAuth2AuthorizationRequest authorizationRequest){
+        Authentication principal = authorization.getAttribute(Principal.class.getName());
+        Map<String, Object> additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
+
+        if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+            JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
+            JSONObject authorization_details_json = authDetailsTokenArray.getJSONObject(0);
+            if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
+                String userHash = null;
+                if(principal instanceof OID4VPAuthenticationToken auth){
+                    userHash = auth.getHash();
+                }
+                else if(principal instanceof UsernamePasswordAuthenticationTokenExtended auth){
+                    UserPrincipal user = (UserPrincipal) auth.getPrincipal();
+                    userHash = user.getUsername();
+                }
+
+                String credentialIdChosen = this.credentialsService.getCredentialIDFromSignatureQualifier(userHash, authorization_details_json.getString("signatureQualifier"));
+                logger.info("CredentialId Selected: {}", credentialIdChosen);
+
+                authorization_details_json.remove("signatureQualifier");
+                authorization_details_json.put("credentialID", credentialIdChosen);
+                authDetailsTokenArray = new JSONArray();
+                authDetailsTokenArray.put(authorization_details_json);
+                authDetailsToken = URLEncoder.encode(String.valueOf(authDetailsTokenArray), StandardCharsets.UTF_8);
+                additionalParameters.remove("authorization_details");
+                additionalParameters.put("authorization_details", authDetailsToken);
+                OAuth2AuthorizationRequest newAuthorizationRequest = OAuth2AuthorizationRequest.from(authorizationRequest).additionalParameters(additionalParameters).build();
+                return OAuth2Authorization.from(authorization).attribute(OAuth2AuthorizationRequest.class.getName(), newAuthorizationRequest).build();
+            }
+        }
+        return authorization;
     }
 
     private OAuth2ClientAuthenticationToken getAuthenticatedClientElseThrowInvalidClient(Authentication authentication) {
@@ -222,7 +267,9 @@ public class TokenRequestProvider implements AuthenticationProvider {
           OAuth2Authorization authorization, RegisteredClient registeredClient,
           OAuth2AuthorizationCodeAuthenticationToken authorizationCodeAuthentication,
           OAuth2Authorization.Token<OAuth2AuthorizationCode> authorizationCode,
-          OAuth2ClientAuthenticationToken clientPrincipal, OAuth2AuthorizationRequest authorizationRequest){
+          OAuth2ClientAuthenticationToken clientPrincipal){
+
+        OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
 
         Authentication principal = authorization.getAttribute(Principal.class.getName());
 		logger.info("Principal Info: {}", principal.toString());
@@ -276,11 +323,8 @@ public class TokenRequestProvider implements AuthenticationProvider {
 
         OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;
 
-        System.out.println(authorizationCodeAuthentication.getAdditionalParameters().toString());
-        System.out.println(authorizationRequest.getAdditionalParameters().get("signatureQualifier"));
-
-        if(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") != null) {
-            String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+        if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
+            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
             Map<String, Object> additionalParameters = new HashMap<>();
             JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
             List<Object> authDetailsList = authDetailsTokenArray.toList();
