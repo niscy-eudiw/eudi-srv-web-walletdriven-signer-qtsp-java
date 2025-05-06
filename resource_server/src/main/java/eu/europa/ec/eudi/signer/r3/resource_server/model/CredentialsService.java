@@ -32,6 +32,8 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListRespon
 import java.util.*;
 import java.security.cert.X509Certificate;
 import org.bouncycastle.asn1.ASN1GeneralizedTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,7 @@ public class CredentialsService {
     private final CertificatesService certificatesService;
     private final CredentialsRepository credentialsRepository;
     private final KeysService keysService;
+    private static final Logger logger = LoggerFactory.getLogger(CredentialsService.class);
 
     public CredentialsService(@Autowired HsmService hsmService, @Autowired EjbcaService ejbcaService,
           @Autowired CredentialsRepository credentialsRepository){
@@ -248,11 +251,12 @@ public class CredentialsService {
           throws Exception{
         Credentials credential = new Credentials();
         KeyPairRegister keyValues = this.keysService.generateP256KeyPair();
+        logger.info("Generated P256 keypair.");
 
         List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(keyValues.getPublicKeyValue(), givenName,
               surname, name, issuingCountry, keyValues.getPrivateKeyBytes());
+        logger.info("Generated certificate and retrieved the chain certificate.");
         X509Certificate signingCertificate = EJBCACertificates.get(0);
-
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
 
         List<CertificateChain> certs = new ArrayList<>();
@@ -283,7 +287,9 @@ public class CredentialsService {
         credential.setCertificate(this.certificatesService.base64EncodeCertificate(signingCertificate));
         credential.setCertificateChain(certs);
         credential.setAuthMode("oauth2code");
+        logger.info("Create Credential Object.");
         this.credentialsRepository.save(credential);
+        logger.info("Saved Credential to Database.");
     }
 
     /**

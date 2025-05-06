@@ -128,12 +128,13 @@ public class HsmService {
 
         long secretKeyWrap = CE.GenerateKey(session, new CKM(CKM.AES_KEY_GEN),
               new CKA(CKA.VALUE_LEN, 32),
-              new CKA(CKA.LABEL, "wrapKey"),
-              new CKA(CKA.ID, "wrapKey"),
+              new CKA(CKA.LABEL, "secret_key_wrapper"),
+              new CKA(CKA.ID, "secret_key_wrapper"),
               new CKA(CKA.TOKEN, false),
-              new CKA(CKA.SENSITIVE, false),
-              new CKA(CKA.EXTRACTABLE, true),
-              new CKA(CKA.DERIVE, true));
+              new CKA(CKA.SENSITIVE, false), // CK_TRUE if object is sensitive
+              new CKA(CKA.WRAP, true), // CK_TRUE if key supports wrapping (i.e., can be used to wrap other keys)
+              new CKA(CKA.UNWRAP, true), // CK_TRUE if key supports unwrapping (i.e., can be used to unwrap other keys)
+              new CKA(CKA.EXTRACTABLE, true)); // CK_TRUE if key is extractable and can be wrapped
         byte[] secret_key = CE.GetAttributeValue(session, secretKeyWrap, CKA.VALUE).getValue();
         this.secretKey = secret_key;
 
@@ -150,12 +151,13 @@ public class HsmService {
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
-              new CKA(CKA.LABEL, "wrapKey"),
-              new CKA(CKA.ID, "wrapKey"),
+              new CKA(CKA.LABEL, "secret_key_wrapper"),
+              new CKA(CKA.ID, "secret_key_wrapper"),
               new CKA(CKA.TOKEN, false),
               new CKA(CKA.SENSITIVE, false),
-              new CKA(CKA.EXTRACTABLE, true),
-              new CKA(CKA.DERIVE, true)
+              new CKA(CKA.WRAP, true),
+              new CKA(CKA.UNWRAP, true),
+              new CKA(CKA.EXTRACTABLE, true)
         };
         long obj = CE.CreateObject(session, secretTempl);
         this.secretKey = secretKeyBytes;
@@ -170,12 +172,13 @@ public class HsmService {
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
-              new CKA(CKA.LABEL, "wrapKey"),
-              new CKA(CKA.ID, "wrapKey"),
+              new CKA(CKA.LABEL, "secret_key_wrapper"),
+              new CKA(CKA.ID, "secret_key_wrapper"),
               new CKA(CKA.TOKEN, false),
               new CKA(CKA.SENSITIVE, false),
-              new CKA(CKA.EXTRACTABLE, true),
-              new CKA(CKA.DERIVE, true)
+              new CKA(CKA.WRAP, true),
+              new CKA(CKA.UNWRAP, true),
+              new CKA(CKA.EXTRACTABLE, true)
         };
         return CE.CreateObject(session, secretTempl);
     }
@@ -195,7 +198,6 @@ public class HsmService {
         CKA[] pubTemplate = new CKA[]{
               new CKA(CKA.MODULUS_BITS, keySize),
               new CKA(CKA.PUBLIC_EXPONENT, Hex.s2b("010001")),
-              new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.LABEL, "rsa-public-key"),
@@ -207,7 +209,6 @@ public class HsmService {
               new CKA(CKA.PRIVATE, true),
               new CKA(CKA.SENSITIVE, true),
               new CKA(CKA.SIGN, true),
-              new CKA(CKA.UNWRAP, true),
               new CKA(CKA.EXTRACTABLE, true),
               new CKA(CKA.LABEL, "rsa-private-key"),
               new CKA(CKA.ID, "rsa-private-key-id"),
@@ -244,8 +245,8 @@ public class HsmService {
               new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
-              new CKA(CKA.LABEL, "EC-public-key"),
-              new CKA(CKA.ID, "EC-public-key")
+              new CKA(CKA.LABEL, "P256-public-key"),
+              new CKA(CKA.ID, "P256-public-key")
         };
 
         CKA[] privTempl = new CKA[]{
@@ -255,8 +256,8 @@ public class HsmService {
               new CKA(CKA.SIGN, true),
               new CKA(CKA.UNWRAP, true),
               new CKA(CKA.EXTRACTABLE, true),
-              new CKA(CKA.LABEL, "EC-private-key"),
-              new CKA(CKA.ID, "EC-private-key"),
+              new CKA(CKA.LABEL, "P256-private-key"),
+              new CKA(CKA.ID, "P256-private-key"),
         };
 
         LongRef pubKey = new LongRef();
@@ -276,8 +277,8 @@ public class HsmService {
         CKA[] templateUnwrap = new CKA[]{
               new CKA(CKA.CLASS, CKO.PRIVATE_KEY),
               new CKA(CKA.KEY_TYPE, CKK.RSA),
-              new CKA(CKA.LABEL, "privatekeyunwrapped"),
-              new CKA(CKA.ID, "privatekeyunwrapped"),
+              new CKA(CKA.LABEL, "RSA-private-key-unwrapped"),
+              new CKA(CKA.ID, "RSA-private-key-unwrapped"),
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.SENSITIVE, true),
               new CKA(CKA.EXTRACTABLE, true),
@@ -290,8 +291,8 @@ public class HsmService {
         CKA[] templateUnwrap = new CKA[]{
               new CKA(CKA.CLASS, CKO.PRIVATE_KEY),
               new CKA(CKA.KEY_TYPE, CKK.EC),
-              new CKA(CKA.LABEL, "privatekeyunwrapped"),
-              new CKA(CKA.ID, "privatekeyunwrapped"),
+              new CKA(CKA.LABEL, "P256-private-key-unwrapped"),
+              new CKA(CKA.ID, "P256-private-key-unwrapped"),
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.SENSITIVE, true),
               new CKA(CKA.EXTRACTABLE, true),
