@@ -88,19 +88,13 @@ public class OpenIdForVPService {
             vpToken =  new JSONObject(messageFromVerifier);
         }
         catch (JSONException e){
-            log.error("The message from Verifier is not a well formatted JSON. {}",e.getMessage());
+            log.error("The message from Verifier is not a well formatted JSON. {}", e.getMessage());
             throw new OID4VPException(OID4VPEnumError.ResponseVerifierWithInvalidFormat, "The message from Verifier is not a valid JSON.");
         }
         log.debug("VP Token: {}", vpToken);
 
         String MSOMDocDeviceResponse = vpToken.getJSONArray("vp_token").getString(0);
-        JSONObject pidAttributes = null;
-        try{
-            pidAttributes = verifierClient.validateDeviceResponse(MSOMDocDeviceResponse);
-        }
-        catch (Exception e){
-            log.error("There was an error validating the deviceResponse through the verifier: "+ e.getMessage());
-        }
+        JSONObject pidAttributes = verifierClient.validateDeviceResponse(MSOMDocDeviceResponse);
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
 		assert pidAttributes != null;
