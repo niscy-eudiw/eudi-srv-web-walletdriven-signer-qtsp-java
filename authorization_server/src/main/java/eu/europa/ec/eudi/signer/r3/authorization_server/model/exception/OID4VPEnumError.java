@@ -66,6 +66,9 @@ public enum OID4VPEnumError {
 
 
     // Errors while validating the VP Token:
+    FailedToValidateVPTokenThroughVerifier("failed_validate_vp_token_through_verifier",
+          "It was impossible to validate the VP Token using the OID4VP Verifier.", 500),
+
     FailedToValidateVPToken("failed_validate_vp_token", "The validation step of the VP Token failed.", 500), // 500
 
     SignatureIssuerAuthInvalid("signature_issuerauth_invalid",
