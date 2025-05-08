@@ -78,7 +78,7 @@ public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthentication
             logger.debug("VP Token received: {}", messageFromVerifier);
 
             // Returns OID4VPException with a correctly formatted messages from the Error.description
-            OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponse(messageFromVerifier);
+            OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
             logger.info("Generated unauthenticated AuthenticationManagerToken: {}", unauthenticatedToken.getHash());
 
             // Returns AuthenticationServiceException with a correctly formatted messages

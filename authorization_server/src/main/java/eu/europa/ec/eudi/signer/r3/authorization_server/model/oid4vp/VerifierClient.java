@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -392,5 +393,35 @@ public class VerifierClient {
 
     private String getUrlToRetrieveVPToken(String presentation_id, String nonce) {
         return verifierProperties.getUrl() + "/" + presentation_id + "?nonce=" + nonce;
+    }
+
+    public JSONObject validateDeviceResponse(String MSO_MDoc_Device_Response) throws Exception{
+        String url = "https://"+verifierProperties.getAddress()+"/utilities/validations/msoMdoc/deviceResponse";
+        Map<String, String> headers = new HashMap<>();
+        headers.put("accept", "application/json");
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+        String body = "device_response="+MSO_MDoc_Device_Response;
+
+        HttpResponse response = WebUtils.httpPostRequest(url, headers, body);
+
+        if(response.getStatusLine().getStatusCode() == 200){
+            HttpEntity entity = response.getEntity();
+            if (entity == null) {
+                log.error("Http Post response from the presentation request is empty.");
+                throw new Exception("Http Post response from the presentation request is empty.");
+            }
+            String result = WebUtils.convertStreamToString(entity.getContent());
+            JSONArray responseVerifier = new JSONArray(result);
+            System.out.println(responseVerifier);
+
+            for(int i = 0; i < responseVerifier.length(); i++){
+                JSONObject jsonObject = responseVerifier.getJSONObject(i);
+                if(jsonObject.get("docType").equals(PresentationDefinitionInputDescriptorsId)){
+                    return jsonObject.getJSONObject("attributes").getJSONObject(PresentationDefinitionInputDescriptorsId);
+                }
+            }
+            return null;
+        }
+        return null;
     }
 }
