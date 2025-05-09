@@ -1,16 +1,24 @@
 # Changelog
 
 ## [0.3.0]
-_02 Dec 2024_
+_09 May 2025_
 
 ### Added:
-- Error page to display errors in the OID4VP authentication process.
-- Added support for the OID4VP cross-device flow
+- Error page to display issues encountered during the OID4VP authentication process.
+- Support for the OID4VP cross-device authentication flow.
+
+### Changed:
+- Update Maven dependencies and remove unused javascript/CSS libraries.
+- Refactored how required OID4VP authentication local variables are managed.
+- Updated OAuth 2.0 client registration and logic to determine whether cross-device or same-device authentication applies.
 
 ### Fixed
-- Bug that introduced the possibility of skipping authentication.
-- Remove parts of VP Token validation steps that will be updated later to support VP Token changes.
-- Issue #11: 'Authentication Issues'
+- Resolved bug that allowed authentication to be bypassed.
+- Fixed an issue caused by unexpected expiration of client_secrets.
+- Issue #11 - 'Authentication Issues'
+- Issue #13 - 'Update VP Token Validation Library': replaced the local VP Token validation mechanism with a call to the OID4VP Verifier Endpoint.
+- Issue #17 - 'Update the oauth2/token to follow CSC'
+- Issue #19 - 'HSM SecretKey Template Properties'
 
 ## [0.2.0]
 

@@ -434,7 +434,7 @@ This secret key is required to encode certain values in JWT tokens.
       client_id:
    ```
 
-   By default, this configuration is set to a backend server based on the code from the github 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
+   By default, this configuration is set to a backend server based on the code from the GitHub 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
 
    ```
    verifier:
