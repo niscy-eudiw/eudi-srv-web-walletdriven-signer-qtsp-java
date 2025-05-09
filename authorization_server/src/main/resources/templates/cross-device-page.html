@@ -11,15 +11,10 @@
     <link rel="icon" th:href="@{/static/images/favicon.gif}" type="image/gif" />
     <link rel="stylesheet" th:href="@{/static/bootstrap-3.4.1-dist/css/bootstrap.min.css}" type="text/css" />
     <link rel="stylesheet" th:href="@{/static/css/stylesheets/custom/custom_en_9.7.1.20.1679559965505.css}" media="all" type="text/css" />
-    <link rel="stylesheet" th:href="@{/static/fontawesome-free-5.15.4-web/css/fontawesome.min.css}" type="text/css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script type="text/javascript" id="jqueryId" th:src="@{/static/scripts/jquery/jquery-3.6.3.min.js}" charset="UTF-8"></script>
-    <script type="text/javascript" th:src="@{/static/scripts/promiz/promiz-1.0.6.js}" charset="UTF-8"></script>
     <script type="text/javascript" th:src="@{/static/bootstrap-3.4.1-dist/js/bootstrap.min.js}" charset="UTF-8" defer="true"></script>
-    <script type="text/javascript" th:src="@{/static/scripts/html5shiv/html5shiv-3.7.3.js}" charset="UTF-8"></script>
-    <script type="text/javascript" th:src="@{/static/scripts/respond/respond-1.4.2.js}" charset="UTF-8"></script>
-    <meta name="referrer" content="no-referrer">
     <script type="text/javascript" th:src="@{/static/scripts/loc/loc_en_9.7.1.20.1679559965505.js}" charset="UTF-8"></script>
+    <meta name="referrer" content="no-referrer">
     <title>Authentication</title>
 </head>
 <body id="responsive-main-nav1">
@@ -40,8 +35,6 @@
 
                             <div>
                                 <p style="font-size: 21px;  display: inline;">A program is requesting access to </p>
-                                <!--<p th:text="${link}" style="font-size: 21px; display: inline;">link</p>-->
-                                <!--<p style="font-size: 21px; display: inline;"> is requesting access to </p>-->
                                 <p th:text="${reason}" style="font-size: 21px; display: inline;">reason</p>
                                 <br/>
                                 <p style="font-size: 21px; display: inline;">If you authenticate with the EUDIW, you will grant access to </p>
@@ -49,8 +42,6 @@
                                 <br/>
                                 <img th:src="'data:image/png;base64,' + ${qrCode}" alt="QR Code"/>
                             </div>
-
-
                         </div>
                     </div>
                 </div>
