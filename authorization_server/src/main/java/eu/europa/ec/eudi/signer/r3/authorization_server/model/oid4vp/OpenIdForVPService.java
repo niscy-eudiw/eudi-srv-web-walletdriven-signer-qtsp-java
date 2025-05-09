@@ -126,7 +126,7 @@ public class OpenIdForVPService {
         String issuanceAuthority = null;
         for (IssuerSignedItem el : l) {
             switch (el.getElementIdentifier().getValue()) {
-                case "family_name" -> {System.out.println(el.getElementValue()); familyName = el.getElementValue().toString();}
+                case "family_name" -> familyName = el.getElementValue().toString();
                 case "given_name" -> givenName = el.getElementValue().toString();
                 case "birth_date" -> birthDate = el.getElementValue().toString();
                 case "issuing_authority" -> issuanceAuthority = el.getElementValue().toString();

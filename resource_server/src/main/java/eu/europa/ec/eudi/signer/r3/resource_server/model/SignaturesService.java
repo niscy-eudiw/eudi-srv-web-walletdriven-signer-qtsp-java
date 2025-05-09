@@ -86,9 +86,7 @@ public class SignaturesService {
             return false;
         }
         if(!hashesRequested.equals(hashesAuthorized)){
-            System.out.println("Hashes Requested: "+hashesRequested);
-            System.out.println("Hashes Authorized: "+hashesAuthorized);
-            logger.error("The hashes requested are different from the hashes authorized.");
+            logger.error("The hashes requested ({}) are different from the hashes authorized ({}).", hashesRequested, hashesAuthorized);
             return false;
         }
         return true;
@@ -175,9 +173,8 @@ public class SignaturesService {
 
         try{
             SignatureAlgorithm signAlgorithm = SignatureAlgorithm.forOID(signAlgoOID.getId());
+            logger.info("Encryption Algorithm from the Signature Algorithm: {}", signAlgorithm.getEncryptionAlgorithm().getName());
             String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signAlgorithm.getEncryptionAlgorithm().getOid()));
-
-            System.out.println(signAlgorithm.getEncryptionAlgorithm().getName());
 
             logger.info("The algorithm defined in the signAlgo parameter already contains an hash algorithm." +
                   " Algorithm Name found: {}", algorithmName);
