@@ -71,15 +71,9 @@ public class SuccessfulLoginAuthentication extends SimpleUrlAuthenticationSucces
 		clearAuthenticationAttributes(request);
 		String targetUrl = savedRequest.getRedirectUrl();
 
-		System.out.println("Target Url: "+ targetUrl);
-
 		String updatedUriString;
 		try {
 			URI originalUri = URI.create(targetUrl);
-
-			System.out.println(originalUri.getQuery());
-			System.out.println(originalUri.getRawQuery());
-
 			updatedUriString = this.baseUrl + originalUri.getPath() + "?" + originalUri.getRawQuery();
 
 			UsernamePasswordAuthenticationToken token = (UsernamePasswordAuthenticationToken) authentication;

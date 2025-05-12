@@ -110,7 +110,7 @@ public class AuthorizationServerConfig {
 		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
-		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
+		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
 		authorizationServerConfigurer
 			  .registeredClientRepository(registeredClientRepository)
@@ -166,14 +166,7 @@ public class AuthorizationServerConfig {
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
 		return (authenticationProviders) -> {
-			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
-			while (iterator.hasNext()) {
-				AuthenticationProvider authenticationProvider = iterator.next();
-				System.out.println(authenticationProvider.getClass());
-				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class)) {
-					iterator.remove();
-				}
-			}
+			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
 		};
 	}
 

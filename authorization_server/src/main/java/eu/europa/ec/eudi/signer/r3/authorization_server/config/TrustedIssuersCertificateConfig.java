@@ -25,6 +25,8 @@ import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "trusted-issuers")
@@ -32,6 +34,7 @@ public class TrustedIssuersCertificateConfig {
 
     private final String folder;
     private final Map<String, X509Certificate> trustIssuersCertificates;
+    private static final Logger logger = LoggerFactory.getLogger(TrustedIssuersCertificateConfig.class);
 
     public TrustedIssuersCertificateConfig(String folder) throws Exception {
         this.folder = folder;
@@ -41,9 +44,7 @@ public class TrustedIssuersCertificateConfig {
             paths
                   .filter(path -> Files.isRegularFile(path) && path.toString().endsWith(".pem"))
                   .forEach(path -> {
-                      System.out.println("Loading the certificate in the file: " + path);
-
-                      // Process each file here
+                      logger.info("Loading the trusted issuers certificate from the file: {}", path);
                       try {
                           CertificateFactory factory = CertificateFactory.getInstance("x.509");
                           FileInputStream is = new FileInputStream(path.toFile().getAbsolutePath());

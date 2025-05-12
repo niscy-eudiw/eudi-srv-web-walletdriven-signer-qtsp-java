@@ -1,5 +1,5 @@
 /*
- Copyright 2024 European Commission
+ Copyright 2025 European Commission
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 
 @Service

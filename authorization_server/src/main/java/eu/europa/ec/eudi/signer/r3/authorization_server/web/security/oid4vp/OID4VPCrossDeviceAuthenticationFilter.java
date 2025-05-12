@@ -54,7 +54,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 			logger.info("Retrieved the VP Token from the Verifier.");
 			logger.trace("VP Token received: {}", messageFromVerifier);
 
-			OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponse(messageFromVerifier);
+			OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
 			logger.info("Generated unauthenticated AuthenticationManagerToken: {}", unauthenticatedToken.getHash());
 
 			OID4VPAuthenticationToken authenticatedToken = (OID4VPAuthenticationToken)this.getAuthenticationManager().authenticate(unauthenticatedToken);

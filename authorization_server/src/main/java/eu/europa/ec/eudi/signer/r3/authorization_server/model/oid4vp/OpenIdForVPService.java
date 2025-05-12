@@ -39,11 +39,14 @@ public class OpenIdForVPService {
     private static final Logger log = LoggerFactory.getLogger(OpenIdForVPService.class);
     private final UserRepository repository;
     private final TrustedIssuersCertificateConfig trustedCertificatesConfig;
+    private final VerifierClient verifierClient;
 
     public OpenIdForVPService(@Autowired UserRepository repository,
-                              @Autowired TrustedIssuersCertificateConfig trustedCertificatesConfig) {
+                              @Autowired TrustedIssuersCertificateConfig trustedCertificatesConfig,
+                              @Autowired VerifierClient verifierClient) {
         this.repository = repository;
         this.trustedCertificatesConfig = trustedCertificatesConfig;
+        this.verifierClient = verifierClient;
     }
 
     public record UserOIDTemporaryInfo(User user, String givenName, String familyName){}
@@ -77,8 +80,44 @@ public class OpenIdForVPService {
         return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
+    public OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier) throws OID4VPException {
+        log.info("Starting to load VP Token from Verifier Response...");
+
+        JSONObject vpToken;
+        try{
+            vpToken =  new JSONObject(messageFromVerifier);
+        }
+        catch (JSONException e){
+            log.error("The message from Verifier is not a well formatted JSON. {}", e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.ResponseVerifierWithInvalidFormat, "The message from Verifier is not a valid JSON.");
+        }
+        log.debug("VP Token: {}", vpToken);
+
+        String MSOMDocDeviceResponse = vpToken.getJSONArray("vp_token").getString(0);
+        JSONObject pidAttributes = verifierClient.validateDeviceResponse(MSOMDocDeviceResponse);
+        log.info("Validated and loaded the VP Token from the Verifier response.");
+
+		assert pidAttributes != null;
+		UserOIDTemporaryInfo user = loadUserFromDocument(pidAttributes);
+        log.trace("Created an object User with the information from the VP Token.");
+
+        return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
+    }
+
+
+
+    private UserOIDTemporaryInfo loadUserFromDocument(JSONObject document) throws OID4VPException {
+        String familyName = document.getString("family_name");
+        String givenName = document.getString("given_name");
+        String birthDate = String.valueOf(document.getInt("birth_date"));
+        String issuingCountry = document.getString("issuing_country");
+        String issuanceAuthority = document.getString("issuing_authority");
+        return validateAttributesAndLoadUser(familyName, givenName, birthDate, issuingCountry, issuanceAuthority);
+    }
+
     private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws OID4VPException {
-        List<IssuerSignedItem> l = document.getIssuerSignedItems(document.getDocType().getValue());
+        String docType = document.getDocType().getValue();
+        List<IssuerSignedItem> l = document.getIssuerSignedItems(docType);
 
         String familyName = null;
         String givenName = null;
@@ -87,14 +126,18 @@ public class OpenIdForVPService {
         String issuanceAuthority = null;
         for (IssuerSignedItem el : l) {
             switch (el.getElementIdentifier().getValue()) {
-                case "family_name" -> familyName = el.getElementValue().getValue().toString();
-                case "given_name" -> givenName = el.getElementValue().getValue().toString();
-                case "birth_date" -> birthDate = el.getElementValue().getValue().toString();
-                case "issuing_authority" -> issuanceAuthority = el.getElementValue().getValue().toString();
-                case "issuing_country" -> issuingCountry = el.getElementValue().getValue().toString();
+                case "family_name" -> familyName = el.getElementValue().toString();
+                case "given_name" -> givenName = el.getElementValue().toString();
+                case "birth_date" -> birthDate = el.getElementValue().toString();
+                case "issuing_authority" -> issuanceAuthority = el.getElementValue().toString();
+                case "issuing_country" -> issuingCountry = el.getElementValue().toString();
             }
         }
 
+        return validateAttributesAndLoadUser(familyName, givenName, birthDate, issuingCountry, issuanceAuthority);
+    }
+
+    private UserOIDTemporaryInfo validateAttributesAndLoadUser(String familyName, String givenName, String birthDate, String issuingCountry, String issuanceAuthority) throws OID4VPException {
         if(familyName == null){
             log.error("The document in the VP Token is missing the family name.");
             throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your last name is missing from the submitted data. Please try again.");
@@ -120,6 +163,8 @@ public class OpenIdForVPService {
         log.info("Added an object User to the database.");
         return new UserOIDTemporaryInfo(user, givenName, familyName);
     }
+
+
 
     private void addUserToDatabase(User userFromVerifierResponse) {
         Optional<User> userInDatabase = repository.findByHash(userFromVerifierResponse.getHash());

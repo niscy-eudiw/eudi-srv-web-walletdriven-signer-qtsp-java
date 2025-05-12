@@ -388,14 +388,14 @@ This secret key is required to encode certain values in JWT tokens.
    ```
    CREATE DATABASE {database_name};
    CREATE USER {username}@{ip} IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@{ip};
    ```
 
    Replace {ip} with the appropriate IP address or hostname of the AS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the AS program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@'localhost';
    ```
 
    Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
@@ -428,17 +428,19 @@ This secret key is required to encode certain values in JWT tokens.
 
    ```
    verifier:
-      url:
       address:
+      presentation-url:
+      validation-url:
       client_id:
    ```
 
-   By default, this configuration is set to a backend server based on the code from the github 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
+   By default, this configuration is set to a backend server based on the code from the GitHub 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
 
    ```
    verifier:
-      url: https://verifier-backend.eudiw.dev/ui/presentations
       address: verifier-backend.eudiw.dev
+      presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
+      validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
       client_id: x509_san_dns:verifier-backend.eudiw.dev
    ```
 
@@ -538,14 +540,14 @@ This secret key is required to encode certain values in JWT tokens.
    ```
    CREATE DATABASE {database_name};
    CREATE USER {username}@{ip} IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON *.* TO {username}@{ip};
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@{ip};
    ```
 
    Replace {ip} with the appropriate IP address or hostname of the RS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RS program and the database run on the same system, use 'localhost' instead of the IP address:
 
    ```
    CREATE USER {username}@'localhost' IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON *.* TO {username}@'localhost';
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@'localhost';
    ```
 
    Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
