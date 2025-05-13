@@ -22,8 +22,12 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFormEnum;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
@@ -47,8 +51,6 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Consumer;
 import org.json.JSONArray;
@@ -97,16 +99,18 @@ public class AuthorizationServerConfig {
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-																	  OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization) throws Exception
+																	  OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
+																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
+																	  CredentialsService credentialDatabase) throws Exception
 	{
 		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
 		authorizationServerConfigurer.oidc(Customizer.withDefaults());
 
 		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
-		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization);
+		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
-		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator);
+		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
 		authorizationServerConfigurer
 			  .registeredClientRepository(registeredClientRepository)
@@ -130,20 +134,23 @@ public class AuthorizationServerConfig {
 				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter("client_id");
-					return !client_id.equals("wallet-client-tester") && !client_id.equals("sca-client-tester") && !client_id.equals("rp-client") && !client_id.equals("rp-sca-client");
+					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.SAME_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
 				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherCrossDevice = request -> {
 					String client_id = request.getParameter("client_id");
-					return client_id.equals("rp-client") || client_id.equals("rp-sca-client");
+					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.CROSS_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
 					String client_id = request.getParameter("client_id");
-					return client_id.equals("wallet-client-tester") || client_id.equals("sca-client-tester");
+					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.LOGIN_FORM.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getUrl()+"/login"), requestMatcher);
 			})
@@ -153,27 +160,13 @@ public class AuthorizationServerConfig {
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
 		return (authenticationProviders) -> {
-			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
-			while (iterator.hasNext()) {
-				AuthenticationProvider authenticationProvider = iterator.next();
-				System.out.println(authenticationProvider.getClass());
-				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class)) {
-					iterator.remove();
-				}
-			}
+			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
 		};
 	}
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
 		return (authenticationProviders) -> {
-			Iterator<AuthenticationProvider> iterator = authenticationProviders.iterator();
-			while (iterator.hasNext()) {
-				AuthenticationProvider authenticationProvider = iterator.next();
-				System.out.println(authenticationProvider.getClass());
-				if (authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class)) {
-					iterator.remove();
-				}
-			}
+			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
 		};
 	}
 
@@ -192,7 +185,8 @@ public class AuthorizationServerConfig {
 	// Defines the RegisteredClientRepository used by the OAuth2AuthorizationServerConfigurer
 	// for managing new and existing clients
 	@Bean
-	public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate) {
+	public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate,
+																	 RegisteredClientAuthenticationFormRepository registeredClientExtendedRepository) {
 		// Save registered client's in db as if in-memory
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
@@ -201,7 +195,6 @@ public class AuthorizationServerConfig {
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
 				.clientSecret(registration.getClientSecret())
-				.clientSecretExpiresAt(Instant.now().plus(Duration.ofDays(7)))
 				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
 				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
@@ -213,6 +206,9 @@ public class AuthorizationServerConfig {
 				clientBuilder.scope(scope);
 			RegisteredClient client = clientBuilder.build();
 			registeredClientRepository.save(client);
+
+			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationForm().getId());
+			registeredClientExtendedRepository.save(registeredClientAuthenticationForm);
 		}
 
 		return registeredClientRepository;

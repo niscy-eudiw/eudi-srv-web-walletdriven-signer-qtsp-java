@@ -96,10 +96,13 @@ public class CredentialsController {
                 logger.info("There are no active certificates.");
                 String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
                 String surnameDecrypted = this.cryptoUtils.decryptString(surname);
+              
+                logger.info("Creating Credential for User {} {}", givenNameDecrypted, surnameDecrypted);
 
-                // this.credentialsService.createRSACredential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
                 this.credentialsService.createECDSAP256Credential(userHash, givenNameDecrypted, surnameDecrypted, givenNameDecrypted+" "+surnameDecrypted, issuingCountry);
+                logger.info("Issued new Credential.");
                 listAvailableCredentialsId = credentialsService.getAvailableCredentialsID(userHash, onlyValid);
+                logger.info("Retrieved list of available Credentials.");
             }
             credentialsListResponse.setCredentialIDs(listAvailableCredentialsId);
             logger.info("Added the list of available credentials ID to the response.");
@@ -116,6 +119,7 @@ public class CredentialsController {
             return credentialsListResponse;
         }
         catch (Exception e){
+            e.printStackTrace();
             logger.error(e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request");
         }

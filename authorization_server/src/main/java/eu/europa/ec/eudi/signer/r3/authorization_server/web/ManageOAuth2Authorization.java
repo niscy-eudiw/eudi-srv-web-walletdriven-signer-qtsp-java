@@ -16,23 +16,24 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-
 import java.time.Instant;
 import java.util.Set;
 
 public class ManageOAuth2Authorization {
 
     private final JdbcOperations jdbcOperations;
+    private static final Logger logger = LoggerFactory.getLogger(ManageOAuth2Authorization.class);
 
     public ManageOAuth2Authorization(JdbcOperations jdbcOperations) {
         this.jdbcOperations = jdbcOperations;
     }
 
     public void removePreviousOAuth2AuthorizationOfUser(String principal_name, Set<String> authorized_scopes){
-        // authorized_scopes
         String authorizedScopes;
         if (!CollectionUtils.isEmpty(authorized_scopes)){
             authorizedScopes = StringUtils.collectionToDelimitedString(authorized_scopes, ",");
@@ -41,7 +42,7 @@ public class ManageOAuth2Authorization {
     }
 
     public void removeExpiredAccessTokens(Instant now){
-        System.out.println(now);
+        logger.info("Removing OAuth2.0 Authorization from the DB from before {}", now.toString());
         this.jdbcOperations.update("DELETE FROM oauth2_authorization WHERE access_token_expires_at < ?", now);
     }
 }

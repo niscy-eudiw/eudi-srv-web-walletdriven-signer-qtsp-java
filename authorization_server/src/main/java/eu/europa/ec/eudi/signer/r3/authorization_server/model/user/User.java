@@ -47,8 +47,7 @@ public class User {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             result = sha.digest(familyAndGivenNameAndBirthDateAndCountry.getBytes());
         }
-        catch (NoSuchAlgorithmException e){
-            System.out.println(e.getMessage());
+        catch (NoSuchAlgorithmException ignored){
         }
         return Base64.getEncoder().encodeToString(result);
     }

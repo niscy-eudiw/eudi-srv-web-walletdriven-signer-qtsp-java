@@ -46,19 +46,20 @@ public class OID4VPController {
 			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookieString);
 
 			String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
+			logger.info("Retrieved the redirect link for cross device authentication.");
 
 			QRCodeWriter barcodeWriter = new QRCodeWriter();
 			BitMatrix bitMatrix = barcodeWriter.encode(redirectLink, BarcodeFormat.QR_CODE, 200, 200);
-
 			ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
 			MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-
 			byte[] qrCodeBytes = pngOutputStream.toByteArray();
 			String qrCode = Base64.getEncoder().encodeToString(qrCodeBytes);
 			model.addAttribute("qrCode", qrCode);
+			logger.info("Generated QrCode for cross-device flow.");
 
 			String urlCrossDeviceCallback = serviceUrl+"/oid4vp/cross-device/callback?session_id="+sessionId;
 			model.addAttribute("url", urlCrossDeviceCallback);
+			logger.info("Define the Callback Url.");
 
 			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookieString).getUrlToReturnTo();
 			URI url = new URI(urlToReturnTo);
@@ -77,7 +78,9 @@ public class OID4VPController {
 
 			return "cross-device-page";
 		}catch (Exception e){
-			model.addAttribute("error", "Failed to generate QR Code: " + e.getMessage());
+			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
+			model.addAttribute("errormessage", "Failed to generate QR Code: " + e.getMessage());
 			return "error";
 		}
 	}

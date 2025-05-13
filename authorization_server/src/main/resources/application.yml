@@ -18,8 +18,10 @@ server:
     include-message: always
 
 verifier:
-  url: https://dev.verifier-backend.eudiw.dev/ui/presentations
-  address: dev.verifier-backend.eudiw.dev
+  address: verifier-backend.eudiw.dev
+  presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
+  validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
+  client-id: x509_san_dns:verifier-backend.eudiw.dev
 
 oauth2-issuer-url:
   url: http://localhost:8084

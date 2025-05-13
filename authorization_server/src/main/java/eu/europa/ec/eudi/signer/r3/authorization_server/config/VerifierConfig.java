@@ -20,16 +20,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "verifier")
 public class VerifierConfig {
-    private String url;
     private String address;
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
+    private String presentationUrl;
+    private String validationUrl;
+    private String clientId;
 
     public String getAddress() {
         return address;
@@ -37,5 +31,29 @@ public class VerifierConfig {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getPresentationUrl() {
+        return presentationUrl;
+    }
+
+    public void setPresentationUrl(String presentationUrl) {
+        this.presentationUrl = presentationUrl;
+    }
+
+    public String getValidationUrl() {
+        return validationUrl;
+    }
+
+    public void setValidationUrl(String validationUrl) {
+        this.validationUrl = validationUrl;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }

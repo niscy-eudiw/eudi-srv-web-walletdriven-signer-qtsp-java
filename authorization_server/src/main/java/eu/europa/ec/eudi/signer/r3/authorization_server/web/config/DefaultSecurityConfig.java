@@ -94,7 +94,6 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
 	CorsConfigurationSource corsConfigurationSource() {
-		System.out.println("CorsConfigurationSource...");
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of("*"));
 		configuration.setAllowedMethods(List.of("*"));

@@ -66,7 +66,7 @@ public class WebUtils {
         }
     }
 
-    public static String convertStreamToString(InputStream is) throws Exception {
+    public static String convertStreamToString(InputStream is) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
         String line = reader.readLine();

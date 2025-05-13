@@ -1,8 +1,8 @@
-# TrustProvider Signer
+# EUDI Wallet-Driven & RP-Centric signer QTSP
 
 ## Dependency License Report
 
-_2024-11-11 14:27:20 CET_
+_2025-05-09 13:10:00 CET_
 
 ## Apache License, Version 2.0
 
@@ -71,10 +71,10 @@ _2024-11-11 14:27:20 CET_
 > -   **POM Project URL**: [http://hc.apache.org/httpcomponents-client](http://hc.apache.org/httpcomponents-client)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
-**14** **Group:** `id.walt` **Name:** `waltid-mdoc-jvm` **Version:** `1.2312081100.0`
+**14** **Group:** `id.walt.mdoc-credentials` **Name:** `waltid-mdoc-credentials-jvm` **Version:** `0.12.0`
 
 > -   **POM Project URL**: [https://walt.id/](https://walt.id/)
-> -   **POM License**: Apache License, Version 2.0 - [https://github.com/walt-id/waltid-mdoc/blob/main/LICENSE] (https://github.com/walt-id/waltid-mdoc/blob/main/LICENSE)
+> -   **POM License**: Apache License, Version 2.0 - [https://github.com/walt-id/waltid-identity/blob/main/waltid-libraries/credentials/waltid-mdoc-credentials/LICENSE] (https://github.com/walt-id/waltid-identity/blob/main/waltid-libraries/credentials/waltid-mdoc-credentials/LICENSE)
 
 **15** **Group:** `org.springframework.boot` **Name:** `spring-boot-starter-jdbc` **Version:** `3.3.0`
 
@@ -121,10 +121,10 @@ _2024-11-11 14:27:20 CET_
 > -   **POM Project URL**: [https://github.com/FasterXML/jackson](https://github.com/FasterXML/jackson)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
-**24** **Group:** `org.springdoc` **Name:** `springdoc-openapi-starter-webmvc-ui` **Version:** `2.3.0`
+**24** **Group:** `org.springdoc` **Name:** `springdoc-openapi-starter-webmvc-ui` **Version:** `2.8.0`
 
 > -   **POM Project URL**: [https://springdoc.org/](https://springdoc.org/)
-> -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
+> -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0.txt](https://www.apache.org/licenses/LICENSE-2.0.txt)
 
 **25** **Group:** `org.apache.commons` **Name:** `commons-text` **Version:** `1.12.0`
 
@@ -136,65 +136,78 @@ _2024-11-11 14:27:20 CET_
 > -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
+**27** **Group:** `com.google.zxing` **Name:** `core` **Version:** `3.5.3`
+
+> -   **POM Project URL**: [https://github.com/zxing/zxing](https://github.com/zxing/zxing)
+> -   **POM License**: Apache License, Version 2.0 - [https://github.com/zxing/zxing/blob/master/LICENSE](https://github.com/zxing/zxing/blob/master/LICENSE)
+
+**28** **Group:** `com.google.zxing` **Name:** `javase` **Version:** `3.5.3`
+
+> -   **POM Project URL**: [https://github.com/zxing/zxing](https://github.com/zxing/zxing)
+> -   **POM License**: Apache License, Version 2.0 - [https://github.com/zxing/zxing/blob/master/LICENSE](https://github.com/zxing/zxing/blob/master/LICENSE)
+
+**29** **Group:** `org.springframework.boot` **Name:** `spring-boot-starter-parent` **Version:** `3.3.0`
+
+> -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
+> -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## BSD3
 
-**27** **Group:** `com.augustcellars.cose` **Name:** `cose-java` **Version:** `1.1.0`
+**30** **Group:** `com.augustcellars.cose` **Name:** `cose-java` **Version:** `1.1.0`
 
 > -   **POM Project URL**: [https://github.com/cose-wg/cose-java](https://github.com/cose-wg/cose-java)
 > -   **POM License**: BSD3 - [https://github.com/jimsch/COSE-JAVA/blob/master/LICENSE](https://github.com/jimsch/COSE-JAVA/blob/master/LICENSE)
 
 ## Bouncy Castle Licence
 
-**28** **Group:** `org.bouncycastle` **Name:** `bcprov-jdk15on` **Version:** `1.70`
+**31** **Group:** `org.bouncycastle` **Name:** `bcprov-jdk18on` **Version:** `1.78.1`
 
 > -   **POM Project URL**: [https://www.bouncycastle.org/java.html](https://www.bouncycastle.org/java.html)
 > -   **POM License**: Bouncy Castle Licence - [https://www.bouncycastle.org/licence.html](https://www.bouncycastle.org/licence.html)
 
-**29** **Group:** `org.bouncycastle` **Name:** `bcpkix-jdk15on` **Version:** `1.70`
+**32** **Group:** `org.bouncycastle` **Name:** `bcpkix-jdk18on` **Version:** `1.78.1`
 
 > -   **POM Project URL**: [https://www.bouncycastle.org/java.html](https://www.bouncycastle.org/java.html)
 > -   **POM License**: Bouncy Castle Licence - [https://www.bouncycastle.org/licence.html](https://www.bouncycastle.org/licence.html)
 
 ## MySQL Connector License
 
-**30** **Group:** `com.mysql` **Name:** `mysql-connector-j` **Version:** `9.0.0`
+**33** **Group:** `com.mysql` **Name:** `mysql-connector-j` **Version:** `9.0.0`
 
 > -   **POM Project URL**: [https://dev.mysql.com/doc/connector-j/en/](https://dev.mysql.com/doc/connector-j/en/)
 > -   **POM License**: [https://github.com/mysql/mysql-connector-j/blob/release/9.x/LICENSE](https://github.com/mysql/mysql-connector-j/blob/release/9.x/LICENSE)
 
 ## MIT License
 
-**31** **Group:** `org.signserver.jacknji11` **Name:** `jacknji11` **Version:** `1.2-pk3`
+**34** **Group:** `org.signserver.jacknji11` **Name:** `jacknji11` **Version:** `1.2-pk3`
 
 > -   **POM Project URL**: [https://github.com/joelhockey/jacknji11](https://github.com/joelhockey/jacknji11)
 > -   **POM License**: MIT License - [https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt](https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt)
 
 ## LGPL 2.1 License
 
-**32** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
+**35** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
 
 > -   **POM Project URL**: [https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS](https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS)
 > -   **POM License**: LGPL 2.1 - [https://opensource.org/license/LGPL-2.1](https://opensource.org/license/LGPL-2.1)
 
 ## Org.Json Public Domain License
 
-**33** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
+**36** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
 
 > -   **POM Project URL**: [https://github.com/douglascrockford/JSON-java](https://github.com/douglascrockford/JSON-java)
 > -   **POM License**: Public Domain - [https://github.com/stleary/JSON-java/blob/master/LICENSE](https://github.com/stleary/JSON-java/blob/master/LICENSE)
 
 ## EPL 1.0 License
 
-**34** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
+**37** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
 
 > -   **POM Project URL**: [http://junit.org](http://junit.org)
 > -   **POM License**: EPL 1.0 - [https://junit.org/junit4/license.html](https://junit.org/junit4/license.html)
 
 ## rQES R2 License
 
-**35** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
+**38** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
 
 > -   **POM Project URL**: [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java)
 > -   **POM License**: Apache License, Version 2.0 - [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt)
-

@@ -146,10 +146,6 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
               !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
                     !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
 
-        System.out.println(authorizeRequest.getAuthorization_details());
-        System.out.println(token.getAuthorization_details());
-        System.out.println(Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
-
         boolean isInvalidCredential =
               !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
                     !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
@@ -197,10 +193,6 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         boolean isInvalidBasic =
               !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
                     !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
-
-        System.out.println(authorizeRequest.getAuthorization_details());
-        System.out.println(token.getAuthorization_details());
-        System.out.println(Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
 
         boolean isInvalidCredential =
               !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
