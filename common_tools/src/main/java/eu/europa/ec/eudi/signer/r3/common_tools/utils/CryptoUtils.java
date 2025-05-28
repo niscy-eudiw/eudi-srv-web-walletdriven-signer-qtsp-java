@@ -40,12 +40,18 @@ public class CryptoUtils {
 
 	public CryptoUtils() throws Exception{
 		Security.addProvider(new BouncyCastleProvider());
-
 		Properties properties = new Properties();
 		InputStream configStream = getClass().getClassLoader().getResourceAsStream("application-crypto.yml");
 		properties.load(configStream);
 
-		this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(properties.get("symmetric-secret-key").toString()), "AES");
+		String keyProperty = properties.getProperty("symmetric-secret-key");
+		System.out.println(keyProperty);
+		if (keyProperty != null && keyProperty.matches("\\$\\{.+}")) {
+			String envKey = keyProperty.substring(2, keyProperty.length() - 1); // Extract ENV var name
+			keyProperty = System.getenv(envKey); // Resolve from system environment
+		}
+
+		this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(keyProperty), "AES");
 	}
 
 

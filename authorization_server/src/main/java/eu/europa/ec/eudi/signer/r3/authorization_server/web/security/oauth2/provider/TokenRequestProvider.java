@@ -29,10 +29,10 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.Creden
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -56,7 +56,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
     private final OAuth2AuthorizationService authorizationService;
     private final OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator;
     private final CredentialsService credentialsService;
-    private final Logger logger = LogManager.getLogger(TokenRequestProvider.class);
+    private final Logger logger = LoggerFactory.getLogger(TokenRequestProvider.class);
 
     private OAuth2Error getOAuth2Error(String errorCode, String errorDescription){
         logger.error(errorDescription);

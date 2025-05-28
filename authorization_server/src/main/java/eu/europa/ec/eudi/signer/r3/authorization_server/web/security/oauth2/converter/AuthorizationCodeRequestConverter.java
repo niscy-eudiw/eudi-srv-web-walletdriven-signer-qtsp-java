@@ -21,8 +21,9 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.U
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -47,7 +48,7 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
     private final RequestMatcher withoutScopeOrAuthorizationDetailsRequestMatcher;
     private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous",
           "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-    private final Logger logger = LogManager.getLogger(AuthorizationCodeRequestConverter.class);
+    private final Logger logger = LoggerFactory.getLogger(AuthorizationCodeRequestConverter.class);
 
     public AuthorizationCodeRequestConverter(){
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();

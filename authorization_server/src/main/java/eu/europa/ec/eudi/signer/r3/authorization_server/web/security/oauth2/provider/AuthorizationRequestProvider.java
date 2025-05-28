@@ -17,12 +17,8 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Base64;
@@ -33,11 +29,11 @@ import java.util.Set;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -74,7 +70,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
     private final OAuth2AuthorizationService authorizationService;
     private final ManageOAuth2Authorization manageOAuth2Authorization;
     private final CredentialsService credentialsService;
-    private final Logger logger = LogManager.getLogger(AuthorizationRequestProvider.class);
+    private final Logger logger = LoggerFactory.getLogger(AuthorizationRequestProvider.class);
 
     private static class OAuth2AuthorizationCodeGenerator implements OAuth2TokenGenerator<OAuth2AuthorizationCode> {
 

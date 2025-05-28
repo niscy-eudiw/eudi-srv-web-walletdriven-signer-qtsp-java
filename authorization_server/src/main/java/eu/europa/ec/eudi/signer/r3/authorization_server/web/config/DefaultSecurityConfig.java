@@ -16,7 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
@@ -57,7 +57,7 @@ import java.util.List;
 public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 	@Bean
-	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig,
+	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, ServiceURLConfig issuerConfig,
 														  OID4VPSameDeviceAuthenticationFilter sameDeviceAuthenticationFilter,
 														  OID4VPCrossDeviceAuthenticationFilter crossDeviceAuthenticationFilter,
 														  CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -77,7 +77,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 			  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			  .addFilterBefore(sameDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			  .addFilterBefore(crossDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())))
+			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getServiceURL())))
 			  .exceptionHandling(ex ->
 					ex
 						  .accessDeniedHandler((request, response, accessDeniedException) -> {

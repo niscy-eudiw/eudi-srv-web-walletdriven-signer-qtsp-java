@@ -26,9 +26,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DataSourceConfig {
 
-    @Value("${auth.datasourceUsername}")
+    @Value("${spring.datasource.username}") // env var
     private String datasourceUsername;
-    @Value("${auth.datasourcePassword}")
+    @Value("${spring.datasource.password}") // env var
     private String datasourcePassword;
     @Value("${spring.datasource.url}")
     private String datasourceUrl;
@@ -40,6 +40,7 @@ public class DataSourceConfig {
         DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.url(datasourceUrl);
         dataSourceBuilder.driverClassName(datasourceDriverClassName);
+        System.out.println(datasourceUsername);
         dataSourceBuilder.username(datasourceUsername);
         dataSourceBuilder.password(datasourcePassword);
         return dataSourceBuilder.build();

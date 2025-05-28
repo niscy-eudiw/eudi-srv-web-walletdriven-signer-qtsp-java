@@ -19,9 +19,9 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.con
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2TokenRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
@@ -40,7 +40,7 @@ import org.springframework.util.StringUtils;
 public class TokenRequestConverter implements AuthenticationConverter {
 
     private final RequestMatcher tokenRequestMatcher;
-    private final Logger logger = LogManager.getLogger(TokenRequestConverter.class);
+    private final Logger logger = LoggerFactory.getLogger(TokenRequestConverter.class);
 
     public TokenRequestConverter(){
         RequestMatcher tokenRequestMatcher = OAuth2TokenRequest.requestMatcher();

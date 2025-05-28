@@ -23,7 +23,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class, OAuth2IssuerConfig.class, UserTestLoginFormConfig.class})
+@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class, ServiceURLConfig.class, UserTestLoginFormConfig.class})
 @EnableScheduling
 public class AuthorizationServerApplication {
 

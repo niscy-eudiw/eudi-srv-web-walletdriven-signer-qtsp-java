@@ -10,8 +10,8 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -30,7 +30,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 	private final OpenIdForVPService openIdForVPService;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
-	private final Logger logger = LogManager.getLogger(OID4VPCrossDeviceAuthenticationFilter.class);
+	private final Logger logger = LoggerFactory.getLogger(OID4VPCrossDeviceAuthenticationFilter.class);
 
 	public OID4VPCrossDeviceAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient, OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
 		super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
