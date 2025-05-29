@@ -17,9 +17,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
@@ -114,7 +112,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 		return new HttpSessionEventPublisher();
 	}
 
-	@Bean
+	/*@Bean
 	public CustomUserDetailsService userDetailsService(UserRepository userRepository, UserTestLoginFormConfig userTest){
 		if(!userTest.isEmpty()){
 			User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
@@ -124,7 +122,12 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 				userRepository.save(tester);
 		}
 		return new CustomUserDetailsService(userRepository);
+	}*/
+	@Bean
+	public CustomUserDetailsService userDetailsService(UserRepository userRepository){
+		return new CustomUserDetailsService(userRepository);
 	}
+
 
 	@Bean
 	public AuthenticationManager authenticationManager(CustomUserDetailsService userDetailsService) {

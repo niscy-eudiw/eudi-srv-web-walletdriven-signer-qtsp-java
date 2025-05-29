@@ -1,0 +1,2 @@
+application-crypto:
+  symmetric-secret-key: ${SYMMETRIC_SECRET_KEY} # a BASE64-encoded value of an AES secret key

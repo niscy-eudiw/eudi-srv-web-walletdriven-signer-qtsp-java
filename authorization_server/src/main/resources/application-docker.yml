@@ -1,5 +1,6 @@
-oauth2-issuer-url:
-  url: http://authorizationserver:8084
+service-url-config:
+  oauth2-issuer-url: http://host.docker.internal:8084
+  service-url: http://localhost:8084
 
 spring:
   datasource:

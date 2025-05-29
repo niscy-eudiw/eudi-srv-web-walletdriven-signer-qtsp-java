@@ -1,0 +1,25 @@
+services:
+  authorization_server:
+    build:
+      context: .
+      dockerfile: authorization_server/Dockerfile
+    container_name: authorizationserver
+    ports:
+      - "8084:8084"
+    env_file:
+      - .env
+
+  resource_server:
+    build:
+      context: .
+      dockerfile: resource_server/Dockerfile
+    container_name: resourceserver
+    depends_on:
+      - authorization_server
+    ports:
+      - "8085:8085"
+    volumes:
+      - /mnt/c/Users/mrodr/RQES_Projects/HSM/config/:/opt/app/config/
+      - /mnt/c/Users/mrodr/RQES_Projects/ejbca_files/:/opt/app/ejbca_files/
+    env_file:
+      - .env

@@ -7,5 +7,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://authorizationserver:8084/oauth2/jwks
-          issuer-uri: http://authorizationserver:8084
+          jwk-set-uri: http://host.docker.internal:8084/oauth2/jwks
+          issuer-uri: http://host.docker.internal:8084

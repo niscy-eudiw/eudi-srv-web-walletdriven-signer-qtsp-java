@@ -19,7 +19,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConditionalOnProperty(prefix = "user-login-form", name = "enabled", havingValue = "true", matchIfMissing = true)
+/*@ConditionalOnProperty(prefix = "user-login-form", name = "enabled", havingValue = "true", matchIfMissing = true)
 @ConfigurationProperties(prefix="user-login-form")
 public class UserTestLoginFormConfig {
 	private String familyName;
@@ -102,4 +102,4 @@ public class UserTestLoginFormConfig {
 	public boolean isEmpty(){
 		return familyName==null || givenName ==null || birthDate == null || issuanceAuthority == null || issuingCountry == null || password == null;
 	}
-}
+}*/
