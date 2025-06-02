@@ -37,13 +37,13 @@
         </rollingPolicy>
     </appender>
 
-    <springProfile name="dev">
+    <springProfile name="dev, docker">
         <logger name="com.example" level="INFO"/>
         <root level="INFO">
             <appender-ref ref="ROLLINGFILE"/>
         </root>
     </springProfile>
-    <springProfile name="!dev">
+    <springProfile name="!dev &amp; !docker">
         <logger name="com.example" level="DEBUG"/>
         <root level="DEBUG">
             <appender-ref ref="CONSOLE"/>

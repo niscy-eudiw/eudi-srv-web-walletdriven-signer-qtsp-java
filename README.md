@@ -301,34 +301,138 @@ The endpoints presented below are based on the CSC API v2.0 specifications.
 - Apache Maven 3.6.3
 - MySQL
 
+### Database Setup
+
+To deploy both services successfully, a MySQL database must be set up and configured.
+
+1. **Install and Start MySQL**
+
+   The services require a MySQL database. If you're using Ubuntu or a Debian-based system, you can install and start MySQL server with the following commands:
+
+   ```
+   sudo apt install mysql-server -y
+   sudo systemctl start mysql.service
+   ```
+
+2. **Create Database and User**
+
+   After installing MySQL, open the MySQL shell and execute the following commands to create the database and user:
+
+   ```
+   CREATE DATABASE {database_name};
+   CREATE USER {database_username}@{ip} IDENTIFIED BY {database_password};
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {database_username}@{ip};
+   ```
+
+   Replace {ip} with the appropriate IP address or hostname of the database, {database_username} with the username of the user you wish to create, {database_password} with the password of the user and {database_name} with the database to be created. If the services and the database run on the same system, use 'localhost' instead of the IP address:
+
+   ```
+   CREATE USER {database_username}@'localhost' IDENTIFIED BY {database_password};
+   GRANT ALL PRIVILEGES ON {database_name}.* TO {database_username}@'localhost';
+   ```
+
+3. **Configure Environment Variables and Application Settings**
+
+   Add the following variables to your .env file (introduced in the next section):
+   ```
+   SPRING_DATASOURCE_USERNAME={database_username}
+   SPRING_DATASOURCE_PASSWORD={database_password}
+   ```   
+   
+   Then, update the application.yml files (in the resources folder in the modules authorization_server and resource_server) to point to the database:
+   ```
+   datasource:
+      username: ${SPRING_DATASOURCE_USERNAME}
+      password: ${SPRING_DATASOURCE_PASSWORD}
+      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      driver-class-name: com.mysql.cj.jdbc.Driver
+   ```
+
+   If deploying via Docker, update application-docker.yml files (in the resources folder in the modules authorization_server and resource_server) accordingly:
+   ```
+   datasource:
+       url: jdbc:mysql://host.docker.internal:3306/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+   ```
+   
+   Note: Use host.docker.internal if the MySQL server is running on the host machine and the services are containerized.
+
+4. **Create tables in the database**
+
+   Spring Authorization Server requires specific database schemas for OAuth2.0 support. You can initialize these using the official schema files:
+
+    - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql
+    - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-schema.sql
+    - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-consent-schema.sql
+
+5. **Optional: Add Login Form User**
+
+   During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
+   To add a test user:
+   1. Open the tools/add_login_form_user.sql file.
+   2. Replace placeholder values with your desired user data.
+   3. Execute the script:
+      ```shell
+      mysql < tools/add_login_form_user.sql
+      ```
+
+### Set up .env file
+
+   To deploy the Authorization Server and Resource Server, you must create a .env file containing all required environment variables. This file centralizes configuration details for database access, encryption, and integration with EJBCA and HSM components. 
+   Create a file named .env in the root of your project and define the following variables:
+
+   ```
+   # --- Spring Configuration ---
+   SPRING_PROFILES_ACTIVE=docker
+   SPRING_DATASOURCE_USERNAME={database_username}
+   SPRING_DATASOURCE_PASSWORD={database_password}
+   SYMMETRIC_SECRET_KEY=      # a BASE64-encoded value of an AES secret key for token encryption
+   
+   # --- Secret Key Encryption ---
+   DB_ENCRYPTION_PASSPHRASE=  # Passphrase for encrypting secret keys stored in the database
+   DB_ENCRYPTION_SALT=        # Base64-encoded salt used with the passphrase to derive the encryption key
+   
+   # --- EJBCA Configuration ---
+   EJBCA_HOST=                # EJBCA service hostname or IP
+   EJBCA_CLIENT_P12_FILEPATH= # Path to the client .pfx/.p12 certificate file
+   EJBCA_CLIENT_P12_PASSWORD= # Password for the P12 file
+   EJBCA_MANAGEMENT_CA=       # Path to the ManagementCA file
+   EJBCA_CERTIFICATE_PROFILE_NAME= # Name of the certificate profile in EJBCA
+   EJBCA_END_ENTITY_PROFILE_NAME=  # Name of the end entity profile in EJBCA
+   EJBCA_USERNAME=            # EJBCA API username
+   EJBCA_PASSWORD=            # EJBCA API password
+   
+   # --- HSM / PKCS#11 Configuration ---
+   CS_PKCS11_R2_CFG=
+   JACKNJI11_PKCS11_LIB_PATH= # Path to your PKCS#11 .so library
+   JACKNJI11_TEST_INITSLOT=   # Initial HSM slot identifier
+   JACKNJI11_TEST_TESTSLOT=   # Secondary HSM slot identifier
+   JACKNJI11_TEST_USER_PIN=   # HSM user PIN
+   JACKNJI11_TEST_SO_PIN=     # HSM security officer PIN
+   ```
+   Notes:
+   * Replace the placeholder values with actual values required for your environment.
+   * The SYMMETRIC_SECRET_KEY and DB_ENCRYPTION_SALT must be Base64-encoded.
+   * Additional explanation for specific variables will be provided during the setup steps for the modules  *Common Tools*, *Authorization Server* and *Resource Server*.
+
 ### Common Tools
 
-1. **Create the application-crypto.yml file**
+1. **Configure the Symmetric Secret Key**
 
-The **application-crypto.yml** file must be created in the **common_tools/src/main/resources** folder.
-
+The Common Tools module requires a symmetric AES key to encode certain values in the JWT Access Token.
+This key must be provided via an environment variable and referenced in the configuration file *application-crypto.yml*. Ensure the following line is present in the mentioned file:
 ```
-symmetric-secret-key: # a BASE64-encoded value of an AES secret key
+symmetric-secret-key: ${SYMMETRIC_SECRET_KEY} # a BASE64-encoded value of an AES secret key
 ```
 
-This secret key is required to encode certain values in JWT tokens.
+The *SYMMETRIC_SECRET_KEY* must be set as an environment variable and should be a Base64-encoded representation of a valid AES key.
+
+Note: Be sure to add the value of the AES key in the .env file to the variable *SYMMETRIC_SECRET_KEY*, as described in [Set up .env file](#set-up-env-file).
 
 ### Authorization Server (AS)
 
-1. **Create the application-auth.yml file**
+1. **Create the application-secret.yml file**
 
-   It is required to create an **application-auth.yml** file in the folder **authorization_server/src/main/resources**.
-   This file allows to define the access credentials of a user of the database for this server. The file should follow the format:
-
-   ```
-   auth:
-     	datasourceUsername: # the username of the database user, with permissions to the define database
-     	datasourcePassword: # the password of the database user, with permissions to the define database
-   ```
-
-2. **Create the application-client-registration.yml file**
-
-   It is required to create an **application-client-registration.yml** file in the folder **authorization_server/src/main/resources**.
+   It is required to create an **application-secret.yml** file in the folder **authorization_server/src/main/resources**.
    This file allows to configure one or more OAuth2.0 clients of the Authorization Server and must follow the structure below:
 
    ```
@@ -347,7 +451,6 @@ This secret key is required to encode certain values in JWT tokens.
               scopes:
                  - "service"
                  - "credential"
-              require-authorization-consent: false
               authentication-form: {authentication-method}
 
         {client-id}:
@@ -363,65 +466,16 @@ This secret key is required to encode certain values in JWT tokens.
               scopes:
                  - "service"
                  - "credential"
-              require-authorization-consent: false
               authentication-form: {authentication-method}
    ```
 
    > **Note:**
    > The **authentication-form** value must be one of the supported formats defined in the AuthenticationFormEnum:
-   >
    > - "login-form"
    > - "same-device-flow"
    > - "cross-device-flow"
 
-3. **Create database and user with the required permissions**
-
-   The current program uses a MySQL database. To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
-
-   ```
-   sudo apt install mysql-server -y
-   sudo systemctl start mysql.service
-   ```
-
-   After installing MySQL, create a database and a new user:
-
-   ```
-   CREATE DATABASE {database_name};
-   CREATE USER {username}@{ip} IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@{ip};
-   ```
-
-   Replace {ip} with the appropriate IP address or hostname of the AS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the AS program and the database run on the same system, use 'localhost' instead of the IP address:
-
-   ```
-   CREATE USER {username}@'localhost' IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@'localhost';
-   ```
-
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
-
-   ```
-   auth:
-      datasourceUsername: # the username of the database user, with permissions to the define database
-      datasourcePassword: # the password of the database user, with permissions to the define database
-   ```
-
-   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
-
-   ```
-   datasource:
-      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
-   ```
-
-4. **Create tables in the database**
-
-   There are a few tables that are required to be defined to use the OAuth2.0 from Spring Boot, that need to be created in the previously created database. The tables are:
-
-   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/client/oauth2-registered-client-schema.sql
-   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-schema.sql
-   - https://github.com/spring-projects/spring-authorization-server/blob/main/oauth2-authorization-server/src/main/resources/org/springframework/security/oauth2/server/authorization/oauth2-authorization-consent-schema.sql
-
-5. **Set parameters value for authentication using OpenId4VP**
+2. **Set parameters value for authentication using OpenId4VP**
 
    This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet.
    To enable this feature (authentication using PID), communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
@@ -444,7 +498,7 @@ This secret key is required to encode certain values in JWT tokens.
       client_id: x509_san_dns:verifier-backend.eudiw.dev
    ```
 
-6. **Update the application.yml**
+3. **Update the application.yml**
 
    In the **application.yml**, you can configure a different port for the Authorization Server, which runs on the port 8084 by default.
    To change the port, edit the lines:
@@ -454,132 +508,70 @@ This secret key is required to encode certain values in JWT tokens.
       port: 8084
    ```
 
-   Additionally, you must update the **oauth2-issuer-url** configuration to reflect the URL of the Authorization Server.
+   Additionally, you must update the **service-url-config** configuration to reflect the URL of the Authorization Server.
 
    ```
-   oauth2-issuer-url:
-      url: {url_authorization_server}
+   service-url-config:
+      oauth2-issuer-url: {url_authorization_server}
+      service-url: {url_authorization_server}
    ```
 
-7. **Add the issuers certificate**
+4. **Add the issuers certificate**
 
    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
 
-8. **Add Authentication through Login Form**
-
-   During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
-   To set this up, you need to add **application-user-login-form.yml** with the values:
-
-   ```
-   user-login-form:
-      enabled: true
-      family-name:
-      given-name:
-      birth-date:
-      issuing-country:
-      issuance-authority:
-      role:
-      password:
-   ```
-
 ### Resource Server (RS)
 
-1. **Create the application-auth.yml file**
+1. **Set up the Secret Key Encryption Parameters**
 
-   It is required to create an **application-auth.yml** file in the folder **resource_server/src/main/resources**.
-   This file allows to define the access credentials of a user of the database for this server. The file should follow the format:
-
+   The Resource Server module requires two environment variables (a passphrase and salt value) to encrypt the HSM secret key, which in turn is used to encrypt the signature key.
+   These values must be provided as environment variables and referenced in the *application.yml* configuration file. Ensure the following line is present in the mentioned file:
    ```
    auth:
-      datasourceUsername: # the username of the database user, with permissions to the define database
-      datasourcePassword: # the password of the database user, with permissions to the define database
-      dbEncryptionPassphrase: # a password to encrypt/decrypt the secret keys before saving them in the database
-      dbEncryptionSalt: # a BASE64-encoded value corresponding to the "Salt" required to form the key that will encrypt/decrypt the secret keys before saving them in the database
+      dbEncryptionPassphrase: ${DB_ENCRYPTION_PASSPHRASE}
+      dbEncryptionSalt: ${DB_ENCRYPTION_SALT}
    ```
-
-2. **Create the application-ejbca.yml file**
+   Note: Be sure to add the values in the .env file to the variables *DB_ENCRYPTION_PASSPHRASE* and *DB_ENCRYPTION_SALT*, as described in [Set up .env file](#set-up-env-file).
+   
+2. **Set up the EJBCA Configuration**
    The current implementation makes HTTP requests to an EJBCA server, which serves as a Certificate Authority (CA) for issuing new certificates when a user requests it.
-
-   These HTTP requests are executed using configurations specified in the file **application-ejbca.yml**, located at **resource_server/src/main/resources**. This file supports configurations for different countries.
+   These HTTP requests are executed using configurations specified in the file **application.yml**, located at **resource_server/src/main/resources**. This file supports configurations for different countries.
 
    ```
    ejbca:
-      # Values required to access the EJBCA:
-      cahost: # the address of the EJBCA implementation
-      clientP12ArchiveFilepath: # the filepath to the pfx file
-      clientP12ArchivePassword: # the password of the pfx file
-      managementCA: # the filepath of the ManagementCA file
-
-      # Endpoint:
+      cahost: ${EJBCA_HOST}
+      clientP12ArchiveFilepath: ${EJBCA_CLIENT_P12_FILEPATH}
+      clientP12ArchivePassword: ${EJBCA_CLIENT_P12_PASSWORD}
+      managementCA: ${EJBCA_MANAGEMENT_CA}
       endpoint: /certificate/pkcs10enroll
-      # Values required by the endpoint "/pkcs10enroll":
-      certificateProfileName: # the Certificate Profile Name
-      endEntityProfileName: # The End Enity Profile Name
-      username: # Username for authentication
-      password: # Password for authentication
-      includeChain: true
-
-      countries:
-      - country: # country code
-        certificateAuthorityName: # the certificate authority name for that country
+      certificateProfileName: ${EJBCA_CERTIFICATE_PROFILE_NAME}
+      endEntityProfileName: ${EJBCA_END_ENTITY_PROFILE_NAME}
+      username: ${EJBCA_USERNAME}
+      password: ${EJBCA_PASSWORD}
    ```
 
-3. **Create database and user with the required permissions**
+   You need to set up the environment variables *EJBCA_HOST*, *EJBCA_CLIENT_P12_FILEPATH*, *EJBCA_CLIENT_P12_PASSWORD*, 
+   *EJBCA_MANAGEMENT_CA*, *EJBCA_CERTIFICATE_PROFILE_NAME*, *EJBCA_END_ENTITY_PROFILE_NAME*, *EJBCA_USERNAME* and 
+   *EJBCA_PASSWORD* in the .env file, as described in [Set up .env file](#set-up-env-file).
 
-   The current program uses a MySQL database. If you have already set up the database for the Authorization Server, you may use the same database, or create a new database.
-   To run it locally, it is necessary to have a MySQL server running. If you're using Ubuntu or a Debian-based system, you can install and start MySQL with the following commands:
-
-   ```
-   sudo apt install mysql-server -y
-   sudo systemctl start mysql.service
-   ```
-
-   After installing MySQL, create a database and a new user:
-
-   ```
-   CREATE DATABASE {database_name};
-   CREATE USER {username}@{ip} IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@{ip};
-   ```
-
-   Replace {ip} with the appropriate IP address or hostname of the RS component, {username} with the username of the user you wish to create, {password} with the password of the user, and {database_name} with the database to be created. If the RS program and the database run on the same system, use 'localhost' instead of the IP address:
-
-   ```
-   CREATE USER {username}@'localhost' IDENTIFIED BY {password};
-   GRANT ALL PRIVILEGES ON {database_name}.* TO {username}@'localhost';
-   ```
-
-   Lastly, don't forget to set the username and the password of the user created in the **application-auth.yml**:
-
-   ```
-   auth:
-      datasourceUsername: # the username of the database user, with permissions to the define database
-      datasourcePassword: # the password of the database user, with permissions to the define database
-   ```
-
-   and to set the database name in the **application.yml**, by replacing the {mysql_url} and {database_name}:
-
-   ```
-   datasource:
-      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
-   ```
-
-4. **Configure the HSM Module**
+3. **Configure the HSM Module**
 
    The current implementation uses a Hardware Secure Module to create and use the signature keys. The library jacknji11 in https://github.com/joelhockey/jacknji11 allows to make this requests to an HSM distribution. To use this library it is required to define the environmental variables:
 
    ```
-   JACKNJI11_PKCS11_LIB_PATH={path_to_so}
-   JACKNJI11_TEST_TESTSLOT={slot}
-   JACKNJI11_TEST_INITSLOT={slot}
-   JACKNJI11_TEST_SO_PIN={user_pin}
-   JACKNJI11_TEST_USER_PIN={user_pin}
+   JACKNJI11_PKCS11_LIB_PATH=  # Path to your PKCS#11 .so library
+   JACKNJI11_TEST_TESTSLOT=    # Initial HSM slot identifier
+   JACKNJI11_TEST_INITSLOT=    # Secondary HSM slot identifier
+   JACKNJI11_TEST_SO_PIN=      # HSM security officer PIN
+   JACKNJI11_TEST_USER_PIN=    # HSM user PIN
    ```
 
    This version of the program was tested using the HSM distribution Utimaco vHSM.
 
-5. **Update the application.yml**
+   Define the same values in the .env file, as defined in [Set up .env file](#set-up-env-file).
+
+4. **Update the application.yml**
 
    In the **application.yml**, it is required to update the value of the configuration to the url of the Authorization Server.
 
@@ -608,6 +600,23 @@ It is important to run this scripts in the order presented:
    ```
    ./deploy_rs.sh
    ```
+
+## Docker Deployment
+
+### Set-up
+
+To build the Docker Image, you will need to remove the following lines of the *application.yml* of the module authorization_server and resource_server and the *application-crypto.yml* of the module common_tools:
+```
+spring:
+  config:
+    import: file:.env[.properties]
+```
+
+### Execution
+To start the 'EUDI Wallet-Driven & RP-Centric signer QTSP' service as a Docker Container, run the command:
+```shell
+docker compose up --build
+```
 
 ## How to contribute
 

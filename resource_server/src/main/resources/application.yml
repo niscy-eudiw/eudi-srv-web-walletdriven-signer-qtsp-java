@@ -18,6 +18,8 @@ server:
     include-message: always
 
 spring:
+  config:
+    import: file:.env[.properties]
   datasource:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
@@ -38,7 +40,7 @@ spring:
 
   profiles:
     include:
-      - "ejbca"
+      - "crypto"
 
   application:
     name: qtsp

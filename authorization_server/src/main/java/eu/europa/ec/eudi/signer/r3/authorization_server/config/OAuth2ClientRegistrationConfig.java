@@ -36,9 +36,11 @@ public class OAuth2ClientRegistrationConfig {
     public static class Client {
         private String clientId;
         private String clientSecret;
+        private Set<String> clientAuthenticationMethods;
+        private Set<String> authorizationGrantTypes;
         private Set<String> redirectUris;
         private Set<String> scopes;
-        private AuthenticationMethodEnum authenticationMethod;
+        private AuthenticationFlowEnum authenticationFlow;
 
         public String getClientId() {
             return clientId;
@@ -54,6 +56,22 @@ public class OAuth2ClientRegistrationConfig {
 
         public void setClientSecret(String clientSecret) {
             this.clientSecret = clientSecret;
+        }
+
+        public Set<String> getClientAuthenticationMethods() {
+            return clientAuthenticationMethods;
+        }
+
+        public void setClientAuthenticationMethods(Set<String> clientAuthenticationMethods) {
+            this.clientAuthenticationMethods = clientAuthenticationMethods;
+        }
+
+        public Set<String> getAuthorizationGrantTypes() {
+            return authorizationGrantTypes;
+        }
+
+        public void setAuthorizationGrantTypes(Set<String> authorizationGrantTypes) {
+            this.authorizationGrantTypes = authorizationGrantTypes;
         }
 
         public Set<String> getRedirectUris() {
@@ -72,12 +90,12 @@ public class OAuth2ClientRegistrationConfig {
             this.scopes = scopes;
         }
 
-        public AuthenticationMethodEnum getAuthenticationMethod() {
-            return authenticationMethod;
+        public AuthenticationFlowEnum getAuthenticationFlow() {
+            return authenticationFlow;
         }
 
-        public void setAuthenticationMethod(AuthenticationMethodEnum authenticationMethod) {
-            this.authenticationMethod = authenticationMethod;
+        public void setAuthenticationFlow(AuthenticationFlowEnum authenticationFlow) {
+            this.authenticationFlow = authenticationFlow;
         }
     }
 }

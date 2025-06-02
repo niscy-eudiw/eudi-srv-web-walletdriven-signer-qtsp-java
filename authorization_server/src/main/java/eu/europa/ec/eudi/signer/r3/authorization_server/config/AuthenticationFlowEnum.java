@@ -16,7 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
-public enum AuthenticationMethodEnum {
+public enum AuthenticationFlowEnum {
 	LOGIN_FORM(1, "login-form"),
 	SAME_DEVICE_FLOW(2, "same-device-flow"),
 	CROSS_DEVICE_FLOW(3, "cross-device-flow");
@@ -24,7 +24,7 @@ public enum AuthenticationMethodEnum {
 	private final int id;
 	private final String value;
 
-	AuthenticationMethodEnum(int id, String value) {
+	AuthenticationFlowEnum(int id, String value) {
 		this.id = id;
 		this.value = value;
 	}
