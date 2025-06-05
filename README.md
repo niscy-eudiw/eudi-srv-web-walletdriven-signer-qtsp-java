@@ -414,6 +414,13 @@ To deploy both services successfully, a MySQL database must be set up and config
    * The SYMMETRIC_SECRET_KEY and DB_ENCRYPTION_SALT must be Base64-encoded.
    * Additional explanation for specific variables will be provided during the setup steps for the modules  *Common Tools*, *Authorization Server* and *Resource Server*.
 
+   To use the .env file in Spring Boot, you will need to add the following lines to the *application.yml* of the module authorization_server and resource_server and to the *application-crypto.yml* of the module common_tools:
+   ```
+   spring:
+      config:
+         import: file:.env[.properties]
+   ```
+
 ### Common Tools
 
 1. **Configure the Symmetric Secret Key**

@@ -28,7 +28,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableConfigurationProperties({ InfoConfig.class, EjbcaProperties.class, AuthConfig.class, CredentialsConfig.class })
-@ComponentScan("eu.europa.ec.eudi.signer.r3.common_tools")
+@ComponentScan("eu.europa.ec.eudi.signer.r3")
 public class ResourceServerApplication {
 
 	public static void main(String[] args) {

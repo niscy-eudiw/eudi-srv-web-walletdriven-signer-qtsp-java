@@ -2950,9 +2950,6 @@ form ul.error {
     width: 100%
 }
 
-.countryName {
-    background: url("/static/images/sprite_eidas.png") no-repeat
-}
 
 .AT,
 .BE,
@@ -2994,10 +2991,6 @@ form ul.error {
     float: left;
     margin: 0 0 10px 5px;
     padding: 2px 0 10px 35px
-}
-
-.SCY {
-    background-image: url("/static/images/SCY.png") ;
 }
 
 .AT {
@@ -3517,42 +3510,6 @@ body.contrast .verif-method-dd-option__svg-icon-stroke_nofill {
     fill: none;
     stroke: #000;
     stroke-width: 3px
-}
-
-.link-external {
-    display: inline-block !important;
-    margin-right: 20px;
-    position: relative
-}
-
-.link-external:after {
-    position: absolute;
-    top: 0;
-    right: -21px;
-    content: "";
-    width: 18px;
-    height: 18px;
-    background: url("/static/images/open-in-new-white-18dp.svg") left no-repeat;
-    background-size: 18px;
-    transition: all .1s linear
-}
-
-.link-external-blue {
-    display: inline-block !important;
-    margin-right: 20px;
-    position: relative
-}
-
-.link-external-blue:after {
-    position: absolute;
-    top: 0;
-    right: -21px;
-    content: "";
-    width: 18px;
-    height: 18px;
-    background: url("https://webgate.ec.europa.eu/cas/images/open-in-new-blue-18dp.svg") left no-repeat;
-    background-size: 18px;
-    transition: all .1s linear
 }
 
 .announcement-box {
