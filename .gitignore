@@ -7,9 +7,7 @@ target/
 
 .env
 
-authorization_server/src/main/resources/application-secret.yml
-authorization_server/src/main/resources/application-dev.yml
-resource_server/src/main/resources/application-dev.yml
+**/application-secret.yml
 
 logs/*
 certificate_of_issuers/ot_root.pem

@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: rQES QTSP Image Builder
 
 on:
   push:
@@ -36,9 +36,9 @@ jobs:
         id: meta-authorization-server
         uses: docker/metadata-action@v5.7.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-authorization-server
 
-      - name: Build and push authorization_server image
+      - name: Build and push Authorization Server image
         id: build-and-push-authorization-server
         uses: docker/build-push-action@v6.15.0
         with:
@@ -56,9 +56,9 @@ jobs:
         id: meta-resource-server
         uses: docker/metadata-action@v5.7.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-resource-server
 
-      - name: Build and push resource_server image
+      - name: Build and push Resource Server image
         id: build-and-push-resource-server
         uses: docker/build-push-action@v6.15.0
         with:

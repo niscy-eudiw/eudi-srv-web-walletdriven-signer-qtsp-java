@@ -8,6 +8,9 @@ services:
       - "8084:8084"
     env_file:
       - .env
+    volumes:
+      - .{PATH_TO_OAUTH2_CLIENTS_CONFIG_FOLDER}:/config/
+    command: ["--spring.config.additional-location=file:/config/application-secret.yml"]
 
   resource_server:
     build:
@@ -19,7 +22,7 @@ services:
     ports:
       - "8085:8085"
     volumes:
-      - /mnt/c/Users/mrodr/RQES_Projects/HSM/config/:/opt/app/config/
-      - /mnt/c/Users/mrodr/RQES_Projects/ejbca_files/:/opt/app/ejbca_files/
+      - {PATH_TO_HSM_CONFIG_FOLDER}:/opt/app/config/hsm/
+      - {PATH_TO_EJBCA_CONFIG_FOLDER}:/opt/app/config/ejbca/
     env_file:
       - .env

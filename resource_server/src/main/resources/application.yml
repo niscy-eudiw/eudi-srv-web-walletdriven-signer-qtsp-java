@@ -18,12 +18,12 @@ server:
     include-message: always
 
 spring:
-  config:
-    import: file:.env[.properties]
+  #config:
+  #  import: file:.env[.properties]
   datasource:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
-    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    url: jdbc:mysql://${SPRING_DATASOURCE_DB_URL}/${SPRING_DATASOURCE_DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -37,7 +37,6 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-
   profiles:
     include:
       - "crypto"
@@ -50,8 +49,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8084/oauth2/jwks
-          issuer-uri: http://localhost:8084
+          jwk-set-uri: ${AUTHORIZATION_SERVER_JWT_SET_URI}/oauth2/jwks
+          issuer-uri: ${AUTHORIZATION_SERVER_ISSUER_URI}
 
 auth:
   dbEncryptionPassphrase: ${DB_ENCRYPTION_PASSPHRASE}

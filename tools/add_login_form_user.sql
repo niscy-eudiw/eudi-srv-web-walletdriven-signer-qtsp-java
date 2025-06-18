@@ -1,4 +1,4 @@
-USE qtsp;
+USE {database_name};
 
 CREATE TABLE IF NOT EXISTS users (
     id varchar(255) NOT NULL PRIMARY KEY,
@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 INSERT INTO users (id, hash, issuance_authority, issuing_country, role, password) VALUES
- (UUID(), TO_BASE64(UNHEX(SHA2('{family_name};{given_name};{birth_date};{issuing_country}', 256))) , {issuance_authority}, {issuing_country}, 'user', {password});
+(UUID(), TO_BASE64(UNHEX(SHA2('{family_name};{given_name};{birth_date};{issuing_country}', 256))) , {issuance_authority}, {issuing_country}, 'user', {password});
