@@ -20,12 +20,11 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
     - [Credentials Listing](#credentials-listing-1)
     - [Credential Authorization](#credential-authorization-1)
   - [Endpoints](#endpoints)
-  - [Deployment](#deployment)
-    - [Requirements](#requirements)
-    - [Common Tools](#common-tools)
-    - [Authorization Server (AS)](#authorization-server-as)
-    - [Resource Server (RS)](#resource-server-rs)
-    - [Execution](#execution)
+  - [Prerequisites](#prerequisites)
+    - [Database Setup](#database-setup)
+    - [.env File Setup](#env-file-setup)
+  - [Local Deployment](#local-deployment)
+  - [Docker Deployment](#docker-deployment)
   - [How to contribute](#how-to-contribute)
   - [License](#license)
     - [Third-party component licenses](#third-party-component-licenses)
@@ -33,10 +32,10 @@ the [EUDI Wallet Reference Implementation project description](https://github.co
 
 ## Overview
 
-This is a REST API server that implements a wallet-driven and rp-centric QTSP for the remote Qualified Electronic Signature component of the EUDI Wallet.
-The QTSP provides endpoints based on the CSC API v2.0 specification and supports authentication via OpenID4VP.
+This project provides a RESTful API server that implements a Wallet-Driven and RP-Centric QTSP for the remote Qualified Electronic Signature (rQES) 
+in the EUDI Wallet ecosystem. The server follows the CSC API v2.0 specification and supports OpenID4VP-based authentication.
 
-Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [deploy](#deployment) it in your environment.
+Currently, the server is running at "https://walletcentric.signer.eudiw.dev", but you can [run it locally](#local-deployment) or use the [Docker-based deployment](#docker-deployment) option.
 
 The Wallet Centric rQES Specification can be found [here](docs/rqes-walledriven.md).
 
@@ -293,17 +292,14 @@ The endpoints presented below are based on the CSC API v2.0 specifications.
 - /csc/v2/credentials/info
 - /csc/v2/signatures/signHash
 
-## Deployment
-
-### Requirements
-
-- Java version 17
-- Apache Maven 3.6.3
-- MySQL
+## Prerequisites
 
 ### Database Setup
 
-To deploy both services successfully, a MySQL database must be set up and configured.
+To successfully deploy the Authorization Server and Resource Server, a MySQL database must be installed and configured.
+This is required for both local and Docker-based deployments.
+
+Follow the steps below to set up the database:
 
 1. **Install and Start MySQL**
 
@@ -338,13 +334,13 @@ To deploy both services successfully, a MySQL database must be set up and config
    SPRING_DATASOURCE_USERNAME={database_username}
    SPRING_DATASOURCE_PASSWORD={database_password}
    ```   
-   
-   Then, update the application.yml files (in the resources folder in the modules authorization_server and resource_server) to point to the database:
+
+   Then, update the application.yml files (in the resources folder in the modules authorization_server and resource_server) or the set the required variables in the .env file to point to the database:
    ```
    datasource:
       username: ${SPRING_DATASOURCE_USERNAME}
       password: ${SPRING_DATASOURCE_PASSWORD}
-      url: jdbc:mysql://{mysql_url}/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      url: jdbc:mysql://{SPRING_DATASOURCE_DB_URL}/{SPRING_DATASOURCE_DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
       driver-class-name: com.mysql.cj.jdbc.Driver
    ```
 
@@ -353,7 +349,7 @@ To deploy both services successfully, a MySQL database must be set up and config
    datasource:
        url: jdbc:mysql://host.docker.internal:3306/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
    ```
-   
+
    Note: Use host.docker.internal if the MySQL server is running on the host machine and the services are containerized.
 
 4. **Create tables in the database**
@@ -368,23 +364,27 @@ To deploy both services successfully, a MySQL database must be set up and config
 
    During development, it was determined that adding a login form could be important, primarily for integration tests used by other services.
    To add a test user:
-   1. Open the tools/add_login_form_user.sql file.
-   2. Replace placeholder values with your desired user data.
-   3. Execute the script:
-      ```shell
-      mysql < tools/add_login_form_user.sql
-      ```
+    1. Open the tools/add_login_form_user.sql file.
+    2. Replace placeholder values with your desired user data.
+    3. Execute the script:
+       ```shell
+       mysql < tools/add_login_form_user.sql
+       ```
 
-### Set up .env file
+### .env File Setup
 
-   To deploy the Authorization Server and Resource Server, you must create a .env file containing all required environment variables. This file centralizes configuration details for database access, encryption, and integration with EJBCA and HSM components. 
-   Create a file named .env in the root of your project and define the following variables:
+To deploy the Authorization Server and Resource Server, you must create a .env file containing all required environment variables.
+This file centralizes configuration details for database access, encryption, and integration with EJBCA and HSM components.
+Create a .env file in the root of your project and define the following variables:
 
    ```
    # --- Spring Configuration ---
    SPRING_PROFILES_ACTIVE=docker
    SPRING_DATASOURCE_USERNAME={database_username}
    SPRING_DATASOURCE_PASSWORD={database_password}
+   SPRING_DATASOURCE_DB_NAME={database_name}
+   SPRING_DATASOURCE_DB_URL={database_url} # Example: host.docker.internal:3306 or localhost:3306
+   
    SYMMETRIC_SECRET_KEY=      # a BASE64-encoded value of an AES secret key for token encryption
    
    # --- Secret Key Encryption ---
@@ -402,31 +402,38 @@ To deploy both services successfully, a MySQL database must be set up and config
    EJBCA_PASSWORD=            # EJBCA API password
    
    # --- HSM / PKCS#11 Configuration ---
-   CS_PKCS11_R2_CFG=
    JACKNJI11_PKCS11_LIB_PATH= # Path to your PKCS#11 .so library
    JACKNJI11_TEST_INITSLOT=   # Initial HSM slot identifier
    JACKNJI11_TEST_TESTSLOT=   # Secondary HSM slot identifier
    JACKNJI11_TEST_USER_PIN=   # HSM user PIN
    JACKNJI11_TEST_SO_PIN=     # HSM security officer PIN
-   ```
-   Notes:
-   * Replace the placeholder values with actual values required for your environment.
-   * The SYMMETRIC_SECRET_KEY and DB_ENCRYPTION_SALT must be Base64-encoded.
-   * Additional explanation for specific variables will be provided during the setup steps for the modules  *Common Tools*, *Authorization Server* and *Resource Server*.
+   
+   # Resource Server Configuration
+   AUTHORIZATION_SERVER_ISSUER_URI=http://localhost:8084
+   AUTHORIZATION_SERVER_JWT_SET_URI=http://localhost:8084
 
-   To use the .env file in Spring Boot, you will need to add the following lines to the *application.yml* of the module authorization_server and resource_server and to the *application-crypto.yml* of the module common_tools:
+   # Authorization Server Configuration
+   SERVICE_URL_OAUTH2_ISSUER= # Example: http://localhost:8084 or http://host.docker.internal:8084
+   SERVICE_URL=http://localhost:8084
    ```
-   spring:
-      config:
-         import: file:.env[.properties]
-   ```
+Notes:
+* Replace the placeholder values with actual values required for your environment.
+* The SYMMETRIC_SECRET_KEY and DB_ENCRYPTION_SALT must be Base64-encoded.
+* Additional explanation for specific variables will be provided during the setup steps for the modules  *Common Tools*, *Authorization Server* and *Resource Server*.
 
-### Common Tools
+## Local Deployment
 
-1. **Configure the Symmetric Secret Key**
+### Requirements
+
+- Java 17
+- Apache Maven 3.6.3
+- MySQL
+
+### Common Tools Configuration
 
 The Common Tools module requires a symmetric AES key to encode certain values in the JWT Access Token.
-This key must be provided via an environment variable and referenced in the configuration file *application-crypto.yml*. Ensure the following line is present in the mentioned file:
+This key must be provided via an environment variable and referenced in the configuration file *application-crypto.yml*.
+Ensure the following line is present in the mentioned file:
 ```
 symmetric-secret-key: ${SYMMETRIC_SECRET_KEY} # a BASE64-encoded value of an AES secret key
 ```
@@ -435,49 +442,55 @@ The *SYMMETRIC_SECRET_KEY* must be set as an environment variable and should be 
 
 Note: Be sure to add the value of the AES key in the .env file to the variable *SYMMETRIC_SECRET_KEY*, as described in [Set up .env file](#set-up-env-file).
 
-### Authorization Server (AS)
+Additionally, if you choose to define the SYMMETRIC_SECRET_KEY in a .env file,
+be sure to add the following lines to the *application-crypto.yml*:
+```
+spring:
+  config:
+    import: file:.env[.properties]
+```
 
-1. **Create the application-secret.yml file**
+### Authorization Server (AS) Configuration
 
-   It is required to create an **application-secret.yml** file in the folder **authorization_server/src/main/resources**.
+1. **Configure OAuth2.0 Clients**
+
+   It is required to create an **application-secret.yml** file.
    This file allows to configure one or more OAuth2.0 clients of the Authorization Server and must follow the structure below:
 
    ```
    authorizationserver:
      client:
         {client-id}:
-           registration:
-              client-id: "{client-id}"
-              client-secret: "{noop}{client-secret}"
-              client-authentication-methods:
-                 - "client_secret_basic"
-              authorization-grant-types:
-                 - "authorization_code"
-              redirect-uris:
-                 - "{redirect-uris}"
-              scopes:
-                 - "service"
-                 - "credential"
-              authentication-form: {authentication-method}
+           client-id: "{client-id}"
+           client-secret: "{noop}{client-secret}"
+           client-authentication-methods:
+              - "client_secret_basic"
+           authorization-grant-types:
+              - "authorization_code"
+           redirect-uris:
+              - "{redirect-uris}"
+           scopes:
+              - "service"
+              - "credential"
+           authentication-flow: {authentication-flow}
 
         {client-id}:
-           registration:
-              client-id: "{client-id}"
-              client-secret: "{noop}{client-secret}"
-              client-authentication-methods:
-                 - "client_secret_basic"
-              authorization-grant-types:
-                 - "authorization_code"
-              redirect-uris:
-                 - "{redirect-uris}"
-              scopes:
-                 - "service"
-                 - "credential"
-              authentication-form: {authentication-method}
+           client-id: "{client-id}"
+           client-secret: "{noop}{client-secret}"
+           client-authentication-methods:
+              - "client_secret_basic"
+           authorization-grant-types:
+              - "authorization_code"
+           redirect-uris:
+              - "{redirect-uris}"
+           scopes:
+              - "service"
+              - "credential"
+           authentication-flow: {authentication-flow}
    ```
 
    > **Note:**
-   > The **authentication-form** value must be one of the supported formats defined in the AuthenticationFormEnum:
+   > The **authentication-flow** value must be one of the supported formats defined in the AuthenticationFlowEnum:
    > - "login-form"
    > - "same-device-flow"
    > - "cross-device-flow"
@@ -519,8 +532,15 @@ Note: Be sure to add the value of the AES key in the .env file to the variable *
 
    ```
    service-url-config:
-      oauth2-issuer-url: {url_authorization_server}
-      service-url: {url_authorization_server}
+      oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER}
+      service-url: ${SERVICE_URL}
+   ```
+
+   To use the .env file in Spring Boot, you will need to add the following lines to the *application.yml* of the module authorization_server and resource_server and to the *application-crypto.yml* of the module common_tools:
+   ```
+   spring:
+      config:
+         import: file:.env[.properties]
    ```
 
 4. **Add the issuers certificate**
@@ -528,12 +548,14 @@ Note: Be sure to add the value of the AES key in the .env file to the variable *
    It is required to add to the folder **certificate_of_issuers** the certificates of the issuers of VP Tokens that can be trusted.
    Only the VP Tokens with certificates issued by the certificates in that folder will be accepted.
 
-### Resource Server (RS)
+### Resource Server (RS) Configuration
 
 1. **Set up the Secret Key Encryption Parameters**
 
-   The Resource Server module requires two environment variables (a passphrase and salt value) to encrypt the HSM secret key, which in turn is used to encrypt the signature key.
-   These values must be provided as environment variables and referenced in the *application.yml* configuration file. Ensure the following line is present in the mentioned file:
+   The Resource Server module requires two environment variables (a passphrase and salt value) to encrypt the HSM secret key, 
+   which in turn is used to encrypt the signature key.
+   These values must be provided as environment variables and referenced in the *application.yml* configuration file. 
+   Ensure the following line is present in the mentioned file:
    ```
    auth:
       dbEncryptionPassphrase: ${DB_ENCRYPTION_PASSPHRASE}
@@ -588,8 +610,15 @@ Note: Be sure to add the value of the AES key in the .env file to the variable *
          oauth2:
             resourceserver:
                jwt:
-                  jwk-set-uri: {url_authorization_server}/oauth2/jwks
-                  issuer-uri: {url_authorization_server}
+                  jwk-set-uri: ${AUTHORIZATION_SERVER_JWT_SET_URI}/oauth2/jwks
+                  issuer-uri: ${AUTHORIZATION_SERVER_ISSUER_URI}
+   ```
+
+   To use the .env file in Spring Boot, you will need to add the following lines to the *application.yml* of the module authorization_server and resource_server and to the *application-crypto.yml* of the module common_tools:
+   ```
+   spring:
+      config:
+         import: file:.env[.properties]
    ```
 
 ### Execution
@@ -610,20 +639,66 @@ It is important to run this scripts in the order presented:
 
 ## Docker Deployment
 
-### Set-up
+You can also deploy the Wallet-Driven & RP-Centric signer QTSP using Docker, either by:
 
-To build the Docker Image, you will need to remove the following lines of the *application.yml* of the module authorization_server and resource_server and the *application-crypto.yml* of the module common_tools:
+- Pulling the GitHub package image
+- Building the image locally
+
+Note: Don't forget to follow the [Prerequisites](#Prerequisites) and configure the database and the .env file.
+For more details on environment variables, refer to the Local Deployment sections of each module.
+
+### Requirements
+
+- Docker
+- Docker Compose
+
+### Configure docker-compose.yml
+
+You may need to configure a folder with an *application-secret.yml*, presented in the topic *Configure OAuth2.0 Clients* in the section [Authorization Server (AS) Configuration](#authorization-server-as-configuration), as a volume as follows:
+
 ```
-spring:
-  config:
-    import: file:.env[.properties]
+volumes:
+- ./config_files/:/config/
+command: ["--spring.config.additional-location=file:/config/application-secret.yml"]
 ```
 
-### Execution
-To start the 'EUDI Wallet-Driven & RP-Centric signer QTSP' service as a Docker Container, run the command:
-```shell
-docker compose up --build
+In the previous example the file *application-secret.yml* was defined in a folder called *config_files*.
+
+Additionally, we may need to define a volumes for the HSM and EJBCA configuration. 
+
 ```
+volumes:
+   - {PATH_TO_HSM_CONFIG_FILES}:/opt/app/config/hsm/
+   - {PATH_TO_EJBCA_CONFIG_FILES}:/opt/app/config/ejbca/
+```
+
+Replace {PATH_TO_HSM_CONFIG_FILES} and {PATH_TO_EJBCA_CONFIG_FILES} with the actual paths to your configuration files on the host machine.
+
+If you wish to use the pre-built image available on GitHub instead of building the image locally, modify the docker-compose.yml by replacing the build section with an image declaration like so:
+
+```
+services:
+  authorization_server:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-walletdriven-rpcentric-signer-qtsp-java-authorization-server:latest
+    container_name: authorizationserver
+    ...
+  resource_server:
+    image: ghcr.io/eu-digital-identity-wallet/eudi-srv-web-walletdriven-rpcentric-signer-qtsp-java-resource-server:latest
+    container_name: resourceserver  
+    ...
+```
+
+**Optional**: To avoid port conflicts, change the exposed port:
+
+```
+ports:
+    - "8086:8086" # Change first 8086 if the port is already used
+```
+
+### Build and Run with Docker
+
+From the project root, run:
+`docker compose up --build`
 
 ## How to contribute
 

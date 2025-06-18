@@ -9,8 +9,8 @@ services:
     env_file:
       - .env
     volumes:
-      - .{PATH_TO_OAUTH2_CLIENTS_CONFIG_FOLDER}:/config/
-    command: ["--spring.config.additional-location=file:/config/application-secret.yml"]
+      - .{PATH_TO_OAUTH2_CLIENTS_CONFIG_FOLDER}:/opt/app/config/clients
+    command: ["--spring.config.additional-location=file:/opt/app/config/clients/application-secret.yml"]
 
   resource_server:
     build:
