@@ -34,26 +34,13 @@ public class OAuth2ClientRegistrationConfig {
     }
 
     public static class Client {
-        private Registration registration;
-
-        public Registration getRegistration() {
-            return registration;
-        }
-
-        public void setRegistration(Registration registration) {
-            this.registration = registration;
-        }
-    }
-
-    public static class Registration {
         private String clientId;
         private String clientSecret;
         private Set<String> clientAuthenticationMethods;
         private Set<String> authorizationGrantTypes;
         private Set<String> redirectUris;
         private Set<String> scopes;
-        private boolean requireAuthorizationConsent;
-        private AuthenticationFormEnum authenticationForm;
+        private AuthenticationFlowEnum authenticationFlow;
 
         public String getClientId() {
             return clientId;
@@ -103,20 +90,12 @@ public class OAuth2ClientRegistrationConfig {
             this.scopes = scopes;
         }
 
-        public boolean isRequireAuthorizationConsent() {
-            return requireAuthorizationConsent;
+        public AuthenticationFlowEnum getAuthenticationFlow() {
+            return authenticationFlow;
         }
 
-        public void setRequireAuthorizationConsent(boolean requireAuthorizationConsent) {
-            this.requireAuthorizationConsent = requireAuthorizationConsent;
-        }
-
-        public AuthenticationFormEnum getAuthenticationForm() {
-            return authenticationForm;
-        }
-
-        public void setAuthenticationForm(AuthenticationFormEnum authenticationForm) {
-            this.authenticationForm = authenticationForm;
+        public void setAuthenticationFlow(AuthenticationFlowEnum authenticationFlow) {
+            this.authenticationFlow = authenticationFlow;
         }
     }
 }

@@ -22,8 +22,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,7 +40,7 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
-    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationSuccessHandler.class);
+    private final Logger logger = LoggerFactory.getLogger(OID4VPAuthenticationSuccessHandler.class);
     private final SessionUrlRelationList sessionUrlRelationList;
 
     public OID4VPAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){

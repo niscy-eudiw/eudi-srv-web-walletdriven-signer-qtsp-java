@@ -23,17 +23,21 @@ verifier:
   validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
   client-id: x509_san_dns:verifier-backend.eudiw.dev
 
-oauth2-issuer-url:
-  url: http://localhost:8084
+service-url-config:
+  oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER} # Example: http://localhost:8084
+  service-url: ${SERVICE_URL} # Example: http://localhost:8084
 
 trusted-issuers:
   folder: certificate_of_issuers
 
 spring:
+  #config:
+  #  import: file:.env[.properties]
   datasource:
-    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:mysql://${SPRING_DATASOURCE_DB_URL}/${SPRING_DATASOURCE_DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
     driver-class-name: com.mysql.cj.jdbc.Driver
-
   jpa:
     show-sql: true
     hibernate:
@@ -45,12 +49,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-
   profiles:
     include:
-      - "auth"
-      - "client-registration"
-      - "user-login-form"
+      - "secret"
+      - "crypto"
 
 logging:
   level:

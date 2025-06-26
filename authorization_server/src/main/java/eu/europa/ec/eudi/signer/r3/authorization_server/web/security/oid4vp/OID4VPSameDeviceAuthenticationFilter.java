@@ -30,8 +30,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -49,7 +49,7 @@ public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthentication
     private final OpenIdForVPService openIdForVPService;
     private final SessionUrlRelationList sessionUrlRelationList;
     private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
-    private final Logger logger = LogManager.getLogger(OID4VPSameDeviceAuthenticationFilter.class);
+    private final Logger logger = LoggerFactory.getLogger(OID4VPSameDeviceAuthenticationFilter.class);
 
     public OID4VPSameDeviceAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient,
                                                 OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){

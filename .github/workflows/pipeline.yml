@@ -1,0 +1,72 @@
+name: rQES QTSP Image Builder
+
+on:
+  push:
+    tags: [ 'v..*' ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.TESTES_TOKEN }}
+
+      # --- authorization_server ---
+      - name: Extract Docker metadata for Authorization Server
+        id: meta-authorization-server
+        uses: docker/metadata-action@v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-authorization-server
+
+      - name: Build and push Authorization Server image
+        id: build-and-push-authorization-server
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: .
+          file: authorization_server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-authorization-server.outputs.tags }}
+          labels: ${{ steps.meta-authorization-server.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      # --- resource_server ---
+      - name: Extract Docker metadata for Resource Server
+        id: meta-resource-server
+        uses: docker/metadata-action@v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-resource-server
+
+      - name: Build and push Resource Server image
+        id: build-and-push-resource-server
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: .
+          file: resource_server/Dockerfile
+          push: true
+          tags: ${{ steps.meta-resource-server.outputs.tags }}
+          labels: ${{ steps.meta-resource-server.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false

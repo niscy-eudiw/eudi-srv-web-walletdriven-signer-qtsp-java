@@ -20,17 +20,18 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Base64;
-import java.util.Properties;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class CryptoUtils {
 	private static final int GCM_IV_LENGTH = 12; // 12 bytes
 	private static final int GCM_TAG_LENGTH = 16; // 128 bits
@@ -38,16 +39,11 @@ public class CryptoUtils {
 
 	private final SecretKey secretKey;
 
-	public CryptoUtils() throws Exception{
+	public CryptoUtils(@Autowired CryptoProperties properties) {
 		Security.addProvider(new BouncyCastleProvider());
-
-		Properties properties = new Properties();
-		InputStream configStream = getClass().getClassLoader().getResourceAsStream("application-crypto.yml");
-		properties.load(configStream);
-
-		this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(properties.get("symmetric-secret-key").toString()), "AES");
+		String keyProperty = properties.getSymmetricSecretKey();
+		this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(keyProperty), "AES");
 	}
-
 
 	public String encryptString(String value){
 		byte[] iv = new byte[GCM_IV_LENGTH];

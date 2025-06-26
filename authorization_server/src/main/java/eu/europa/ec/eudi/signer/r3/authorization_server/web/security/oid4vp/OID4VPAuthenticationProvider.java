@@ -16,8 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -28,7 +28,7 @@ public class OID4VPAuthenticationProvider implements AuthenticationProvider {
 
     private final CustomUserDetailsService userDetailsService;
 
-    private final Logger logger = LogManager.getLogger(OID4VPAuthenticationProvider.class);
+    private final Logger logger = LoggerFactory.getLogger(OID4VPAuthenticationProvider.class);
 
     public OID4VPAuthenticationProvider(CustomUserDetailsService userDetailsService){
         this.userDetailsService = userDetailsService;

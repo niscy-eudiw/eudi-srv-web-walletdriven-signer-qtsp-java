@@ -17,9 +17,8 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
-import org.apache.logging.log4j.LogManager;
-
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +26,7 @@ import java.time.Instant;
 
 @Component
 public class RemoveExpiredAuthorization implements SmartLifecycle {
-    private static final Logger logger = LogManager.getLogger(RemoveExpiredAuthorization.class);
+    private static final Logger logger = LoggerFactory.getLogger(RemoveExpiredAuthorization.class);
 
     private Thread removePDFsThread;
     private boolean running = false;

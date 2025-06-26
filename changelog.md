@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0]
+_29 May 2025_
+
+### Added:
+- Docker support for the application:
+  - Added Dockerfile to build the application image.
+  - Added docker-compose.yml.
+  - Instructions for building and running the container added to README.md.
+
 ## [0.3.0]
 _09 May 2025_
 
