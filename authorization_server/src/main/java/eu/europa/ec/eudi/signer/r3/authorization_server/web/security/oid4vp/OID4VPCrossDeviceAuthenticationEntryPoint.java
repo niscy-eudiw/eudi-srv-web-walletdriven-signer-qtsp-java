@@ -16,15 +16,15 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -32,12 +32,12 @@ import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 
 public class OID4VPCrossDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
-	private final Logger logger = LogManager.getLogger(OID4VPCrossDeviceAuthenticationEntryPoint.class);
+	private final Logger logger = LoggerFactory.getLogger(OID4VPCrossDeviceAuthenticationEntryPoint.class);
 	private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
-	private final OAuth2IssuerConfig issuerConfig;
+	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
 
-	public OID4VPCrossDeviceAuthenticationEntryPoint(@Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
+	public OID4VPCrossDeviceAuthenticationEntryPoint(@Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
 		this.issuerConfig = issuerConfig;
 		this.sessionUrlRelationList = sessionUrlRelationList;
 	}
@@ -46,7 +46,7 @@ public class OID4VPCrossDeviceAuthenticationEntryPoint implements Authentication
 	public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
 		logger.info("Redirecting request to OID4VPAuthentication Entry Point.");
 
-		String serviceUrl = this.issuerConfig.getUrl();
+		String serviceUrl = this.issuerConfig.getServiceURL();
 		logger.trace("Entry Point of the Authorization Server in url: {}", serviceUrl);
 
 		String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();

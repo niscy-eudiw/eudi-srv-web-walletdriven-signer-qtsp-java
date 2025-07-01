@@ -22,9 +22,9 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFormEnum;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFlowEnum;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
@@ -55,6 +55,9 @@ import java.util.*;
 import java.util.function.Consumer;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -91,15 +94,18 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
-	private final CryptoUtils cryptoUtils = new CryptoUtils();
+	private final CryptoUtils cryptoUtils;
+	private final Logger logger = LoggerFactory.getLogger(AuthorizationServerConfig.class);
 
-	public AuthorizationServerConfig() throws Exception {}
+	public AuthorizationServerConfig(@Autowired CryptoUtils cryptoUtils) {
+		this.cryptoUtils = cryptoUtils;
+	}
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-																	  OAuth2IssuerConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
+																	  ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
 																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
 																	  CredentialsService credentialDatabase) throws Exception
 	{
@@ -128,6 +134,7 @@ public class AuthorizationServerConfig {
 						  .accessTokenRequestConverter(tokenRequestConverter)
 						  .authenticationProviders(removeDefaultTokenProvider())
 						  .authenticationProvider(tokenRequestProvider));
+		logger.info("Set up authorizationServerConfig.");
 
 		http
 			.exceptionHandling((exceptions) -> {
@@ -135,7 +142,7 @@ public class AuthorizationServerConfig {
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.SAME_DEVICE_FLOW.getId();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
@@ -143,18 +150,19 @@ public class AuthorizationServerConfig {
 				RequestMatcher requestMatcherCrossDevice = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.CROSS_DEVICE_FLOW.getId();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
 					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFormEnum.LOGIN_FORM.getId();
+					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
 				};
-				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getUrl()+"/login"), requestMatcher);
+				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getServiceURL()+"/login"), requestMatcher);
 			})
 			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
+		logger.info("Set up the http exception handling and authentication methods.");
 		return http.build();
 	}
 
@@ -171,14 +179,16 @@ public class AuthorizationServerConfig {
 	}
 
 	@Bean
-	public AuthorizationServerSettings authorizationServerSettings(OAuth2IssuerConfig issuerConfig) {
+	public AuthorizationServerSettings authorizationServerSettings(ServiceURLConfig issuerConfig) {
+		logger.info("Setting up AuthorizationServerSettings with Issuer URL {}", issuerConfig.getOauth2IssuerURL());
 		return AuthorizationServerSettings.builder()
-			  .issuer(issuerConfig.getUrl())
+			  .issuer(issuerConfig.getOauth2IssuerURL())
 			  .build();
 	}
 
 	@Bean
 	public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig){
+		logger.info("Setting up JdbcTemplate with DataSource {}", dataSourceConfig.getDataSource());
 		return new JdbcTemplate(dataSourceConfig.getDataSource());
 	}
 
@@ -187,27 +197,34 @@ public class AuthorizationServerConfig {
 	@Bean
 	public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate,
 																	 RegisteredClientAuthenticationFormRepository registeredClientExtendedRepository) {
+		logger.info("Setting up JdbcRegisteredClientRepository");
+
 		// Save registered client's in db as if in-memory
 		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
 		for (Map.Entry<String, OAuth2ClientRegistrationConfig.Client> e : config.getClient().entrySet()) {
-			OAuth2ClientRegistrationConfig.Registration registration = e.getValue().getRegistration();
+			OAuth2ClientRegistrationConfig.Client registration = e.getValue();
 			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
 				.clientId(registration.getClientId())
 				.clientSecret(registration.getClientSecret())
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
 				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
 
+			for (String clientAuthMethodValue: registration.getClientAuthenticationMethods()){
+				ClientAuthenticationMethod clientAuthenticationMethod = new ClientAuthenticationMethod(clientAuthMethodValue);
+				clientBuilder.clientAuthenticationMethod(clientAuthenticationMethod);
+			}
+			for (String authGrantTypeValue: registration.getAuthorizationGrantTypes()){
+				AuthorizationGrantType authorizationGrantType = new AuthorizationGrantType(authGrantTypeValue);
+				clientBuilder.authorizationGrantType(authorizationGrantType);
+			}
 			for (String redirectUri : registration.getRedirectUris())
 				clientBuilder.redirectUri(redirectUri);
-
 			for (String scope : registration.getScopes())
 				clientBuilder.scope(scope);
 			RegisteredClient client = clientBuilder.build();
 			registeredClientRepository.save(client);
 
-			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationForm().getId());
+			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationFlow().getId());
 			registeredClientExtendedRepository.save(registeredClientAuthenticationForm);
 		}
 
@@ -264,6 +281,7 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
+		logger.info("Setting up OAuth2TokenCustomizer");
 		return context -> {
 			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
 				JwtClaimsSet.Builder claims = context.getClaims();
@@ -339,6 +357,7 @@ public class AuthorizationServerConfig {
 		jwtGenerator.setJwtCustomizer(jwtCustomizer);
 		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
 		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+		logger.info("Setting up OAuth2TokenGenerator");
 		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
 	}
 }

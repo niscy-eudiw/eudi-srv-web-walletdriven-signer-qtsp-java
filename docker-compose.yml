@@ -1,0 +1,28 @@
+services:
+  authorization_server:
+    build:
+      context: .
+      dockerfile: authorization_server/Dockerfile
+    container_name: authorizationserver
+    ports:
+      - "8084:8084"
+    env_file:
+      - .env
+    volumes:
+      - .{PATH_TO_OAUTH2_CLIENTS_CONFIG_FOLDER}:/opt/app/config/clients
+    command: ["--spring.config.additional-location=file:/opt/app/config/clients/application-secret.yml"]
+
+  resource_server:
+    build:
+      context: .
+      dockerfile: resource_server/Dockerfile
+    container_name: resourceserver
+    depends_on:
+      - authorization_server
+    ports:
+      - "8085:8085"
+    volumes:
+      - {PATH_TO_HSM_CONFIG_FOLDER}:/opt/app/config/hsm/
+      - {PATH_TO_EJBCA_CONFIG_FOLDER}:/opt/app/config/ejbca/
+    env_file:
+      - .env

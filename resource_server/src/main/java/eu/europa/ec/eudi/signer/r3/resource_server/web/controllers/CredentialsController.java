@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoProperties;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.CredentialsConfig;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.CredentialsService;
@@ -46,10 +47,10 @@ public class CredentialsController {
     private final CryptoUtils cryptoUtils;
     private static final Logger logger = LoggerFactory.getLogger(CredentialsController.class);
 
-    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig) throws Exception {
+    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig, @Autowired CryptoProperties cryptoProperties) {
         this.credentialsService = credentialsService;
         this.credentialsConfig = credentialsConfig;
-        this.cryptoUtils = new CryptoUtils();
+        this.cryptoUtils = new CryptoUtils(cryptoProperties);
     }
 
     /***
