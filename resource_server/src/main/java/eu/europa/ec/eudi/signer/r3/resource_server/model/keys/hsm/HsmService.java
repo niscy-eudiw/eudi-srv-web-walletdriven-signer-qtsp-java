@@ -198,6 +198,7 @@ public class HsmService {
         CKA[] pubTemplate = new CKA[]{
               new CKA(CKA.MODULUS_BITS, keySize),
               new CKA(CKA.PUBLIC_EXPONENT, Hex.s2b("010001")),
+              new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.LABEL, "rsa-public-key"),
@@ -242,7 +243,6 @@ public class HsmService {
         byte[] ecCurveParams = Hex.s2b("06082a8648ce3d030107");
         CKA[] pubTempl = new CKA[]{
               new CKA(CKA.EC_PARAMS, ecCurveParams),
-              new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
               new CKA(CKA.LABEL, "P256-public-key"),
@@ -254,7 +254,6 @@ public class HsmService {
               new CKA(CKA.PRIVATE, true),
               new CKA(CKA.SENSITIVE, true),
               new CKA(CKA.SIGN, true),
-              new CKA(CKA.UNWRAP, true),
               new CKA(CKA.EXTRACTABLE, true),
               new CKA(CKA.LABEL, "P256-private-key"),
               new CKA(CKA.ID, "P256-private-key"),

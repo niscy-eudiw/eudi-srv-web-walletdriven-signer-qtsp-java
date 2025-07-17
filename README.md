@@ -344,7 +344,7 @@ Follow the steps below to set up the database:
       driver-class-name: com.mysql.cj.jdbc.Driver
    ```
 
-   If deploying via Docker, update application-docker.yml files (in the resources folder in the modules authorization_server and resource_server) accordingly:
+   If deploying via Docker, update the value of the variable '{SPRING_DATASOURCE_SERVER}' to 'host.docker.internal:3306/' as the example:
    ```
    datasource:
        url: jdbc:mysql://host.docker.internal:3306/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
