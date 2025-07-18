@@ -74,11 +74,7 @@ public class SignaturesController {
 
 
         String userHash = claims.get("sub").toString();
-        String givenName = claims.get("givenName").toString();
-        String givenNameDecrypted = this.cryptoUtils.decryptString(givenName);
-        String surname = claims.get("surname").toString();
-        String surnameDecrypted = this.cryptoUtils.decryptString(surname);
-        logger.info("Request received at /csc/v2/signatures/signHash with the body {} from the user {} = {} {}", signHashRequest.toString(), userHash, givenNameDecrypted, surnameDecrypted);
+        logger.info("Request received at /csc/v2/signatures/signHash with the body {} from the user {}", signHashRequest.toString(), userHash);
         if(userHash == null){
             logger.error("invalid_request: Invalid user sub in the Authorization Header.");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: Invalid or missing user identifier.");

@@ -66,11 +66,11 @@ public class OpenIdForVPService {
         }
         catch (JSONException e){
             log.error("The message from Verifier is not a well formatted JSON. {}",e.getMessage());
-            throw new OID4VPException(OID4VPEnumError.ResponseVerifierWithInvalidFormat, "The message from Verifier is not a valid JSON.");
+            throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The message from Verifier is not a valid JSON.");
         }
         log.debug("VP Token: {}", vpToken);
 
-        VPValidator validator = new VPValidator(vpToken, VerifierClient.PresentationDefinitionId, VerifierClient.PresentationDefinitionInputDescriptorsId, this.trustedCertificatesConfig);
+        VPValidator validator = new VPValidator(vpToken, VerifierClient.PRESENTATION_DEFINITION_ID, VerifierClient.PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID, this.trustedCertificatesConfig);
         MDoc document = validator.loadAndVerifyDocumentForVP();
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
@@ -89,7 +89,7 @@ public class OpenIdForVPService {
         }
         catch (JSONException e){
             log.error("The message from Verifier is not a well formatted JSON. {}", e.getMessage());
-            throw new OID4VPException(OID4VPEnumError.ResponseVerifierWithInvalidFormat, "The message from Verifier is not a valid JSON.");
+            throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The message from Verifier is not a valid JSON.");
         }
         log.debug("VP Token: {}", vpToken);
 
@@ -140,19 +140,19 @@ public class OpenIdForVPService {
     private UserOIDTemporaryInfo validateAttributesAndLoadUser(String familyName, String givenName, String birthDate, String issuingCountry, String issuanceAuthority) throws OID4VPException {
         if(familyName == null){
             log.error("The document in the VP Token is missing the family name.");
-            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your last name is missing from the submitted data. Please try again.");
+            throw new OID4VPException(OID4VPEnumError.VP_TOKEN_MISSING_VALUES, "Authentication failed: Your last name is missing from the submitted data. Please try again.");
         }
         if(givenName == null){
             log.error("The document in the VP Token is missing the given name.");
-            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your first name is missing from the submitted data. Please try again.");
+            throw new OID4VPException(OID4VPEnumError.VP_TOKEN_MISSING_VALUES, "Authentication failed: Your first name is missing from the submitted data. Please try again.");
         }
         if(birthDate == null){
             log.error("The document in the VP Token is missing the birthdate.");
-            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: Your birth date is missing from the submitted data. Please try again.");
+            throw new OID4VPException(OID4VPEnumError.VP_TOKEN_MISSING_VALUES, "Authentication failed: Your birth date is missing from the submitted data. Please try again.");
         }
         if(issuingCountry == null){
             log.error("The document in the VP Token is missing the issuing country.");
-            throw new OID4VPException(OID4VPEnumError.VPTokenMissingValues, "Authentication failed: The issuing country is missing from the submitted data. Please try again.");
+            throw new OID4VPException(OID4VPEnumError.VP_TOKEN_MISSING_VALUES, "Authentication failed: The issuing country is missing from the submitted data. Please try again.");
         }
         log.info("Retrieved the required parameters from the VP Token.");
 

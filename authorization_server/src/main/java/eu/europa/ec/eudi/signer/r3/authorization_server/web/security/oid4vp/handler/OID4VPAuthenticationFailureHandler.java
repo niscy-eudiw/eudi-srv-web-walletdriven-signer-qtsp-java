@@ -35,13 +35,13 @@ public class OID4VPAuthenticationFailureHandler implements AuthenticationFailure
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
         OID4VPEnumError error = null;
         if(exception.getMessage().equals("certificate_issuerauth_invalid")){
-            error = OID4VPEnumError.CertificateIssuerAuthInvalid;
+            error = OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID;
         }
         else if(exception.getMessage().equals("status_vptoken_invalid")){
-            error = OID4VPEnumError.StatusVPTokenInvalid;
+            error = OID4VPEnumError.STATUS_VP_TOKEN_INVALID;
         }
         else if(exception.getMessage().equals("presentation_submission_missing_data")){
-            error = OID4VPEnumError.PresentationSubmissionMissingData;
+            error = OID4VPEnumError.PRESENTATION_SUBMISSION_MISSING_DATA;
         }
 
         logger.error("Error received after attempting authentication with OId4VP. Message: {}", error != null ? error.getFormattedMessage() : exception.getMessage());

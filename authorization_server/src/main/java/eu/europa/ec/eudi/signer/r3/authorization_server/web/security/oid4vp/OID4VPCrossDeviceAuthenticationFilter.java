@@ -71,7 +71,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 		}
 		catch (OID4VPException e){
 			logger.error(e.getFormattedMessage());
-			if(e.getError().equals(OID4VPEnumError.VPTokenMissingValues))
+			if(e.getError().equals(OID4VPEnumError.VP_TOKEN_MISSING_VALUES))
 				throw new AuthenticationServiceException(e.getMessage());
 			else if(!Objects.equals(e.getError().getAdditionalInformation(), "")){ // if there are additional information, sends the code to exception handler
 				throw new AuthenticationServiceException(e.getError().getCode());
@@ -80,13 +80,13 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 		}
 		catch (InterruptedException e){
 			logger.error("Unexpected error: {}", e.getMessage());
-			throw new AuthenticationServiceException(OID4VPEnumError.UnexpectedError.getFormattedMessage());
+			throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
 		}
 		catch (URISyntaxException e){
 			logger.error("Unable to add additional information to Authentication Token, " +
 				  "because the URL to return to after OID4VP Authentication is incorrectly formatted.");
 			logger.error(e.getMessage());
-			throw new AuthenticationServiceException(OID4VPEnumError.UnexpectedError.getFormattedMessage());
+			throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
 		}
 	}
 }

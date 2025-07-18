@@ -40,7 +40,6 @@ public class DataSourceConfig {
         DataSourceBuilder<?> dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.url(datasourceUrl);
         dataSourceBuilder.driverClassName(datasourceDriverClassName);
-        System.out.println(datasourceUsername);
         dataSourceBuilder.username(datasourceUsername);
         dataSourceBuilder.password(datasourcePassword);
         return dataSourceBuilder.build();

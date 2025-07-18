@@ -252,5 +252,8 @@ public class Credentials {
               && Objects.equals(certStatus, that.certStatus) && Objects.equals(authMode, that.authMode);
     }
 
-
+    @Override
+    public int hashCode() {
+        return Objects.hash(userID, id, description, signatureQualifier, SCAL, multisign, lang, privateKey, publicKey, keyStatus, keyAlgo, keyLen, keyCurve, certificate, certificateChain, certStatus, authMode, authExpression, authObjects);
+    }
 }

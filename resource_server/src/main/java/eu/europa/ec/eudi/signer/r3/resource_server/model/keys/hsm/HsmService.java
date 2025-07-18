@@ -49,6 +49,7 @@ public class HsmService {
     private byte[] secretKey;
     private final HsmInformation hsmInfo;
     private static final int IVLENGTH = 12;
+    private static final String SECRET_KEY_LABEL = "secret_key_wrapper";
 
     public HsmService(
           @Autowired SecretKeyRepository secretKeyRepositoryLoaded,
@@ -128,8 +129,8 @@ public class HsmService {
 
         long secretKeyWrap = CE.GenerateKey(session, new CKM(CKM.AES_KEY_GEN),
               new CKA(CKA.VALUE_LEN, 32),
-              new CKA(CKA.LABEL, "secret_key_wrapper"),
-              new CKA(CKA.ID, "secret_key_wrapper"),
+              new CKA(CKA.LABEL, SECRET_KEY_LABEL),
+              new CKA(CKA.ID, SECRET_KEY_LABEL),
               new CKA(CKA.TOKEN, false),
               new CKA(CKA.SENSITIVE, false), // CK_TRUE if object is sensitive
               new CKA(CKA.WRAP, true), // CK_TRUE if key supports wrapping (i.e., can be used to wrap other keys)
@@ -151,8 +152,8 @@ public class HsmService {
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
-              new CKA(CKA.LABEL, "secret_key_wrapper"),
-              new CKA(CKA.ID, "secret_key_wrapper"),
+              new CKA(CKA.LABEL, SECRET_KEY_LABEL),
+              new CKA(CKA.ID, SECRET_KEY_LABEL),
               new CKA(CKA.TOKEN, false),
               new CKA(CKA.SENSITIVE, false),
               new CKA(CKA.WRAP, true),
@@ -172,8 +173,8 @@ public class HsmService {
               new CKA(CKA.CLASS, CKO.SECRET_KEY),
               new CKA(CKA.KEY_TYPE, CKK.AES),
               new CKA(CKA.VALUE, secretKeyBytes),
-              new CKA(CKA.LABEL, "secret_key_wrapper"),
-              new CKA(CKA.ID, "secret_key_wrapper"),
+              new CKA(CKA.LABEL, SECRET_KEY_LABEL),
+              new CKA(CKA.ID, SECRET_KEY_LABEL),
               new CKA(CKA.TOKEN, false),
               new CKA(CKA.SENSITIVE, false),
               new CKA(CKA.WRAP, true),
@@ -388,8 +389,8 @@ public class HsmService {
               new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
-              new CKA(CKA.LABEL, "labelrsa-publicloaded"),
-              new CKA(CKA.ID, "labelrsa-publicloaded")
+              new CKA(CKA.LABEL, "rsa_public_key_loaded"),
+              new CKA(CKA.ID, "rsa_pk_loaded")
         };
         long publicKeyValue = CE.CreateObject(session, pubTempl);
 
@@ -414,8 +415,8 @@ public class HsmService {
               new CKA(CKA.WRAP, true),
               new CKA(CKA.VERIFY, true),
               new CKA(CKA.TOKEN, true),
-              new CKA(CKA.LABEL, "labelrsa-publicloaded"),
-              new CKA(CKA.ID, "labelrsa-publicloaded")
+              new CKA(CKA.LABEL, "p256_public_key_loaded"),
+              new CKA(CKA.ID, "p256_pk_loaded")
         };
         long publicKeyValue = CE.CreateObject(session, pubTempl);
 

@@ -67,6 +67,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.jackson2.SecurityJackson2Modules;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -136,11 +137,13 @@ public class AuthorizationServerConfig {
 						  .authenticationProvider(tokenRequestProvider));
 		logger.info("Set up authorizationServerConfig.");
 
+		String clientId = "client_id";
+
 		http
 			.exceptionHandling((exceptions) -> {
 				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
-					String client_id = request.getParameter("client_id");
+					String client_id = request.getParameter(clientId);
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
 				};
@@ -148,14 +151,14 @@ public class AuthorizationServerConfig {
 
 				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherCrossDevice = request -> {
-					String client_id = request.getParameter("client_id");
+					String client_id = request.getParameter(clientId);
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
-					String client_id = request.getParameter("client_id");
+					String client_id = request.getParameter(clientId);
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
 				};
@@ -282,53 +285,33 @@ public class AuthorizationServerConfig {
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
 		logger.info("Setting up OAuth2TokenCustomizer");
+		String credentialIdParameter = "credentialID";
+		String hashAlgorithmOIDParameter = "hashAlgorithmOID";
+		String numSignaturesParameter = "numSignatures";
+		String hashesParameter = "hashes";
+
 		return context -> {
-			if (context.getTokenType().equals(OAuth2TokenType.ACCESS_TOKEN)) {
-				JwtClaimsSet.Builder claims = context.getClaims();
-				OAuth2Authorization authorization = context.getAuthorization();
-                assert authorization != null;
+			if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) return;
 
-				if(authorization.getAuthorizedScopes().contains("service")){
-					if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class)){
-						OID4VPAuthenticationToken token = context.getPrincipal();
-						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-							UserPrincipal up = (UserPrincipal) token.getPrincipal();
-                            claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
-                            claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
-							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-							claims.claim("issuingCountry", u.getIssuingCountry());
-						}
-					}
-					else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class)){
-						UsernamePasswordAuthenticationToken token = context.getPrincipal();
-						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-							UserPrincipal up = (UserPrincipal) token.getPrincipal();
-							claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
-							claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
-							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-							claims.claim("issuingCountry", u.getIssuingCountry());
-						}
-					}else if(context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
-						UsernamePasswordAuthenticationTokenExtended token = context.getPrincipal();
-						if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-							UserPrincipal up = (UserPrincipal) token.getPrincipal();
-							claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
-							claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
-							User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-							claims.claim("issuingCountry", u.getIssuingCountry());
-						}
-					}
+			JwtClaimsSet.Builder claims = context.getClaims();
+			OAuth2Authorization authorization = context.getAuthorization();
+			if (authorization == null) return;
+
+			if(authorization.getAuthorizedScopes().contains("service")){
+				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
+					Authentication token = context.getPrincipal();
+					addUserClaims(token, claims, userRepository);
 				}
+			}
 
-				if (authorization.getAuthorizedScopes().contains("credential")) {
+			if (authorization.getAuthorizedScopes().contains("credential")) {
 					OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
                     assert authorizationRequest != null;
                     if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
 						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
 						JSONArray authDetailsAuthorizationArray = new JSONArray(authDetailsAuthorization);
 						JSONObject authDetailsAuthorizationJSON = authDetailsAuthorizationArray.getJSONObject(0);
-						claims.claim("credentialID", authDetailsAuthorizationJSON.get("credentialID"));
-						claims.claim("hashAlgorithmOID", authDetailsAuthorizationJSON.get("hashAlgorithmOID"));
+
 						JSONArray documentDigests = authDetailsAuthorizationJSON.getJSONArray("documentDigests");
 						List<String> hashesList = new ArrayList<>();
 						for (int i = 0; i < documentDigests.length(); i++) {
@@ -337,18 +320,62 @@ public class AuthorizationServerConfig {
 							hashesList.add(hashValue);
 						}
 						String hashes = String.join(",", hashesList);
-						claims.claim("numSignatures", documentDigests.length());
-						claims.claim("hashes", hashes);
+
+						claims.claim(credentialIdParameter, authDetailsAuthorizationJSON.get(credentialIdParameter));
+						claims.claim(hashAlgorithmOIDParameter, authDetailsAuthorizationJSON.get(hashAlgorithmOIDParameter));
+						claims.claim(numSignaturesParameter, documentDigests.length());
+						claims.claim(hashesParameter, hashes);
 					} else {
-						claims.claim("credentialID", authorizationRequest.getAdditionalParameters().get("credentialID").toString());
-						claims.claim("numSignatures", authorizationRequest.getAdditionalParameters().get("numSignatures").toString());
-						claims.claim("hashes", authorizationRequest.getAdditionalParameters().get("hashes").toString());
-						claims.claim("hashAlgorithmOID", authorizationRequest.getAdditionalParameters().get("hashAlgorithmOID").toString());
+						claims.claim(credentialIdParameter, authorizationRequest.getAdditionalParameters().get(credentialIdParameter).toString());
+						claims.claim(numSignaturesParameter, authorizationRequest.getAdditionalParameters().get(numSignaturesParameter).toString());
+						claims.claim(hashesParameter, authorizationRequest.getAdditionalParameters().get(hashesParameter).toString());
+						claims.claim(hashAlgorithmOIDParameter, authorizationRequest.getAdditionalParameters().get(hashAlgorithmOIDParameter).toString());
 					}
-				}
 			}
 		};
 	}
+
+	private void addUserClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository) {
+		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+			UserPrincipal up = (UserPrincipal) token.getPrincipal();
+			claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
+			claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
+			User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+			claims.claim("issuingCountry", u.getIssuingCountry());
+		}
+	}
+
+	private void addCredentialClaims(JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
+		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+		if (request == null) return;
+
+		Map<String, Object> params = request.getAdditionalParameters();
+		Object authDetails = params.get("authorization_details");
+
+		if (authDetails != null) {
+			JSONObject authDetailsJSON = new JSONArray(
+				  URLDecoder.decode(authDetails.toString(), StandardCharsets.UTF_8))
+				  .getJSONObject(0);
+
+			claims.claim("credentialID", authDetailsJSON.get("credentialID"));
+			claims.claim("hashAlgorithmOID", authDetailsJSON.get("hashAlgorithmOID"));
+
+			JSONArray docs = authDetailsJSON.getJSONArray("documentDigests");
+			List<String> hashes = new ArrayList<>();
+			for (int i = 0; i < docs.length(); i++) {
+				hashes.add(docs.getJSONObject(i).getString("hash"));
+			}
+
+			claims.claim("numSignatures", docs.length());
+			claims.claim("hashes", String.join(",", hashes));
+		} else {
+			claims.claim("credentialID", params.get("credentialID").toString());
+			claims.claim("numSignatures", params.get("numSignatures").toString());
+			claims.claim("hashes", params.get("hashes").toString());
+			claims.claim("hashAlgorithmOID", params.get("hashAlgorithmOID").toString());
+		}
+	}
+
 
 	@Bean
 	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
