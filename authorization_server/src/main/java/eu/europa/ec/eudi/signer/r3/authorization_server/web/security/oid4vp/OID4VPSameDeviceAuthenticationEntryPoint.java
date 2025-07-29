@@ -16,7 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
@@ -27,8 +27,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,14 +42,14 @@ import org.springframework.security.web.RedirectStrategy;
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
 public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
-    private final Logger logger = LogManager.getLogger(OID4VPSameDeviceAuthenticationEntryPoint.class);
+    private final Logger logger = LoggerFactory.getLogger(OID4VPSameDeviceAuthenticationEntryPoint.class);
 
     private final VerifierClient verifierClient;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
-    private final OAuth2IssuerConfig issuerConfig;
+    private final ServiceURLConfig issuerConfig;
     private final SessionUrlRelationList sessionUrlRelationList;
 
-    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
+    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
         this.verifierClient = service;
         this.issuerConfig = issuerConfig;
         this.sessionUrlRelationList = sessionUrlRelationList;
@@ -59,7 +59,7 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
         logger.info("Redirecting request to OID4VPAuthentication Entry Point.");
 
-        String serviceUrl = this.issuerConfig.getUrl();
+        String serviceUrl = this.issuerConfig.getServiceURL();
         logger.trace("Entry Point of the Authorization Server in url: {}", serviceUrl);
 
         String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();

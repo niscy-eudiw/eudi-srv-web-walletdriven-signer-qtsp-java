@@ -1,5 +1,5 @@
 /*
- Copyright 2024 European Commission
+ Copyright 2025 European Commission
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -16,17 +16,24 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+public enum AuthenticationFlowEnum {
+	LOGIN_FORM(1, "login-form"),
+	SAME_DEVICE_FLOW(2, "same-device-flow"),
+	CROSS_DEVICE_FLOW(3, "cross-device-flow");
 
-@ConfigurationProperties(prefix = "oauth2-issuer-url")
-public class OAuth2IssuerConfig {
-    private String url;
+	private final int id;
+	private final String value;
 
-    public String getUrl() {
-        return url;
-    }
+	AuthenticationFlowEnum(int id, String value) {
+		this.id = id;
+		this.value = value;
+	}
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
+	public int getId() {
+		return id;
+	}
+
+	public String getValue() {
+		return value;
+	}
 }

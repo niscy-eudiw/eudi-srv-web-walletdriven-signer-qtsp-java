@@ -40,12 +40,8 @@ import COSE.AlgorithmID;
 import id.walt.mdoc.COSECryptoProviderKeyInfo;
 import id.walt.mdoc.SimpleCOSECryptoProvider;
 import id.walt.mdoc.cose.COSESign1;
-import id.walt.mdoc.dataelement.EncodedCBORElement;
 import id.walt.mdoc.dataretrieval.DeviceResponse;
 import id.walt.mdoc.doc.MDoc;
-import id.walt.mdoc.issuersigned.IssuerSignedItem;
-import id.walt.mdoc.mso.DigestAlgorithm;
-import id.walt.mdoc.mso.MSO;
 import id.walt.mdoc.mso.ValidityInfo;
 import kotlinx.datetime.Instant;
 import org.slf4j.Logger;
@@ -84,7 +80,7 @@ public class VPValidator {
 
         if (!presentation_submission.getString("definition_id").equals(this.presentationDefinitionId)) {
             logger.error("The definition_id from the presentation_submission doesn't match the expected {}", this.presentationDefinitionId);
-            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+            throw new OID4VPException(OID4VPEnumError.PRESENTATION_SUBMISSION_MISSING_DATA,
                   "The value of the definition_id in presentation_submission is not the supported.");
         }
         logger.info("Validated the definition_id of the presentation_submission.");
@@ -98,7 +94,7 @@ public class VPValidator {
 
         if (descriptor_map_response == null) {
             logger.error("None of the descriptor_map in the presentation_submission contains information about the requested VP Token.");
-            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+            throw new OID4VPException(OID4VPEnumError.PRESENTATION_SUBMISSION_MISSING_DATA,
                   "None of the descriptor_map in the presentation_submission contains information about the requested VP Token.");
         }
         logger.info("Found the descriptor_map in the presentation_submission.");
@@ -106,7 +102,7 @@ public class VPValidator {
         if (!descriptor_map_response.getString("format").equals("mso_mdoc")) {
             logger.error("The VP Token format is {}. However, the current implementation only supports vp_token in the format mso_mdoc.",
                   descriptor_map_response.getString("format"));
-            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+            throw new OID4VPException(OID4VPEnumError.PRESENTATION_SUBMISSION_MISSING_DATA,
                   "VP Token received is not a mso_mdoc. The current implementation only supports vp_token in the format mso_mdoc.");
         }
         logger.info("Validated that the VP Token is in the supported format: mso_mdoc.");
@@ -135,7 +131,7 @@ public class VPValidator {
 
         if (pos == -1){
             logger.error("The path value was not found in the descriptor_map of the presentation_submission.");
-            throw new OID4VPException(OID4VPEnumError.PresentationSubmissionMissingData,
+            throw new OID4VPException(OID4VPEnumError.PRESENTATION_SUBMISSION_MISSING_DATA,
                   "The path value was not found in the descriptor_map of the presentation_submission.");
         }
 
@@ -169,7 +165,7 @@ public class VPValidator {
         X509Certificate issuerCertificate = this.trustedIssuersCertificate.getTrustIssuersCertificates().get(cert.getIssuerX500Principal().toString());
         if (issuerCertificate == null) {
             logger.error("The issuer certificate of the IssuerAuth of the VP Token is not one of the trusted certificates.");
-            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid,
+            throw new OID4VPException(OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID,
                   "The issuer certificate of the IssuerAuth is not trustworthy.");
         }
 
@@ -179,7 +175,7 @@ public class VPValidator {
         } catch (Exception e){
 			logger.error("Failed to validate the issuer certificate. Issuer Certificate: {}. Validaty: Not After = {} Not Before = {}",
                   issuerCertificate.getIssuerX500Principal().getName(), issuerCertificate.getNotAfter().toString(), issuerCertificate.getNotBefore().toString());
-            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the issuer of the IssuerAuth is not valid.");
+            throw new OID4VPException(OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID, "The certificate of the issuer of the IssuerAuth is not valid.");
         }
 
         try {
@@ -188,7 +184,7 @@ public class VPValidator {
         }catch (Exception e){
 			logger.error("Failed to validate the certificate. Certificate: {}. Validaty: Not After = {} Not Before = {}",
                   cert.getSubjectX500Principal().getName(), cert.getNotAfter().toString(), cert.getNotBefore().toString());
-            throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "The certificate of the IssuerAuth is not valid.");
+            throw new OID4VPException(OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID, "The certificate of the IssuerAuth is not valid.");
         }
 
         List<X509Certificate> certificateChain = new ArrayList<>();
@@ -207,17 +203,17 @@ public class VPValidator {
 
     private static void validateValidityInfoElements(MDoc document, ValidityInfo validityInfo, java.time.Instant notBefore, java.time.Instant notAfter) throws VerifiablePresentationVerificationException {
         if (!document.verifyValidity()) { // This function verifies the Validity, based on validity info given in the MSO.
-            throw new VerifiablePresentationVerificationException(OID4VPEnumError.ValidityInfoInvalid,
+            throw new VerifiablePresentationVerificationException(OID4VPEnumError.VALIDITY_INFO_INVALID,
                     "Failed the ValidityInfo verification step: the ValidFrom or the ValidUntil from the IssuerAuth is later than the current time.",
-                    VerifiablePresentationVerificationException.Default);
+                    VerifiablePresentationVerificationException.DEFAULT);
         }
 
         Instant validity_info_signed = validityInfo.getSigned().getValue();
         Instant certNotBefore = new Instant(notBefore);
         Instant certNotAfter = new Instant(notAfter);
         if (validity_info_signed.compareTo(certNotAfter) > 0 || validity_info_signed.compareTo(certNotBefore) < 0)
-            throw new VerifiablePresentationVerificationException(OID4VPEnumError.ValidityInfoInvalid,
-                    "Failed the ValidityInfo verification step: the Signed in the IssuerAuth is not valid.", VerifiablePresentationVerificationException.Default);
+            throw new VerifiablePresentationVerificationException(OID4VPEnumError.VALIDITY_INFO_INVALID,
+                    "Failed the ValidityInfo verification step: the Signed in the IssuerAuth is not valid.", VerifiablePresentationVerificationException.DEFAULT);
     }
 
     public MDoc loadAndVerifyDocumentForVP() throws OID4VPException {
@@ -234,7 +230,7 @@ public class VPValidator {
             // Verify that the status in the vpToken is equal "success"
             if (vpToken.getStatus().getValue().intValue() != 0) {
                 logger.error("The value of status in the vp_token is {} and invalid.", vpToken.getStatus().getValue().intValue());
-                throw new OID4VPException(OID4VPEnumError.StatusVPTokenInvalid,
+                throw new OID4VPException(OID4VPEnumError.STATUS_VP_TOKEN_INVALID,
                       "The vp_token's status is not equal to a successful status (0).");
             }
             logger.info("Validated the value of status in the vp_token.");
@@ -253,13 +249,13 @@ public class VPValidator {
                 provider = getSimpleCOSECryptoProvider(certificateFromIssuerAuth, certificateChain);
             } catch (CertificateException e) {
                 logger.error("Failed to validate the certificate in the IssuerAuth. Error: {}", e.getMessage());
-                throw new OID4VPException(OID4VPEnumError.CertificateIssuerAuthInvalid, "Unexpected Error when trying to validate the certificate in the IssuerAuth.");
+                throw new OID4VPException(OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID, "Unexpected Error when trying to validate the certificate in the IssuerAuth.");
             }
             logger.info("Validated the certificate in the IssuerAuth.");
 
             if (!document.verifyCertificate(provider, this.keyID))
-                throw new VerifiablePresentationVerificationException(OID4VPEnumError.CertificateIssuerAuthInvalid,
-                      "Certificate in issuerAuth is not valid.", VerifiablePresentationVerificationException.Default);
+                throw new VerifiablePresentationVerificationException(OID4VPEnumError.CERTIFICATE_ISSUER_AUTH_INVALID,
+                      "Certificate in issuerAuth is not valid.", VerifiablePresentationVerificationException.DEFAULT);
 
             // Verify the ValidityInfo:
             /*MSO mso = document.getMSO();
@@ -290,11 +286,11 @@ public class VPValidator {
         }
         catch (JSONException e){
 			logger.error("JSONException found. Error: {}", e.getMessage());
-            throw new OID4VPException(OID4VPEnumError.UnexpectedError, "The JSON string contains unexpected errors ("+e.getMessage()+").");
+            throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "The JSON string contains unexpected errors ("+e.getMessage()+").");
         }
         catch (Exception e){
-			logger.error("{} : {}", OID4VPEnumError.UnexpectedError.getFormattedMessage(), e.getMessage());
-            throw new OID4VPException(OID4VPEnumError.UnexpectedError, e.getMessage());
+			logger.error("{} : {}", OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage(), e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, e.getMessage());
         }
     }
 }

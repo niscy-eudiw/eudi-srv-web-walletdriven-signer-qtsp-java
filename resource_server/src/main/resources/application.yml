@@ -18,8 +18,12 @@ server:
     include-message: always
 
 spring:
+  #config:
+  #  import: file:.env[.properties]
   datasource:
-    url: jdbc:mysql://localhost:3306/qtsp?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:mysql://${SPRING_DATASOURCE_DB_URL}/${SPRING_DATASOURCE_DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -33,11 +37,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
-
   profiles:
     include:
-      - "ejbca"
-      - "auth"
+      - "crypto"
 
   application:
     name: qtsp
@@ -47,8 +49,12 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8084/oauth2/jwks
-          issuer-uri: http://localhost:8084
+          jwk-set-uri: ${AUTHORIZATION_SERVER_JWT_SET_URI}/oauth2/jwks
+          issuer-uri: ${AUTHORIZATION_SERVER_ISSUER_URI}
+
+auth:
+  dbEncryptionPassphrase: ${DB_ENCRYPTION_PASSPHRASE}
+  dbEncryptionSalt: ${DB_ENCRYPTION_SALT}
 
 info:
   specs: "2.0.0.0"
@@ -103,3 +109,31 @@ logging:
     org.springframework.web: INFO
     org.springframework.security: INFO
     org.springframework.security.oauth2: INFO
+
+ejbca:
+  cahost: ${EJBCA_HOST}
+  clientP12ArchiveFilepath: ${EJBCA_CLIENT_P12_FILEPATH}
+  clientP12ArchivePassword: ${EJBCA_CLIENT_P12_PASSWORD}
+  managementCA: ${EJBCA_MANAGEMENT_CA}
+  endpoint: /certificate/pkcs10enroll
+  certificateProfileName: ${EJBCA_CERTIFICATE_PROFILE_NAME}
+  endEntityProfileName: ${EJBCA_END_ENTITY_PROFILE_NAME}
+  username: ${EJBCA_USERNAME}
+  password: ${EJBCA_PASSWORD}
+  includeChain: true
+
+  countries:
+    - country: CZ
+      certificateAuthorityName: PID Issuer CA - CZ 02
+    - country: EE
+      certificateAuthorityName: PID Issuer CA - EE 02
+    - country: EU
+      certificateAuthorityName: PID Issuer CA - EU 02
+    - country: LU
+      certificateAuthorityName: PID Issuer CA - LU 02
+    - country: NL
+      certificateAuthorityName: PID Issuer CA - NL 02
+    - country: PT
+      certificateAuthorityName: PID Issuer CA - PT 02
+    - country: default
+      certificateAuthorityName: PID Issuer CA - UT 02

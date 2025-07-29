@@ -247,14 +247,12 @@ public class CredentialsService {
      * @param name the full name of the user to be used as CN
      * @param issuingCountry the country to be used in the certificate
      */
-    public void createECDSAP256Credential(String userHash, String givenName, String surname, String name, String issuingCountry)
-          throws Exception{
+    public void createECDSAP256Credential(String userHash, String givenName, String surname, String name, String issuingCountry) throws Exception{
         Credentials credential = new Credentials();
         KeyPairRegister keyValues = this.keysService.generateP256KeyPair();
         logger.info("Generated P256 keypair.");
 
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(keyValues.getPublicKeyValue(), givenName,
-              surname, name, issuingCountry, keyValues.getPrivateKeyBytes());
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(keyValues.getPublicKeyValue(), givenName, surname, name, issuingCountry, keyValues.getPrivateKeyBytes());
         logger.info("Generated certificate and retrieved the chain certificate.");
         X509Certificate signingCertificate = EJBCACertificates.get(0);
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
@@ -278,8 +276,6 @@ public class CredentialsService {
         List<String> keyAlgo = new ArrayList<>();
         keyAlgo.add("1.2.840.10045.2.1"); // ecPublicKey
         keyAlgo.add("1.2.840.10045.4.3.2"); // ecdsa-with-SHA256
-        //keyAlgo.add("1.2.840.10045.4.3.3"); // ecdsa-with-SHA384
-        //keyAlgo.add("1.2.840.10045.4.3.4"); // ecdsa-with-SHA512
         credential.setKeyAlgo(keyAlgo);
         credential.setKeyLen(256);
         credential.setKeyCurve("1.2.840.10045.3.1.7");

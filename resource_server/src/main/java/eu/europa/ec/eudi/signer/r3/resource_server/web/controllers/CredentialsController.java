@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoProperties;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.CredentialsConfig;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.CredentialsService;
@@ -46,10 +47,10 @@ public class CredentialsController {
     private final CryptoUtils cryptoUtils;
     private static final Logger logger = LoggerFactory.getLogger(CredentialsController.class);
 
-    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig) throws Exception {
+    public CredentialsController(@Autowired CredentialsService credentialsService, @Autowired CredentialsConfig credentialsConfig, @Autowired CryptoProperties cryptoProperties) {
         this.credentialsService = credentialsService;
         this.credentialsConfig = credentialsConfig;
-        this.cryptoUtils = new CryptoUtils();
+        this.cryptoUtils = new CryptoUtils(cryptoProperties);
     }
 
     /***
@@ -65,8 +66,7 @@ public class CredentialsController {
         if(logger.isTraceEnabled()) auxDebugLogs(claims);
 
         String userHash = claims.get("sub").toString();
-        logger.trace("Request received at /csc/v2/credentials/list with the body {} from the user {}",
-              listRequestDTO.toString(), userHash);
+        logger.info("Request received at /csc/v2/credentials/list with the body {} from the user {}", listRequestDTO.toString(), userHash);
 
         if(userHash == null) userMissingError();
 
@@ -76,11 +76,11 @@ public class CredentialsController {
         }
 
         String givenName = claims.get("givenName").toString();
-        logger.trace("givenName: {}", givenName);
+        logger.info("givenName: {}", givenName);
         String surname = claims.get("surname").toString();
-        logger.trace("surname: {}", surname);
+        logger.info("surname: {}", surname);
         String issuingCountry = claims.get("issuingCountry").toString();
-        logger.trace("issuingCountry: {}", issuingCountry);
+        logger.info("issuingCountry: {}", issuingCountry);
 
         try {
             CredentialsListResponse credentialsListResponse = new CredentialsListResponse();
@@ -108,18 +108,13 @@ public class CredentialsController {
             logger.info("Added the list of available credentials ID to the response.");
 
             if(listRequestDTO.getCredentialInfo()){
-                // return the main information included in the public key certificate
-                // and the public key certificate or the certificate chain
-                List<CredentialsListResponse.CredentialInfo> ci = credentialsService.getCredentialInfo(
-                      listAvailableCredentialsId, listRequestDTO.getCertificates(),
-                      listRequestDTO.getCertInfo(), listRequestDTO.getAuthInfo());
+                List<CredentialsListResponse.CredentialInfo> ci = credentialsService.getCredentialInfo(listAvailableCredentialsId, listRequestDTO.getCertificates(), listRequestDTO.getCertInfo(), listRequestDTO.getAuthInfo());
                 credentialsListResponse.setCredentialInfos(ci);
                 logger.info("Added the credentials info to the response.");
             }
             return credentialsListResponse;
         }
         catch (Exception e){
-            e.printStackTrace();
             logger.error(e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request");
         }
@@ -151,10 +146,10 @@ public class CredentialsController {
         if(logger.isTraceEnabled()) auxDebugLogs(claims);
 
         String userHash = claims.get("sub").toString();
-        logger.trace("Request received at /csc/v2/credentials/info with the body {} from the user {}",
-              infoRequestDTO.toString(), userHash);
-
+        logger.info("Request received at /csc/v2/credentials/info with the body {} from the user {}", infoRequestDTO.toString(), userHash);
         if(userHash == null) userMissingError();
+
+        logger.info("Request Info from Credential {}", infoRequestDTO.getCredentialID());
 
         if(!credentialsService.credentialBelongsToUser(userHash, infoRequestDTO.getCredentialID())){
             logger.error("Invalid Request: CredentialID doesn't belong to the {}", userHash);
@@ -162,9 +157,7 @@ public class CredentialsController {
         }
 
         try {
-            CredentialsInfoResponse credentialsInfoResponse = credentialsService.getCredentialInfoFromSingleCredential(
-                  infoRequestDTO.getCredentialID(), infoRequestDTO.getCertificates(), infoRequestDTO.getCertInfo(),
-                  infoRequestDTO.getAuthInfo());
+            CredentialsInfoResponse credentialsInfoResponse = credentialsService.getCredentialInfoFromSingleCredential(infoRequestDTO.getCredentialID(), infoRequestDTO.getCertificates(), infoRequestDTO.getCertInfo(), infoRequestDTO.getAuthInfo());
             logger.info("Obtained CredentialsInfo of the CredentialId {}", infoRequestDTO.getCredentialID());
             return credentialsInfoResponse;
         }

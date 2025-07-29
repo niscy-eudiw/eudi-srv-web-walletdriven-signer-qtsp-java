@@ -10,8 +10,8 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
@@ -30,7 +30,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 	private final OpenIdForVPService openIdForVPService;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
-	private final Logger logger = LogManager.getLogger(OID4VPCrossDeviceAuthenticationFilter.class);
+	private final Logger logger = LoggerFactory.getLogger(OID4VPCrossDeviceAuthenticationFilter.class);
 
 	public OID4VPCrossDeviceAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient, OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
 		super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
@@ -71,7 +71,7 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 		}
 		catch (OID4VPException e){
 			logger.error(e.getFormattedMessage());
-			if(e.getError().equals(OID4VPEnumError.VPTokenMissingValues))
+			if(e.getError().equals(OID4VPEnumError.VP_TOKEN_MISSING_VALUES))
 				throw new AuthenticationServiceException(e.getMessage());
 			else if(!Objects.equals(e.getError().getAdditionalInformation(), "")){ // if there are additional information, sends the code to exception handler
 				throw new AuthenticationServiceException(e.getError().getCode());
@@ -80,13 +80,13 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 		}
 		catch (InterruptedException e){
 			logger.error("Unexpected error: {}", e.getMessage());
-			throw new AuthenticationServiceException(OID4VPEnumError.UnexpectedError.getFormattedMessage());
+			throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
 		}
 		catch (URISyntaxException e){
 			logger.error("Unable to add additional information to Authentication Token, " +
 				  "because the URL to return to after OID4VP Authentication is incorrectly formatted.");
 			logger.error(e.getMessage());
-			throw new AuthenticationServiceException(OID4VPEnumError.UnexpectedError.getFormattedMessage());
+			throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
 		}
 	}
 }

@@ -4,13 +4,13 @@ import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +29,13 @@ import java.util.Map;
 
 @Controller
 public class OID4VPController {
-
-	private final Logger logger = LogManager.getLogger(OID4VPController.class);
+	private final Logger logger = LoggerFactory.getLogger(OID4VPController.class);
 	private final VerifierClient verifierClient;
-	private final OAuth2IssuerConfig issuerConfig;
+	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting tokenSetting;
 
-	public OID4VPController(@Autowired VerifierClient verifierClient,  @Autowired OAuth2IssuerConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
+	public OID4VPController(@Autowired VerifierClient verifierClient, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
 		this.verifierClient = verifierClient;
 		this.issuerConfig = issuerConfig;
 		this.sessionUrlRelationList = sessionUrlRelationList;
@@ -46,7 +45,7 @@ public class OID4VPController {
 	@GetMapping("/oid4vp/cross-device")
 	public String getOID4VPCrossDevicePage(Model model, @RequestParam String sessionId){
 		try {
-			String serviceUrl = this.issuerConfig.getUrl();
+			String serviceUrl = this.issuerConfig.getServiceURL();
 			String sanitizeCookieString = WebUtils.getSanitizedCookieString(sessionId);
 			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookieString);
 

@@ -16,11 +16,10 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2IssuerConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.UserTestLoginFormConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.controller.OID4VPController;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
@@ -28,6 +27,8 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.S
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationFailureHandler;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler.OID4VPAuthenticationSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -56,8 +57,11 @@ import java.util.List;
 @Configuration(proxyBeanMethods = false)
 public class DefaultSecurityConfig implements WebMvcConfigurer {
 
+	private final Logger logger = LoggerFactory.getLogger(DefaultSecurityConfig.class);
+
+
 	@Bean
-	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, OAuth2IssuerConfig issuerConfig,
+	public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, ServiceURLConfig issuerConfig,
 														  OID4VPSameDeviceAuthenticationFilter sameDeviceAuthenticationFilter,
 														  OID4VPCrossDeviceAuthenticationFilter crossDeviceAuthenticationFilter,
 														  CorsConfigurationSource corsConfigurationSource) throws Exception {
@@ -77,7 +81,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 			  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			  .addFilterBefore(sameDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 			  .addFilterBefore(crossDeviceAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getUrl())))
+			  .formLogin(f->f.successHandler(new SuccessfulLoginAuthentication(issuerConfig.getServiceURL())))
 			  .exceptionHandling(ex ->
 					ex
 						  .accessDeniedHandler((request, response, accessDeniedException) -> {
@@ -89,11 +93,13 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 							  response.getWriter().write("Unauthorized");
 						  })
 			  );
+		logger.info("Setup the default security filter chain.");
 		return http.build();
 	}
 
 	@Bean
 	CorsConfigurationSource corsConfigurationSource() {
+		logger.info("Setting up CORS Configuration.");
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of("*"));
 		configuration.setAllowedMethods(List.of("*"));
@@ -115,19 +121,15 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 	}
 
 	@Bean
-	public CustomUserDetailsService userDetailsService(UserRepository userRepository, UserTestLoginFormConfig userTest){
-		if(!userTest.isEmpty()){
-			User tester = new User(userTest.getFamilyName(), userTest.getGivenName(), userTest.getBirthDate(), userTest.getIssuingCountry(), userTest.getIssuanceAuthority(), userTest.getRole());
-			tester.setPassword(userTest.getPassword());
-
-			if(userRepository.findByHash(tester.getHash()).isEmpty())
-				userRepository.save(tester);
-		}
+	public CustomUserDetailsService userDetailsService(UserRepository userRepository){
+		logger.info("Setting up UserDetailsService");
+		logger.info(String.valueOf(userRepository.getClass()));
 		return new CustomUserDetailsService(userRepository);
 	}
 
 	@Bean
 	public AuthenticationManager authenticationManager(CustomUserDetailsService userDetailsService) {
+		logger.info("Setting up authentication manager.");
 		OID4VPAuthenticationProvider authenticationManagerProvider = new OID4VPAuthenticationProvider(userDetailsService);
 
 		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
@@ -137,18 +139,22 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 
 		List<AuthenticationProvider> providers = new ArrayList<>();
 		providers.add(authenticationManagerProvider);
+		logger.info("Added Provider: OID4VPAuthenticationProvider");
 		providers.add(daoAuthenticationProvider);
+		logger.info("Added Provider: DaoAuthenticationProvider");
 
 		return new ProviderManager(providers);
 	}
 
 	@Bean
 	public OID4VPAuthenticationSuccessHandler customAuthenticationSuccessHandler(SessionUrlRelationList sessionUrlRelationList){
+		logger.info("Setting up OID4VPAuthenticationSuccessHandler");
 		return new OID4VPAuthenticationSuccessHandler(sessionUrlRelationList);
 	}
 
 	@Bean
 	public OID4VPAuthenticationFailureHandler customAuthenticationFailureHandler(){
+		logger.info("Setting up OID4VPAuthenticationFailureHandler");
 		return new OID4VPAuthenticationFailureHandler();
 	}
 
@@ -162,6 +168,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
+		logger.info("Setting up OID4VPSameDeviceAuthenticationFilter");
 		return filter;
 	}
 
@@ -175,6 +182,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
+		logger.info("Setting up OID4VPCrossDeviceAuthenticationFilter");
 		return filter;
 	}
 }

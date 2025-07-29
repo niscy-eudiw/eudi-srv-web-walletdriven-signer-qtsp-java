@@ -19,11 +19,11 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.exception;
 
 public class VerifiablePresentationVerificationException extends Exception {
 
-    public static final int Default = -1;
+    public static final int DEFAULT = -1;
 
-    public static final int Signature = 8;
+    public static final int SIGNATURE = 8;
 
-    public static final int Integrity = 9;
+    public static final int INTEGRITY = 9;
 
     private final int type;
 
@@ -32,12 +32,12 @@ public class VerifiablePresentationVerificationException extends Exception {
     public VerifiablePresentationVerificationException(OID4VPEnumError error, String message, int type) {
         super("Verification of the Verifiable Presentation Failed: " + message);
 
-        if (type == Signature) {
-            this.type = Signature;
-        } else if (type == Integrity) {
-            this.type = Integrity;
+        if (type == SIGNATURE) {
+            this.type = SIGNATURE;
+        } else if (type == INTEGRITY) {
+            this.type = INTEGRITY;
         } else
-            this.type = Default;
+            this.type = DEFAULT;
 
         this.error = error;
     }
