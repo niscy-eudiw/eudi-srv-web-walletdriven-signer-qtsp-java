@@ -1,7 +1,7 @@
 # Changelog
 
-## [0.5.0]
-_29 Jul 2025_
+## [0.4.1]
+_30 Jul 2025_
 
 ### Added:
 - Additional logging and debug messages to aid troubleshooting.
