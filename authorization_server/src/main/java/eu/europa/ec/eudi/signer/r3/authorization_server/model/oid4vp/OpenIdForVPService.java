@@ -24,8 +24,13 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepositor
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import id.walt.mdoc.doc.MDoc;
 import id.walt.mdoc.issuersigned.IssuerSignedItem;
+
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -40,16 +45,65 @@ public class OpenIdForVPService {
     private final UserRepository repository;
     private final TrustedIssuersCertificateConfig trustedCertificatesConfig;
     private final VerifierClient verifierClient;
+    private final TransactionDataService transactionDataService;
+
 
     public OpenIdForVPService(@Autowired UserRepository repository,
                               @Autowired TrustedIssuersCertificateConfig trustedCertificatesConfig,
-                              @Autowired VerifierClient verifierClient) {
+                              @Autowired VerifierClient verifierClient,
+                              @Autowired TransactionDataService transactionDataService) {
         this.repository = repository;
         this.trustedCertificatesConfig = trustedCertificatesConfig;
         this.verifierClient = verifierClient;
+        this.transactionDataService = transactionDataService;
     }
 
     public record UserOIDTemporaryInfo(User user, String givenName, String familyName){}
+
+    public String getCrossDeviceRedirectLink(String urlToReturnTo, String sanitizeCookie, String serviceUrl) throws Exception {
+        JSONArray transactionData = transactionDataService.getTransactionData(urlToReturnTo);
+        log.info("Transaction_Data: {}", transactionData);
+        String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
+        log.info("Retrieved the redirect link for cross device authentication.");
+        return redirectLink;
+    }
+
+    public String getSameDeviceRedirectLink(HttpServletRequest request, String sanitizeCookie, String serviceUrl) throws Exception {
+        JSONArray transactionData = transactionDataService.getTransactionData(request);
+        log.info("Transaction_Data: {}", transactionData);
+        String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
+        log.info("Retrieved the redirect link for cross device authentication.");
+        return redirectLink;
+    }
+
+    /**
+     * Function that allows to retrieve the VP Token from the OID4VP Verifier, validate the 'transaction_data' if the value is present
+     * and returns an 'OID4VPAuthenticationToken'
+     * @param sessionId identifier of the session
+     * @param url the request url
+     * @return an unauthenticated 'OID4VPAuthenticationToken'
+     */
+    public OID4VPAuthenticationToken pollVPTokenAndCreateOID4VPAuthToken(String sessionId, URI url) throws OID4VPException, InterruptedException {
+        String messageFromVerifier = this.verifierClient.getVPTokenFromVerifierRecursive(sessionId);
+        log.info("VP Token received: {}", messageFromVerifier);
+
+        transactionDataService.validateTransactionData(messageFromVerifier, url);
+        log.info("Validated Transaction Data.");
+
+		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
+    }
+
+    public OID4VPAuthenticationToken getVPTokenAndCreateOID4VPAuthToken(String sessionId, String code, URI url) throws OID4VPException {
+        // Returns OID4VPException with a correctly formatted messages from the Error.description
+        String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
+        log.info("VP Token received: {}", messageFromVerifier);
+
+        transactionDataService.validateTransactionData(messageFromVerifier, url);
+        log.info("Validated Transaction Data.");
+
+        // Returns OID4VPException with a correctly formatted messages from the Error.description
+		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
+    }
 
     /**
      * Function that allows to load a User object from the VP Token received from the Verifier.
@@ -57,7 +111,7 @@ public class OpenIdForVPService {
      * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
      * @return an unauthenticated token with information about the user to authenticate
      */
-    public OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws OID4VPException {
+    private OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws OID4VPException {
         log.info("Starting to load VP Token from Verifier Response...");
 
         JSONObject vpToken;
@@ -80,7 +134,7 @@ public class OpenIdForVPService {
         return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
     }
 
-    public OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier) throws OID4VPException {
+    private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier) throws OID4VPException {
         log.info("Starting to load VP Token from Verifier Response...");
 
         JSONObject vpToken;
@@ -101,10 +155,10 @@ public class OpenIdForVPService {
 		UserOIDTemporaryInfo user = loadUserFromDocument(pidAttributes);
         log.trace("Created an object User with the information from the VP Token.");
 
-        return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
+        OID4VPAuthenticationToken unauthenticatedToken = OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
+        log.info("Created an unauthenticated OID4VP Token.");
+        return unauthenticatedToken;
     }
-
-
 
     private UserOIDTemporaryInfo loadUserFromDocument(JSONObject document) throws OID4VPException {
         String familyName = document.getString("family_name");
@@ -163,8 +217,6 @@ public class OpenIdForVPService {
         log.info("Added an object User to the database.");
         return new UserOIDTemporaryInfo(user, givenName, familyName);
     }
-
-
 
     private void addUserToDatabase(User userFromVerifierResponse) {
         Optional<User> userInDatabase = repository.findByHash(userFromVerifierResponse.getHash());

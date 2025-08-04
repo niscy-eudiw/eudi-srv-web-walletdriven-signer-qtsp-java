@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEn
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
@@ -45,16 +44,14 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
     private static final AntPathRequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/callback", "GET");
-    private final VerifierClient verifierClient;
     private final OpenIdForVPService openIdForVPService;
     private final SessionUrlRelationList sessionUrlRelationList;
     private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
     private final Logger logger = LoggerFactory.getLogger(OID4VPSameDeviceAuthenticationFilter.class);
 
-    public OID4VPSameDeviceAuthenticationFilter(AuthenticationManager authenticationManager, VerifierClient verifierClient,
+    public OID4VPSameDeviceAuthenticationFilter(AuthenticationManager authenticationManager,
                                                 OpenIdForVPService openId4VPService, SessionUrlRelationList sessionUrlRelationList){
         super(DEFAULT_ANT_PATH_REQUEST_MATCHER, authenticationManager);
-        this.verifierClient = verifierClient;
         this.openIdForVPService = openId4VPService;
         this.sessionUrlRelationList = sessionUrlRelationList;
     }
@@ -72,21 +69,17 @@ public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthentication
         String sanitizedSessionId = WebUtils.getSanitizedCookieString(sessionId);
 
         try {
-            // Returns OID4VPException with a correctly formatted messages from the Error.description
-            String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sanitizedSessionId, code);
-            logger.info("Retrieved the VP Token from the Verifier.");
-            logger.debug("VP Token received: {}", messageFromVerifier);
+            String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId).getUrlToReturnTo();
+            URI url = new URI(urlToReturnTo);
 
             // Returns OID4VPException with a correctly formatted messages from the Error.description
-            OID4VPAuthenticationToken unauthenticatedToken = openIdForVPService.loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
+            OID4VPAuthenticationToken unauthenticatedToken = this.openIdForVPService.getVPTokenAndCreateOID4VPAuthToken(sanitizedSessionId, code, url);
             logger.info("Generated unauthenticated AuthenticationManagerToken: {}", unauthenticatedToken.getHash());
 
             // Returns AuthenticationServiceException with a correctly formatted messages
             OID4VPAuthenticationToken authenticatedToken = (OID4VPAuthenticationToken) this.getAuthenticationManager().authenticate(unauthenticatedToken);
             logger.info("Generated authenticate AuthenticationManagerToken: {}", ((UserPrincipal)authenticatedToken.getPrincipal()).getUsername());
 
-            String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId).getUrlToReturnTo();
-            URI url = new URI(urlToReturnTo);
             this.commonTokenSetting.setCommonParameters(authenticatedToken, url);
             logger.info("Added additional parameters to the Authentication Token.");
 

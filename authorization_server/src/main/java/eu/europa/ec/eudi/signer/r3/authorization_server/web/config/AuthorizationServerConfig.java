@@ -28,6 +28,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
@@ -104,7 +105,7 @@ public class AuthorizationServerConfig {
 
 	@Bean
 	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, VerifierClient verifierClient,
+	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, OpenIdForVPService openIdForVPService,
 																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
 																	  ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
 																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
@@ -141,7 +142,7 @@ public class AuthorizationServerConfig {
 
 		http
 			.exceptionHandling((exceptions) -> {
-				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(verifierClient, issuerConfig, sessionUrlRelationList);
+				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
 					String client_id = request.getParameter(clientId);
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();

@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -29,29 +30,30 @@ public class CommonTokenSetting {
 
 	public void setCommonParameters(ICommonTokenStructure token, URI url){
 		Map<String, String> queryValues = getQueryValues(url);
+		OAuth2AuthorizeRequest requestValues = OAuth2AuthorizeRequest.from(url);
 
-		String client_id = getClientIdFromOAuth2Request(queryValues);
+		String client_id = requestValues.getClient_id();
 		if(client_id != null) token.setClient_id(client_id);
 
-		String redirect_uri = getRedirectUriFromOAuth2Request(queryValues);
+		String redirect_uri = requestValues.getRedirect_uri();
 		if(redirect_uri != null) token.setRedirect_uri(redirect_uri);
 
-		String scope = getScopeFromOAuth2Request(queryValues);
+		String scope = requestValues.getScope();
 		token.setScope(scope);
 
-		String hashDocument = getHashDocumentFromOAuth2Request(queryValues);
+		String hashDocument = requestValues.getHashes();
 		if(hashDocument != null) token.setHashDocument(hashDocument);
 
-		String credentialId = getCredentialIDFromOAuth2Request(queryValues);
+		String credentialId = requestValues.getCredentialID();
 		if(credentialId != null) token.setCredentialID(credentialId);
 
-		String hashAlgorithmOID = getHashAlgorithmOIDFromOAuth2Request(queryValues);
+		String hashAlgorithmOID = requestValues.getHashAlgorithmOID();
 		if(hashAlgorithmOID != null) token.setHashAlgorithmOID(hashAlgorithmOID);
 
-		String numSignatures = getNumSignaturesFromOAuth2Request(queryValues);
+		String numSignatures = requestValues.getNumSignatures();
 		if(numSignatures != null) token.setNumSignatures(numSignatures);
 
-		String authorizationDetails = getAuthorizationDetailsFromOAuth2Request(queryValues);
+		String authorizationDetails = requestValues.getAuthorization_details();
 		if(authorizationDetails != null) token.setAuthorization_details(authorizationDetails);
 	}
 
@@ -72,40 +74,12 @@ public class CommonTokenSetting {
 		return queryPairs;
 	}
 
-	private String getClientIdFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("client_id");
-	}
-
-	private String getRedirectUriFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("redirect_uri");
-	}
-
 	public String getScopeFromOAuth2Request(Map<String, String> queryPairs) {
 		String scope = queryPairs.get("scope");
 		if(scope == null && queryPairs.get("authorization_details") != null)
 			scope = "credential";
 
 		return scope;
-	}
-
-	private String getHashDocumentFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("hashes");
-	}
-
-	private String getCredentialIDFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("credentialID");
-	}
-
-	private String getHashAlgorithmOIDFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("hashAlgorithmOID");
-	}
-
-	private String getNumSignaturesFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("numSignatures");
-	}
-
-	private String getAuthorizationDetailsFromOAuth2Request(Map<String, String> queryPairs){
-		return queryPairs.get("authorization_details");
 	}
 
 }

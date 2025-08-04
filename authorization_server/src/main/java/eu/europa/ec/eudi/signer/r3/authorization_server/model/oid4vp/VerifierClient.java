@@ -216,35 +216,6 @@ public class VerifierClient {
         return new JSONObject(presentationDefinition);
     }
 
-    public JSONArray getTransactionData(
-          String credentialID, String hashAlgorithmOID, JSONArray documentDigestsRequested){
-        JSONArray transaction_data = new JSONArray();
-
-        JSONObject transaction_data_object = new JSONObject();
-        transaction_data_object.put("type", "qes_authorization");
-
-        List<String> credentials_ids = new ArrayList<>();
-        credentials_ids.add(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
-        transaction_data_object.put("credential_ids", credentials_ids);
-
-        transaction_data_object.put("credentialID", credentialID);
-
-        JSONArray documentDigests = new JSONArray();
-        for(int i = 0; i < documentDigestsRequested.length(); i++){
-            JSONObject jsonObject = documentDigestsRequested.getJSONObject(i);
-            JSONObject documentDigestSingle = new JSONObject();
-            documentDigestSingle.put("label", jsonObject.get("label"));
-            documentDigestSingle.put("DTBS/R", jsonObject.get("hash"));
-            documentDigestSingle.put("DTBS/RHashAlgorithmOID", hashAlgorithmOID);
-            documentDigests.put(documentDigestSingle);
-        }
-        transaction_data_object.put("documentDigests", documentDigests);
-
-        // String transaction_data_string_base64 = Base64.getEncoder().encodeToString(transaction_data_object.toString().getBytes());
-        transaction_data.put(transaction_data_object);
-        return transaction_data;
-    }
-
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
         JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
@@ -327,8 +298,11 @@ public class VerifierClient {
 
         WebUtils.StatusAndMessage response = getVerifierResponse(url, headers);
 
-        if(response.getStatusCode() == 200)
-            return extractVPTokenOrThrow(response);
+        if(response.getStatusCode() == 200) {
+            String message = extractVPTokenOrThrow(response);
+            log.info("Retrieved the VP Token from the Verifier.");
+            return message;
+        }
         else{
 			log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", response.getStatusCode(), response.getMessage());
             throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "The OID4VP Verifier service is currently unavailable.");
@@ -350,8 +324,11 @@ public class VerifierClient {
             WebUtils.StatusAndMessage response = getVerifierResponse(url, headers);
             int status = response.getStatusCode();
 
-            if (status == 200)
-                return extractVPTokenOrThrow(response);
+            if (status == 200) {
+                String message = extractVPTokenOrThrow(response);
+                log.info("Retrieved the VP Token from the Verifier.");
+                return message;
+            }
             else if (status == 404 || status == 500) { // if unable to connect or exception...
                 log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", status, response.getMessage());
                 throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "The OID4VP Verifier service is currently unavailable.");

@@ -18,6 +18,12 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
+
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
@@ -245,6 +251,63 @@ public class OAuth2AuthorizeRequest {
         }
         if(request.getParameterValues(name).length != 1){
             throw new IllegalArgumentException("Too many values for the parameter: " + name);
+        }
+        return value;
+    }
+
+    public static OAuth2AuthorizeRequest from(URI url) {
+        Map<String, String> queryValues = getQueryValues(url);
+
+        OAuth2AuthorizeRequest authRequest = new OAuth2AuthorizeRequest();
+        authRequest.setResponse_type(getRequiredQueryValue(queryValues, "response_type"));
+        authRequest.setClient_id(getRequiredQueryValue(queryValues, "client_id"));
+        authRequest.setRedirect_uri(queryValues.get("redirect_uri"));
+        authRequest.setScope(queryValues.get("scope"));
+        authRequest.setAuthorization_details(queryValues.get("authorization_details"));
+        // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
+        if(authRequest.getScope() == null) {
+            if (authRequest.getAuthorization_details() == null)
+                authRequest.setScope("service");
+            else
+                authRequest.setScope("credential");
+        }
+        authRequest.setCode_challenge(getRequiredQueryValue(queryValues, "code_challenge"));
+        authRequest.setCode_challenge_method(queryValues.get("code_challenge_method"));
+        authRequest.setState(queryValues.get("state"));
+        authRequest.setRequest_uri(queryValues.get("request_uri"));
+        authRequest.setLang(queryValues.get("lang"));
+        authRequest.setCredentialID(queryValues.get("credentialID"));
+        authRequest.setSignatureQualifier(queryValues.get("signatureQualifier"));
+        authRequest.setNumSignatures(queryValues.get("numSignatures"));
+        authRequest.setHashes(queryValues.get("hashes"));
+        authRequest.setHashAlgorithmOID(queryValues.get("hashAlgorithmOID"));
+        authRequest.setDescription(queryValues.get("description"));
+        authRequest.setAccount_token(queryValues.get("account_token"));
+        authRequest.setClientData(queryValues.get("clientData"));
+        return authRequest;
+    }
+
+    private static Map<String, String> getQueryValues(URI url){
+        String query = url.getRawQuery();
+
+        Map<String, String> queryPairs = new HashMap<>();
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            if(idx != -1) {
+                String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
+                queryPairs.put(key, value);
+            }
+        }
+
+        return queryPairs;
+    }
+
+    private static String getRequiredQueryValue(Map<String, String> queryValues, String name) throws IllegalArgumentException {
+        String value = queryValues.get(name);
+        if (value == null || value.isBlank() || !StringUtils.hasText(value)) {
+            throw new IllegalArgumentException("Missing required parameter: " + name);
         }
         return value;
     }

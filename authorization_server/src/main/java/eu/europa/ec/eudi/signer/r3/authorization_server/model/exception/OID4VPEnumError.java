@@ -64,6 +64,9 @@ public enum OID4VPEnumError {
     FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER("failed_validate_vp_token_through_verifier",
           "It was impossible to validate the VP Token using the OID4VP Verifier.", 500),
 
+    FAILED_TO_VALIDATE_TRANSACTION_DATA("failed_to_validade_transaction_data",
+          OID4VPEnumError.general_message, 500),
+
     FAILED_TO_VALIDATE_VP_TOKEN("failed_validate_vp_token", "The validation step of the VP Token failed.", 500), // 500
 
     SIGNATURE_ISSUER_AUTH_INVALID("signature_issuerauth_invalid",
