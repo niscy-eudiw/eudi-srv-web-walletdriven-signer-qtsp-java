@@ -216,15 +216,53 @@ public class VerifierClient {
         return new JSONObject(presentationDefinition);
     }
 
+    private JSONObject getDCQLQueryJSON(){
+        String dcqlQuery = "{" +
+              "'credentials': [" +
+                "{" +
+                    "'id': 'query_0'," +
+                    "'format': 'mso_mdoc'," +
+                    "'meta': {'doctype_value': '"+PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"'}," +
+                    "'claims': [" +
+                        "{" +
+                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'family_name']," +
+                            "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'given_name']," +
+                            "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'birth_date']," +
+                            "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_authority']," +
+                            "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_country']," +
+                            "'intent_to_retain': false" +
+                        "}" +
+                    "]" +
+                "}" +
+              "]" +
+        "}";
+        return new JSONObject(dcqlQuery);
+    }
+
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
-        JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
+        JSONObject presentationDefinitionJSON = getPresentationDefinitionJSON();
+        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
+        // jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJSON);
+        jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
+        // jsonBodyToInitPresentation.put("request_uri_method", "post");
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         if(transaction_data != null)
             jsonBodyToInitPresentation.put("transaction_data", transaction_data);
@@ -232,13 +270,16 @@ public class VerifierClient {
     }
 
     private String getCrossDeviceMessage(String nonce, JSONArray transaction_data) {
-        JSONObject presentationDefinitionJsonObject = getPresentationDefinitionJSON();
+        JSONObject presentationDefinitionJSON = getPresentationDefinitionJSON();
+        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
+        //jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJSON);
+        jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
+        jsonBodyToInitPresentation.put("request_uri_method", "post");
         if(transaction_data != null)
             jsonBodyToInitPresentation.put("transaction_data", transaction_data);
         return jsonBodyToInitPresentation.toString();
