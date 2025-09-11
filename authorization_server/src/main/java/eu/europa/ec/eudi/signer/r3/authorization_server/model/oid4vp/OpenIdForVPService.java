@@ -70,7 +70,7 @@ public class OpenIdForVPService {
         }
         log.debug("VP Token: {}", vpToken);
 
-        VPValidator validator = new VPValidator(vpToken, VerifierClient.PRESENTATION_DEFINITION_ID, VerifierClient.PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID, this.trustedCertificatesConfig);
+        VPValidator validator = new VPValidator(vpToken, this.trustedCertificatesConfig);
         MDoc document = validator.loadAndVerifyDocumentForVP();
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
