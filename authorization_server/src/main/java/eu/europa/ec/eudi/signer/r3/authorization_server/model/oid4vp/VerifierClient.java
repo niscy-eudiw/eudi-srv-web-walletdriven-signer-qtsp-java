@@ -221,8 +221,8 @@ public class VerifierClient {
               "'credentials': [" +
                 "{" +
                     "'id': 'query_0'," +
-                    "'format': 'mso_mdoc'," +
-                    "'meta': {'doctype_value': '"+PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"'}," +
+                    "'format': 'vc+sd-jwt'," +
+                    "'meta': {\"vct_values\": [\"urn:eudi:pid:1\"]}," +
                     "'claims': [" +
                         "{" +
                             "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'family_name']," +
@@ -252,7 +252,6 @@ public class VerifierClient {
     }
 
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
-        JSONObject presentationDefinitionJSON = getPresentationDefinitionJSON();
         JSONObject dcqlQueryJSON = getDCQLQueryJSON();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
@@ -270,7 +269,6 @@ public class VerifierClient {
     }
 
     private String getCrossDeviceMessage(String nonce, JSONArray transaction_data) {
-        JSONObject presentationDefinitionJSON = getPresentationDefinitionJSON();
         JSONObject dcqlQueryJSON = getDCQLQueryJSON();
 
         // Set JSON Body
@@ -388,7 +386,7 @@ public class VerifierClient {
         return verifierProperties.getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce;
     }
 
-    public JSONObject validateDeviceResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
+    public JSONObject validateMSOMDocDeviceResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
         Map<String, String> headers = new HashMap<>();
         headers.put("accept", "application/json");
         headers.put("Content-Type", "application/x-www-form-urlencoded");
@@ -446,6 +444,69 @@ public class VerifierClient {
             }
             catch (IOException e){
 				log.error("Couldn't retrieve the error message from the failed validation response: {}", e.getMessage());
+                throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
+            }
+        }
+    }
+
+    public JSONObject validateSDJWTResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
+        Map<String, String> headers = new HashMap<>();
+        headers.put("accept", "application/json");
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+        String body = "device_response="+MSO_MDoc_Device_Response;
+
+        HttpResponse response;
+        try{
+            response = WebUtils.httpPostRequest(this.verifierProperties.getValidationUrl(), headers, body);
+        }
+        catch (Exception e){
+            log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "It wasn't possible to validate the Verifier Response.");
+        }
+
+        if(response.getStatusLine().getStatusCode() == 200){
+            log.info("Successfully validated verifier response (Status Code: 200).");
+
+            JSONArray responseVerifier;
+            try {
+                String result = WebUtils.convertStreamToString(response.getEntity().getContent());
+                responseVerifier = new JSONArray(result);
+                log.info("Parsed the validation response.");
+            }
+            catch (IOException e){
+                log.error("It was impossible to retrieve the content from the validation request to the OID4VP Verifier.");
+                throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
+            }
+            catch (JSONException e){
+                log.error("It was impossible to parse validation response as a JSON Array.");
+                throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The Verifier's validation response is not a valid JSON Array.");
+            }
+
+            for(int i = 0; i < responseVerifier.length(); i++){
+                JSONObject jsonObject = responseVerifier.getJSONObject(i);
+                if (!jsonObject.has("docType")){
+                    log.error("Expected 'docType' missing from the Verifier's Validation Endpoint response.");
+                    throw new OID4VPException(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER, "the validation of the OID4VP Verifier response failed because expected 'doctype' parameter is missing.");
+                }
+                if(jsonObject.get("docType").equals(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID)){
+                    log.info("Received attributes of the requested doctype {}", PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
+                    JSONObject attributes = jsonObject.getJSONObject("attributes").getJSONObject(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
+                    log.info("Retrieved attributes as a JSONObject.");
+                    return attributes;
+                }
+            }
+            log.error("Attributes of the requested 'doctype' not found in the validation response.");
+            throw new OID4VPException(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER, "the validation of the OID4VP Verifier response failed because expected 'attributes' parameter is missing.");
+        }
+        else{
+            try {
+                HttpEntity entity = response.getEntity();
+                String result = WebUtils.convertStreamToString(entity.getContent());
+                log.error("Failed to validate the Verifier Response with error message: {}", result);
+                throw new OID4VPException(OID4VPEnumError.FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER, "It was impossible to validate the VP Token. An error message was received from the OID4VP Verifier.");
+            }
+            catch (IOException e){
+                log.error("Couldn't retrieve the error message from the failed validation response: {}", e.getMessage());
                 throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
             }
         }

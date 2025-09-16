@@ -148,7 +148,7 @@ public class OpenIdForVPService {
         log.debug("VP Token: {}", vpToken);
 
         String MSOMDocDeviceResponse = vpToken.getJSONArray("vp_token").getString(0);
-        JSONObject pidAttributes = verifierClient.validateDeviceResponse(MSOMDocDeviceResponse);
+        JSONObject pidAttributes = verifierClient.validateMSOMDocDeviceResponse(MSOMDocDeviceResponse);
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
 		assert pidAttributes != null;
