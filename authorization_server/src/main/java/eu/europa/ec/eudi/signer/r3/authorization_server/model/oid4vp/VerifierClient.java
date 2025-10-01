@@ -83,8 +83,6 @@ public class VerifierClient {
         }
         log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
 
-
-
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
         if (!keys.contains(this.request_uri)){
