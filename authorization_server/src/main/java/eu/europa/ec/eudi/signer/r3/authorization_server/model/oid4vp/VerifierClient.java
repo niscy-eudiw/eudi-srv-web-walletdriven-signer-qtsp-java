@@ -47,7 +47,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class VerifierClient {
-    public static final String PRESENTATION_DEFINITION_ID = "32f54163-7166-48f1-93d8-ff217bdb0653";
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
 
     private final String request_uri = "request_uri";
@@ -83,8 +82,6 @@ public class VerifierClient {
         }
         log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
 
-
-
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
         if (!keys.contains(this.request_uri)){
@@ -106,7 +103,7 @@ public class VerifierClient {
         log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString(this.client_id);
         log.info("Client Id: "+ client_id);
-        if(!client_id.equals(this.verifierProperties.getClientId())) {
+        if(!client_id.contains(this.verifierProperties.getClientId())) {
             log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         }
@@ -154,7 +151,7 @@ public class VerifierClient {
         log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString(this.client_id);
         log.info("Client Id: "+ client_id);
-        if(!client_id.equals(this.verifierProperties.getClientId()))
+        if(!client_id.contains(this.verifierProperties.getClientId()))
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         String presentation_id = responseFromVerifier.getString(this.transaction_id);
         log.info("Transaction Id: "+presentation_id);
@@ -238,28 +235,43 @@ public class VerifierClient {
         return headers;
     }
 
-    private String getPresentationDefinition(){
-		return "{" +
-              "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
-              "'input_descriptors': [{" +
-              "'id': '"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"'," +
-              "'name': 'EUDI PID'," +
-              "'purpose': 'We need to verify your identity'," +
-              "'format': {'mso_mdoc': {" +
-              "'alg': ['ES256', 'ES384', 'ES512', 'EdDSA'] } }," +
-              "'constraints': {" +
-              "'fields': [" +
-              "{'path': [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['family_name']\"], 'intent_to_retain': true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['given_name']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['issuing_authority']\"], \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['issuing_country']\"], \"intent_to_retain\": true}" +
-              "]}}]}";
+    private JSONObject getDCQLQueryJSON(){
+        String dcqlQuery = "{" +
+              "'credentials': [" +
+                "{" +
+                    "'id': 'query_0'," +
+                    "'format': 'mso_mdoc'," +
+                    "'meta': {'doctype_value': '"+PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"'}," +
+                    "'claims': [" +
+                        "{" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'family_name']," +
+                        "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'given_name']," +
+                        "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'birth_date']," +
+                        "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_authority']," +
+                        "'intent_to_retain': false" +
+                        "}," +
+                        "{" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_country']," +
+                        "'intent_to_retain': false" +
+                        "}" +
+                    "]" +
+                "}" +
+              "]" +
+        "}";
+        return new JSONObject(dcqlQuery);
     }
 
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
-        String presentationDefinition = getPresentationDefinition();
-        JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
+        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
 
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
@@ -267,20 +279,19 @@ public class VerifierClient {
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
+        jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         return jsonBodyToInitPresentation.toString();
     }
 
     private String getCrossDeviceMessage(String nonce) {
-        String presentationDefinition = getPresentationDefinition();
-        JSONObject presentationDefinitionJsonObject = new JSONObject(presentationDefinition);
+        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJsonObject);
+        jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
         return jsonBodyToInitPresentation.toString();
     }
 

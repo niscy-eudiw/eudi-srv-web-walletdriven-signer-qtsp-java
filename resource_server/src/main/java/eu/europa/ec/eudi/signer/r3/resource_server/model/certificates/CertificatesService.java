@@ -35,6 +35,8 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.security.auth.x500.X500Principal;
 import java.io.*;
@@ -50,32 +52,15 @@ import java.util.*;
 public class CertificatesService {
     private final HsmService hsmService;
     private final EjbcaService ejbcaService;
+    private static final Logger logger = LoggerFactory.getLogger(CertificatesService.class);
 
     public CertificatesService(HsmService hsmService, EjbcaService ejbcaService){
         this.hsmService = hsmService;
         this.ejbcaService = ejbcaService;
     }
 
-    public String certificateToString(X509Certificate certificate) throws IOException {
-        try (StringWriter sw = new StringWriter();
-             JcaPEMWriter pemWriter = new JcaPEMWriter(sw)) {
-            pemWriter.writeObject(certificate);
-            pemWriter.flush();
-            return sw.toString();
-        }
-    }
-
     public String base64EncodeCertificate(X509Certificate certificate) throws Exception{
         return Base64.getEncoder().encodeToString(certificate.getEncoded());
-    }
-
-    public X509Certificate stringToCertificate(String certificateString) throws IOException, CertificateException {
-        try (StringReader stringReader = new StringReader(certificateString);
-             PEMParser pemParser = new PEMParser(stringReader)) {
-            Object object = pemParser.readObject();
-            return new JcaX509CertificateConverter()
-                  .getCertificate((X509CertificateHolder) object);
-        }
     }
 
     public X509Certificate base64DecodeCertificate(String certificate) throws Exception{
@@ -84,7 +69,6 @@ public class CertificatesService {
         CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
         return (X509Certificate)certFactory.generateCertificate(inputStream);
     }
-
 
     public List<X509Certificate> generateRSACertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues) throws Exception {
         return generateCertificates(publicKey, givenName, surname, subjectCN, countryCode, privateKeyValues, "RSA");
@@ -95,23 +79,26 @@ public class CertificatesService {
     }
 
     private List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues, String keyAlgorithm) throws Exception{
-        // Create a certificate Signing Request for the keys
+
         byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
+        logger.info("Retrieved Certificate Signing Request Information.");
 
         PKCS10CertificationRequest certificateHSM = generateCertificateRequest(privateKeyValues, csrInfo, keyAlgorithm);
         String certificateString = "-----BEGIN CERTIFICATE REQUEST-----\n" + new String(Base64.getEncoder().encode(certificateHSM.getEncoded())) + "\n" + "-----END CERTIFICATE REQUEST-----";
+        logger.info("Generated the Certificate Signing Request.");
 
         // Makes a request to the CA
         List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
+        logger.info("Retrieved the certificate and certificate chain from the CA.");
         if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
             throw new Exception("Certificates received from CA are not valid");
         }
+        logger.info("Validated the certificate and certificate chain received from the CA.");
         return certificateAndCertificateChain;
     }
 
 
-    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName,
-                                                  String countryName) throws Exception {
+    private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName, String countryName) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
         SubjectPublicKeyInfo pki = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
 
@@ -121,6 +108,7 @@ public class CertificatesService {
               .addRDN(BCStyle.GIVENNAME, givenName)
               .addRDN(BCStyle.C, countryName)
               .build();
+		logger.info("Generating Certificate Signing Request Info: {}", subjectDN.toString());
 
         CertificationRequestInfo cri = new CertificationRequestInfo(subjectDN, pki, new DERSet());
         return cri.getEncoded();
@@ -144,34 +132,74 @@ public class CertificatesService {
         return new PKCS10CertificationRequest(cr);
     }
 
-    private boolean validateCertificateFromCA(List<X509Certificate> certificatesAndCertificateChain, String givenName, String surname, String subjectCN, String countryCode){
-        if(certificatesAndCertificateChain.isEmpty()) return false;
+    private boolean validateCertificateFromCA(List<X509Certificate> certificatesAndCertificateChain, String expectedGivenName, String expectedSurname, String expectedSubjectCN, String expectedCountryCode){
+        if(certificatesAndCertificateChain.isEmpty()) {
+            logger.info("No certificate or certificate chain was received from the CA. The list of certificates is empty.");
+            return false;
+        }
 
-        String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(countryCode);
         X509Certificate certificate = certificatesAndCertificateChain.get(0);
         X500Principal subjectX500Principal = certificate.getSubjectX500Principal();
         X500Name x500SubjectName = new X500Name(subjectX500Principal.getName());
-        X500Principal issuerX500Principal = certificate.getIssuerX500Principal();
-        X500Name x500IssuerName = new X500Name(issuerX500Principal.getName());
 
         RDN[] rdnGivenName = x500SubjectName.getRDNs(BCStyle.GIVENNAME);
-        if(rdnListContainsValue(rdnGivenName, givenName))
+        if(rdnListContainsValue(rdnGivenName, expectedGivenName)) {
+            StringBuilder sb = new StringBuilder();
+            Arrays.stream(rdnGivenName).forEach(it -> {
+                String value = IETFUtils.valueToString(it.getFirst().getValue());
+                sb.append(value).append(", ");
+            });
+            logger.info("The expected GivenName ({}) was not found in the certificate received ({}).", expectedGivenName, sb);
             return false;
+        }
 
         RDN[] rdnSurname = x500SubjectName.getRDNs(BCStyle.SURNAME);
-        if(rdnListContainsValue(rdnSurname, surname))
+        if(rdnListContainsValue(rdnSurname, expectedSurname)) {
+            StringBuilder sb = new StringBuilder();
+            Arrays.stream(rdnSurname).forEach(it -> {
+                String value = IETFUtils.valueToString(it.getFirst().getValue());
+                sb.append(value).append(", ");
+            });
+            logger.info("The expected Surname ({}) was not found in the certificate received ({}).", expectedSurname, sb);
             return false;
+        }
 
         RDN[] rdnSubjectCN = x500SubjectName.getRDNs(BCStyle.CN);
-        if(rdnListContainsValue(rdnSubjectCN, subjectCN))
+        if(rdnListContainsValue(rdnSubjectCN, expectedSubjectCN)) {
+            StringBuilder sb = new StringBuilder();
+            Arrays.stream(rdnSubjectCN).forEach(it -> {
+                String value = IETFUtils.valueToString(it.getFirst().getValue());
+                sb.append(value).append(", ");
+            });
+            logger.info("The expected CommonName ({}) was not found in the certificate received ({}).", expectedSubjectCN, sb);
             return false;
+        }
 
         RDN[] rdnCountry = x500SubjectName.getRDNs(BCStyle.C);
-        if(rdnListContainsValue(rdnCountry, countryCode))
+        if(rdnListContainsValue(rdnCountry, expectedCountryCode)) {
+            StringBuilder sb = new StringBuilder();
+            Arrays.stream(rdnCountry).forEach(it -> {
+                String value = IETFUtils.valueToString(it.getFirst().getValue());
+                sb.append(value).append(", ");
+            });
+            logger.info("The expected Country ({}) was not found in the certificate received ({}).", expectedCountryCode, sb);
             return false;
+        }
 
+        String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(expectedCountryCode);
+        X500Principal issuerX500Principal = certificate.getIssuerX500Principal();
+        X500Name x500IssuerName = new X500Name(issuerX500Principal.getName());
         RDN[] rdnIssuerSubjectCN = x500IssuerName.getRDNs(BCStyle.CN);
-        return !rdnListContainsValue(rdnIssuerSubjectCN, expectedIssuerSubjectCN);
+        if(rdnListContainsValue(rdnIssuerSubjectCN, expectedIssuerSubjectCN)){
+            StringBuilder sb = new StringBuilder();
+            Arrays.stream(rdnIssuerSubjectCN).forEach(it -> {
+                String value = IETFUtils.valueToString(it.getFirst().getValue());
+                sb.append(value).append(", ");
+            });
+            logger.info("The expected Issuer ({}) was not found in the certificate received ({}).", expectedIssuerSubjectCN, sb);
+            return false;
+        }
+        return true;
     }
 
     private static boolean rdnListContainsValue(RDN[] rdnListFromCertificate, String value){
