@@ -65,7 +65,7 @@ info:
   description: "This is a test Qualified Trust Service Provider"
   authType:
     - "oauth2code"
-  oauth2: "https://walletcentric.signer.eudiw.dev"
+  oauth2: ${AUTHORIZATION_SERVER_ISSUER_URI}
   asynchronousOperationMode: false
   methods:
     - "oauth2/authorize"

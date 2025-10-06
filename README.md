@@ -515,7 +515,7 @@ spring:
       address: verifier-backend.eudiw.dev
       presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
       validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
-      client_id: x509_san_dns:verifier-backend.eudiw.dev
+      client_id: verifier-backend.eudiw.dev
    ```
 
 3. **Update the application.yml**

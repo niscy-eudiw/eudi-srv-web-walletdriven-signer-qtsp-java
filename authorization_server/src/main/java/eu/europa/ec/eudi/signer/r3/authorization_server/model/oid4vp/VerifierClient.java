@@ -104,7 +104,7 @@ public class VerifierClient {
         log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString(this.client_id);
         log.info("Client Id: "+ client_id);
-        if(!client_id.equals(this.verifierProperties.getClientId())) {
+        if(!client_id.contains(this.verifierProperties.getClientId())) {
             log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         }
@@ -152,7 +152,7 @@ public class VerifierClient {
         log.info("Encoded Request URI: "+encoded_request_uri);
         String client_id = responseFromVerifier.getString(this.client_id);
         log.info("Client Id: "+ client_id);
-        if(!client_id.equals(this.verifierProperties.getClientId()))
+        if(!client_id.contains(this.verifierProperties.getClientId()))
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         String presentation_id = responseFromVerifier.getString(this.transaction_id);
         log.info("Transaction Id: "+presentation_id);
