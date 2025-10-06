@@ -47,7 +47,6 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class VerifierClient {
-    public static final String PRESENTATION_DEFINITION_ID = "32f54163-7166-48f1-93d8-ff217bdb0653";
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
 
     private final String request_uri = "request_uri";

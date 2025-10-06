@@ -497,8 +497,8 @@ spring:
 
 2. **Set parameters value for authentication using OpenId4VP**
 
-   This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet.
-   To enable this feature (authentication using PID), communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
+   This application requires users to authenticate and authorize the signature of documents with certificates they own through their EUDI Wallet.
+   To enable this feature (authentication using PID), communication with a backend Verifier that supports OID4VP v1 is required. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
 
    ```
    verifier:
