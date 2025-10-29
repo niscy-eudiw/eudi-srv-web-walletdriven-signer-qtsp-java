@@ -24,15 +24,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestException;
-import java.security.cert.X509Certificate;
-import java.time.Clock;
 import java.util.*;
-
-import eu.europa.esig.dss.model.x509.CertificateToken;
-import eu.europa.esig.dss.spi.DSSUtils;
-import eu.europa.esig.dss.spi.tsl.TrustedListsCertificateSource;
-import eu.europa.esig.dss.spi.x509.CertificateSource;
-import eu.europa.esig.dss.spi.x509.CommonCertificateSource;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
@@ -41,11 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import eu.europa.esig.dss.tsl.job.TLValidationJob;
-import eu.europa.esig.dss.tsl.source.TLSource;
-import eu.europa.esig.dss.tsl.function.GrantedTrustService;
-
 
 @Service
 public class SignaturesService {
@@ -86,7 +73,7 @@ public class SignaturesService {
             return false;
         }
 
-        logger.info("Validating CredentialID {} belongs to User {}", userHash, credentialIDRequested);
+        logger.info("Validating CredentialID {} belongs to User {}", credentialIDRequested, userHash);
         Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequested);
         if(credentials.isEmpty()){
             logger.error("The credentialId requested doesn't belong to the user.");

@@ -47,14 +47,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class VerifierClient {
-    public static final String PRESENTATION_DEFINITION_ID = "32f54163-7166-48f1-93d8-ff217bdb0653";
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
-
-    private final String request_uri = "request_uri";
-    private final String client_id = "client_id";
-    private final String transaction_id = "transaction_id";
-
-    private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
+	private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
     private final VerifierConfig verifierProperties;
     private final VerifierCreatedVariables verifierVariables;
 
@@ -86,30 +80,33 @@ public class VerifierClient {
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains(this.request_uri)){
+		String request_uri1 = "request_uri";
+		if (!keys.contains(request_uri1)){
             log.error("Missing 'request_uri' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
-        if(!keys.contains(this.client_id)){
+		String client_id1 = "client_id";
+		if(!keys.contains(client_id1)){
             log.error("Missing 'client_id' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
-        if(!keys.contains(this.transaction_id)){
+		String transaction_id = "transaction_id";
+		if(!keys.contains(transaction_id)){
             log.error("Missing 'transaction_id' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
         log.info("All keys are present.");
 
-        String request_uri = responseFromVerifier.getString(this.request_uri);
+        String request_uri = responseFromVerifier.getString(request_uri1);
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
 		log.info("Encoded Request URI: {}", encoded_request_uri);
-        String client_id = responseFromVerifier.getString(this.client_id);
-		log.info("Client Id: {}", client_id);
-        if(!client_id.equals(this.verifierProperties.getClientId())) {
+        String client_id = responseFromVerifier.getString(client_id1);
+        log.info("Client Id: "+ client_id);
+        if(!client_id.contains(this.verifierProperties.getClientId())) {
             log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         }
-        String presentation_id = responseFromVerifier.getString(this.transaction_id);
+        String presentation_id = responseFromVerifier.getString(transaction_id);
         log.info("Transaction Id: "+presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
@@ -195,54 +192,33 @@ public class VerifierClient {
         return headers;
     }
 
-
-    private JSONObject getPresentationDefinitionJSON(){
-        String presentationDefinition = "{" +
-              "'id': '32f54163-7166-48f1-93d8-ff217bdb0653'," +
-              "'input_descriptors': [{" +
-              "'id': '"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"'," +
-              "'name': 'EUDI PID'," +
-              "'purpose': 'We need to verify your identity'," +
-              "'format': {'mso_mdoc': {" +
-              "'alg': ['ES256', 'ES384', 'ES512', 'EdDSA'] } }," +
-              "'constraints': {" +
-              "'fields': [" +
-              "{'path': [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['family_name']\"], 'intent_to_retain': true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['given_name']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['birth_date']\"],  \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['issuing_authority']\"], \"intent_to_retain\": true}," +
-              "{\"path\": [\"$['"+ PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID +"']['issuing_country']\"], \"intent_to_retain\": true}" +
-              "]}}]}";
-        return new JSONObject(presentationDefinition);
-    }
-
     private JSONObject getDCQLQueryJSON(){
         String dcqlQuery = "{" +
               "'credentials': [" +
                 "{" +
                     "'id': 'query_0'," +
-                    "'format': 'vc+sd-jwt'," +
-                    "'meta': {\"vct_values\": [\"urn:eudi:pid:1\"]}," +
+                    "'format': 'mso_mdoc'," +
+                    "'meta': {'doctype_value': '"+PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"'}," +
                     "'claims': [" +
                         "{" +
-                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'family_name']," +
-                            "'intent_to_retain': false" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'family_name']," +
+                        "'intent_to_retain': false" +
                         "}," +
                         "{" +
-                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'given_name']," +
-                            "'intent_to_retain': false" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'given_name']," +
+                        "'intent_to_retain': false" +
                         "}," +
                         "{" +
-                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'birth_date']," +
-                            "'intent_to_retain': false" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'birth_date']," +
+                        "'intent_to_retain': false" +
                         "}," +
                         "{" +
-                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_authority']," +
-                            "'intent_to_retain': false" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_authority']," +
+                        "'intent_to_retain': false" +
                         "}," +
                         "{" +
-                            "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_country']," +
-                            "'intent_to_retain': false" +
+                        "'path': ['" + PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID+"', 'issuing_country']," +
+                        "'intent_to_retain': false" +
                         "}" +
                     "]" +
                 "}" +
@@ -259,9 +235,7 @@ public class VerifierClient {
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        // jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJSON);
         jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
-        // jsonBodyToInitPresentation.put("request_uri_method", "post");
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         if(transaction_data != null)
             jsonBodyToInitPresentation.put("transaction_data", transaction_data);
@@ -275,7 +249,6 @@ public class VerifierClient {
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
-        //jsonBodyToInitPresentation.put("presentation_definition", presentationDefinitionJSON);
         jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
         jsonBodyToInitPresentation.put("request_uri_method", "post");
         if(transaction_data != null)

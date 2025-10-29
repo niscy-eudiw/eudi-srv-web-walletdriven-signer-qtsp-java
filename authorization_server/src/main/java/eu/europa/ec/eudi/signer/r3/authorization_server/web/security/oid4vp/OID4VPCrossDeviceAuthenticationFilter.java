@@ -73,7 +73,8 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 			else throw new AuthenticationServiceException(e.getError().getFormattedMessage());
 		}
 		catch (InterruptedException e){
-			logger.error("Unexpected error: {}", e.getMessage());
+			logger.error("Thread awaiting response from Verifier was interrupted: {}", e.getMessage());
+			Thread.currentThread().interrupt();
 			throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
 		}
 		catch (URISyntaxException e){

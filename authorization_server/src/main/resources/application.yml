@@ -21,7 +21,7 @@ verifier:
   address: dev.verifier-backend.eudiw.dev
   presentation-url: https://dev.verifier-backend.eudiw.dev/ui/presentations
   validation-url: https://dev.verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
-  client-id: x509_san_dns:dev.verifier-backend.eudiw.dev
+  client-id: dev.verifier-backend.eudiw.dev
 
 service-url-config:
   oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER} # Example: http://localhost:8084

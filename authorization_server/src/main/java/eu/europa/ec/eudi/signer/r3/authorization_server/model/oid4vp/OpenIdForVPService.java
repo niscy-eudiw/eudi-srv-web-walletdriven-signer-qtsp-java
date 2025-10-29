@@ -23,10 +23,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import id.walt.mdoc.doc.MDoc;
-import id.walt.mdoc.issuersigned.IssuerSignedItem;
-
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,7 +40,6 @@ public class OpenIdForVPService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenIdForVPService.class);
     private final UserRepository repository;
-    private final TrustedIssuersCertificateConfig trustedCertificatesConfig;
     private final VerifierClient verifierClient;
     private final TransactionDataService transactionDataService;
 
@@ -53,7 +49,6 @@ public class OpenIdForVPService {
                               @Autowired VerifierClient verifierClient,
                               @Autowired TransactionDataService transactionDataService) {
         this.repository = repository;
-        this.trustedCertificatesConfig = trustedCertificatesConfig;
         this.verifierClient = verifierClient;
         this.transactionDataService = transactionDataService;
     }
@@ -111,29 +106,6 @@ public class OpenIdForVPService {
      * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
      * @return an unauthenticated token with information about the user to authenticate
      */
-    private OID4VPAuthenticationToken loadUserFromVerifierResponse(String messageFromVerifier) throws OID4VPException {
-        log.info("Starting to load VP Token from Verifier Response...");
-
-        JSONObject vpToken;
-        try{
-            vpToken =  new JSONObject(messageFromVerifier);
-        }
-        catch (JSONException e){
-            log.error("The message from Verifier is not a well formatted JSON. {}",e.getMessage());
-            throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The message from Verifier is not a valid JSON.");
-        }
-        log.debug("VP Token: {}", vpToken);
-
-        VPValidator validator = new VPValidator(vpToken, VerifierClient.PRESENTATION_DEFINITION_ID, VerifierClient.PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID, this.trustedCertificatesConfig);
-        MDoc document = validator.loadAndVerifyDocumentForVP();
-        log.info("Validated and loaded the VP Token from the Verifier response.");
-
-        UserOIDTemporaryInfo user = loadUserFromDocument(document);
-        log.trace("Created an object User with the information from the VP Token.");
-
-        return OID4VPAuthenticationToken.unauthenticated(user.user().getHash(), user.givenName(), user.familyName());
-    }
-
     private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier) throws OID4VPException {
         log.info("Starting to load VP Token from Verifier Response...");
 
@@ -147,7 +119,7 @@ public class OpenIdForVPService {
         }
         log.debug("VP Token: {}", vpToken);
 
-        String MSOMDocDeviceResponse = vpToken.getJSONArray("vp_token").getString(0);
+        String MSOMDocDeviceResponse = vpToken.getJSONObject("vp_token").getJSONArray("query_0").getString(0);
         JSONObject pidAttributes = verifierClient.validateMSOMDocDeviceResponse(MSOMDocDeviceResponse);
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
@@ -166,28 +138,6 @@ public class OpenIdForVPService {
         String birthDate = String.valueOf(document.getInt("birth_date"));
         String issuingCountry = document.getString("issuing_country");
         String issuanceAuthority = document.getString("issuing_authority");
-        return validateAttributesAndLoadUser(familyName, givenName, birthDate, issuingCountry, issuanceAuthority);
-    }
-
-    private UserOIDTemporaryInfo loadUserFromDocument(MDoc document) throws OID4VPException {
-        String docType = document.getDocType().getValue();
-        List<IssuerSignedItem> l = document.getIssuerSignedItems(docType);
-
-        String familyName = null;
-        String givenName = null;
-        String birthDate = null;
-        String issuingCountry = null;
-        String issuanceAuthority = null;
-        for (IssuerSignedItem el : l) {
-            switch (el.getElementIdentifier().getValue()) {
-                case "family_name" -> familyName = el.getElementValue().toString();
-                case "given_name" -> givenName = el.getElementValue().toString();
-                case "birth_date" -> birthDate = el.getElementValue().toString();
-                case "issuing_authority" -> issuanceAuthority = el.getElementValue().toString();
-                case "issuing_country" -> issuingCountry = el.getElementValue().toString();
-            }
-        }
-
         return validateAttributesAndLoadUser(familyName, givenName, birthDate, issuingCountry, issuanceAuthority);
     }
 
