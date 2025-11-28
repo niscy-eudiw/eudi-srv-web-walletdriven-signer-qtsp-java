@@ -101,13 +101,13 @@ public class VerifierClient {
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
 		log.info("Encoded Request URI: {}", encoded_request_uri);
         String client_id = responseFromVerifier.getString(client_id1);
-        log.info("Client Id: "+ client_id);
-        if(!client_id.contains(this.verifierProperties.getClientId())) {
+		log.info("Client Id: {}", client_id);
+        /*if(!client_id.contains(this.verifierProperties.getClientId())) {
             log.error("Client Id Received different from Client Id expected");
             throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
-        }
+        }*/
         String presentation_id = responseFromVerifier.getString(transaction_id);
-        log.info("Transaction Id: "+presentation_id);
+		log.info("Transaction Id: {}", presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
         this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
@@ -192,7 +192,7 @@ public class VerifierClient {
         return headers;
     }
 
-    private JSONObject getDCQLQueryJSON(){
+    private JSONObject getDCQLQueryMSOMDoc(){
         String dcqlQuery = "{" +
               "'credentials': [" +
                 "{" +
@@ -227,8 +227,28 @@ public class VerifierClient {
         return new JSONObject(dcqlQuery);
     }
 
+    private JSONObject getDCQLQuerySDJWT(){
+        String dcqlQuery = "{" +
+              "'credentials': [" +
+              "{" +
+              "'id': 'query_0'," +
+              "'format': 'dc+sd-jwt'," +
+              "'meta': {'vct_values': ['urn:eudi:pid:1']}," +
+              "'claims': [" +
+              "{'path': ['family_name']}," +
+              "{'path': ['given_name']}," +
+              "{'path': ['birthdate']}," +
+              "{'path': ['issuing_authority']}," +
+              "{'path': ['issuing_country']}" +
+              "]" +
+              "}" +
+              "]" +
+              "}";
+        return new JSONObject(dcqlQuery);
+    }
+
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
-        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
+        JSONObject dcqlQueryJSON = getDCQLQuerySDJWT();
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
 
         // Set JSON Body
@@ -243,7 +263,7 @@ public class VerifierClient {
     }
 
     private String getCrossDeviceMessage(String nonce, JSONArray transaction_data) {
-        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
+        JSONObject dcqlQueryJSON = getDCQLQuerySDJWT();
 
         // Set JSON Body
         JSONObject jsonBodyToInitPresentation = new JSONObject();
@@ -259,6 +279,17 @@ public class VerifierClient {
     private String getLinkToWallet(String request_uri, String client_id) {
         return "eudi-openid4vp://" + verifierProperties.getAddress() + "?client_id=" +
                 client_id + "&request_uri=" + request_uri;
+    }
+
+    private VerifierCreatedVariable retrieveAndRemoveVerifierVariables(String userId) throws OID4VPException {
+        VerifierCreatedVariable variables = verifierVariables.getAndRemoveUsersVerifierCreatedVariable(userId);
+        if (variables == null) {
+            log.error("Failed to retrieve the required local variables to complete the authentication.");
+            throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "Something went wrong on our end during sign-in. Please try again in a few moments.");
+        }
+        log.info("Retrieved the required local variables to complete the authentication.");
+        log.info("Current Verifier Variables State: {}", verifierVariables);
+        return variables;
     }
 
     private VerifierCreatedVariable retrieveVerifierVariables(String userId) throws OID4VPException {
@@ -301,7 +332,7 @@ public class VerifierClient {
     public String getVPTokenFromVerifier(String userId, String code) throws OID4VPException {
         log.info("Starting to retrieve the VP Token from the Verifier to authenticate the user {}...", userId);
 
-        VerifierCreatedVariable variables = retrieveVerifierVariables(userId);
+        VerifierCreatedVariable variables = retrieveAndRemoveVerifierVariables(userId);
 
         Map<String, String> headers = getHeaders();
         String url = getUrlToRetrieveVPTokenWithResponseCode(variables.getTransaction_id(), variables.getNonce(), code);
@@ -324,7 +355,7 @@ public class VerifierClient {
     public String getVPTokenFromVerifierRecursive(String user) throws OID4VPException, InterruptedException {
         log.info("Starting to recursively retrieve the VP Token from the Verifier to authenticate the user {}...", user);
 
-        VerifierCreatedVariable variables = retrieveVerifierVariables(user);
+        VerifierCreatedVariable variables = retrieveAndRemoveVerifierVariables(user);
 
         Map<String, String> headers = getHeaders();
         String url = getUrlToRetrieveVPToken(variables.getTransaction_id(), variables.getNonce());
@@ -422,15 +453,20 @@ public class VerifierClient {
         }
     }
 
-    public JSONObject validateSDJWTResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
+    public String getNonce(String user) throws OID4VPException {
+        VerifierCreatedVariable variables = retrieveVerifierVariables(user);
+        return variables.getNonce();
+    }
+
+    public JSONObject validateSDJWTResponse(String SD_JWT_Device_Response, String nonce) throws OID4VPException{
         Map<String, String> headers = new HashMap<>();
         headers.put("accept", "application/json");
         headers.put("Content-Type", "application/x-www-form-urlencoded");
-        String body = "device_response="+MSO_MDoc_Device_Response;
+        String body = "sd_jwt_vc="+SD_JWT_Device_Response+"&nonce="+nonce;
 
         HttpResponse response;
         try{
-            response = WebUtils.httpPostRequest(this.verifierProperties.getValidationUrl(), headers, body);
+            response = WebUtils.httpPostRequest("https://verifier-backend.eudiw.dev/utilities/validations/sdJwtVc", headers, body);
         }
         catch (Exception e){
             log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());
@@ -440,10 +476,10 @@ public class VerifierClient {
         if(response.getStatusLine().getStatusCode() == 200){
             log.info("Successfully validated verifier response (Status Code: 200).");
 
-            JSONArray responseVerifier;
+            JSONObject responseVerifier;
             try {
                 String result = WebUtils.convertStreamToString(response.getEntity().getContent());
-                responseVerifier = new JSONArray(result);
+                responseVerifier = new JSONObject(result);
                 log.info("Parsed the validation response.");
             }
             catch (IOException e){
@@ -451,25 +487,25 @@ public class VerifierClient {
                 throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
             }
             catch (JSONException e){
-                log.error("It was impossible to parse validation response as a JSON Array.");
+                log.error("It was impossible to parse validation response as a JSON Object.");
                 throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The Verifier's validation response is not a valid JSON Array.");
             }
 
-            for(int i = 0; i < responseVerifier.length(); i++){
-                JSONObject jsonObject = responseVerifier.getJSONObject(i);
-                if (!jsonObject.has("docType")){
-                    log.error("Expected 'docType' missing from the Verifier's Validation Endpoint response.");
-                    throw new OID4VPException(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER, "the validation of the OID4VP Verifier response failed because expected 'doctype' parameter is missing.");
-                }
-                if(jsonObject.get("docType").equals(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID)){
-                    log.info("Received attributes of the requested doctype {}", PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
-                    JSONObject attributes = jsonObject.getJSONObject("attributes").getJSONObject(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
-                    log.info("Retrieved attributes as a JSONObject.");
-                    return attributes;
-                }
+            // Validate 'vct'
+            if(!responseVerifier.has("vct") || !responseVerifier.getString("vct").equals("urn:eudi:pid:1")) {
+                throw new OID4VPException(OID4VPEnumError.FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER, "It was impossible to validate the VP Token. An error message was received from the OID4VP Verifier.");
             }
-            log.error("Attributes of the requested 'doctype' not found in the validation response.");
-            throw new OID4VPException(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER, "the validation of the OID4VP Verifier response failed because expected 'attributes' parameter is missing.");
+
+            log.info(String.valueOf(responseVerifier));
+
+            // Retrieve 'attributes'
+            JSONObject attributes = new JSONObject();
+            attributes.put("family_name", responseVerifier.get("family_name"));
+            attributes.put("given_name", responseVerifier.get("given_name"));
+            attributes.put("birth_date", responseVerifier.get("birthdate"));
+            attributes.put("issuing_country", responseVerifier.get("issuing_country"));
+            attributes.put("issuing_authority", responseVerifier.get("issuing_authority"));
+            return attributes;
         }
         else{
             try {

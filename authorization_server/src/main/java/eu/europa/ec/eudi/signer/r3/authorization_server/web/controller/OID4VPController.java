@@ -6,12 +6,9 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +19,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.ByteArrayOutputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 
@@ -32,13 +26,11 @@ import java.util.Map;
 public class OID4VPController {
 	private final Logger logger = LoggerFactory.getLogger(OID4VPController.class);
 	private final OpenIdForVPService openIdForVPService;
-	private final VerifierClient verifierClient;
 	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting tokenSetting;
 
-	public OID4VPController(@Autowired VerifierClient verifierClient, @Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
-		this.verifierClient = verifierClient;
+	public OID4VPController(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
 		this.openIdForVPService = openIdForVPService;
 		this.issuerConfig = issuerConfig;
 		this.sessionUrlRelationList = sessionUrlRelationList;

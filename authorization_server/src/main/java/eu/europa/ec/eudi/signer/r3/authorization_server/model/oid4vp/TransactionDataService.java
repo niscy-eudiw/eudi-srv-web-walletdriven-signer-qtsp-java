@@ -93,7 +93,7 @@ public class TransactionDataService {
 		transaction_data_object.put("type", "qes_authorization");
 
 		List<String> credentials_ids = new ArrayList<>();
-		credentials_ids.add(PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID);
+		credentials_ids.add("query_0");
 		transaction_data_object.put("credential_ids", credentials_ids);
 
 		transaction_data_object.put("credentialID", credentialID);

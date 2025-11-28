@@ -16,13 +16,11 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.TrustedIssuersCertificateConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
-import id.walt.mdoc.doc.MDoc;
 import java.net.URI;
 import java.util.Optional;
 
@@ -45,7 +43,6 @@ public class OpenIdForVPService {
 
 
     public OpenIdForVPService(@Autowired UserRepository repository,
-                              @Autowired TrustedIssuersCertificateConfig trustedCertificatesConfig,
                               @Autowired VerifierClient verifierClient,
                               @Autowired TransactionDataService transactionDataService) {
         this.repository = repository;
@@ -79,16 +76,20 @@ public class OpenIdForVPService {
      * @return an unauthenticated 'OID4VPAuthenticationToken'
      */
     public OID4VPAuthenticationToken pollVPTokenAndCreateOID4VPAuthToken(String sessionId, URI url) throws OID4VPException, InterruptedException {
+        String nonce = this.verifierClient.getNonce(sessionId);
+
         String messageFromVerifier = this.verifierClient.getVPTokenFromVerifierRecursive(sessionId);
         log.info("VP Token received: {}", messageFromVerifier);
 
         transactionDataService.validateTransactionData(messageFromVerifier, url);
         log.info("Validated Transaction Data.");
 
-		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
+		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier, nonce);
     }
 
     public OID4VPAuthenticationToken getVPTokenAndCreateOID4VPAuthToken(String sessionId, String code, URI url) throws OID4VPException {
+        String nonce = this.verifierClient.getNonce(sessionId);
+
         // Returns OID4VPException with a correctly formatted messages from the Error.description
         String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
         log.info("VP Token received: {}", messageFromVerifier);
@@ -97,7 +98,7 @@ public class OpenIdForVPService {
         log.info("Validated Transaction Data.");
 
         // Returns OID4VPException with a correctly formatted messages from the Error.description
-		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier);
+		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier, nonce);
     }
 
     /**
@@ -106,7 +107,7 @@ public class OpenIdForVPService {
      * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
      * @return an unauthenticated token with information about the user to authenticate
      */
-    private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier) throws OID4VPException {
+    private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier, String nonce) throws OID4VPException {
         log.info("Starting to load VP Token from Verifier Response...");
 
         JSONObject vpToken;
@@ -120,7 +121,7 @@ public class OpenIdForVPService {
         log.debug("VP Token: {}", vpToken);
 
         String MSOMDocDeviceResponse = vpToken.getJSONObject("vp_token").getJSONArray("query_0").getString(0);
-        JSONObject pidAttributes = verifierClient.validateMSOMDocDeviceResponse(MSOMDocDeviceResponse);
+        JSONObject pidAttributes = verifierClient.validateSDJWTResponse(MSOMDocDeviceResponse, nonce);
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
 		assert pidAttributes != null;
@@ -135,7 +136,7 @@ public class OpenIdForVPService {
     private UserOIDTemporaryInfo loadUserFromDocument(JSONObject document) throws OID4VPException {
         String familyName = document.getString("family_name");
         String givenName = document.getString("given_name");
-        String birthDate = String.valueOf(document.getInt("birth_date"));
+        String birthDate = String.valueOf(document.get("birth_date"));
         String issuingCountry = document.getString("issuing_country");
         String issuanceAuthority = document.getString("issuing_authority");
         return validateAttributesAndLoadUser(familyName, givenName, birthDate, issuingCountry, issuanceAuthority);

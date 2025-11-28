@@ -17,9 +17,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.controller.OID4VPController;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
