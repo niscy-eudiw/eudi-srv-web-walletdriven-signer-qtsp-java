@@ -9,6 +9,7 @@ _6 Oct 2025_
 ### Changed
 - Minor improvements to the deployment bash script.
 - Updated OID4VP-related code to support OpenID4VP v1.
+- Updated OID4VP configuration: the wallet scheme and verifier domain are now configurable via environment variables.
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.
