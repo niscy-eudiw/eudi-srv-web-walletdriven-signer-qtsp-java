@@ -110,30 +110,43 @@ logging:
     org.springframework.security: INFO
     org.springframework.security.oauth2: INFO
 
-ejbca:
-  cahost: ${EJBCA_HOST}
-  clientP12ArchiveFilepath: ${EJBCA_CLIENT_P12_FILEPATH}
-  clientP12ArchivePassword: ${EJBCA_CLIENT_P12_PASSWORD}
-  managementCA: ${EJBCA_MANAGEMENT_CA}
-  endpoint: /certificate/pkcs10enroll
-  certificateProfileName: ${EJBCA_CERTIFICATE_PROFILE_NAME}
-  endEntityProfileName: ${EJBCA_END_ENTITY_PROFILE_NAME}
-  username: ${EJBCA_USERNAME}
-  password: ${EJBCA_PASSWORD}
-  includeChain: true
+keys:
+  use-hsm: ${KEYS_USE_HSM}
+  keyAlgorithm: RSA
+  keySize: 2048
+  signatureAlgorithm: SHA256withRSA
 
-  countries:
-    - country: CZ
-      certificateAuthorityName: PID Issuer CA - CZ 02
-    - country: EE
-      certificateAuthorityName: PID Issuer CA - EE 02
-    - country: EU
-      certificateAuthorityName: PID Issuer CA - EU 02
-    - country: LU
-      certificateAuthorityName: PID Issuer CA - LU 02
-    - country: NL
-      certificateAuthorityName: PID Issuer CA - NL 02
-    - country: PT
-      certificateAuthorityName: PID Issuer CA - PT 02
-    - country: default
-      certificateAuthorityName: PID Issuer CA - UT 02
+certificates:
+  use-ejbca: ${CERTIFICATES_USE_EJBCA}
+  ca-subject:
+    certificate-file: ${CERTIFICATES_CA_SUBJECT_CERTIFICATE_FILE}
+    key-file: ${CERTIFICATES_CA_SUBJECT_KEY_FILE}
+    common-name: ${CERTIFICATES_CA_SUBJECT_COMMON_NAME}
+    organization: ${CERTIFICATES_CA_SUBJECT_ORGANIZATION}
+    country: ${CERTIFICATES_CA_SUBJECT_COUNTRY}
+  ejbca:
+    cahost: ${EJBCA_HOST}
+    clientP12ArchiveFilepath: ${EJBCA_CLIENT_P12_FILEPATH}
+    clientP12ArchivePassword: ${EJBCA_CLIENT_P12_PASSWORD}
+    managementCA: ${EJBCA_MANAGEMENT_CA}
+    endpoint: /certificate/pkcs10enroll
+    certificateProfileName: ${EJBCA_CERTIFICATE_PROFILE_NAME}
+    endEntityProfileName: ${EJBCA_END_ENTITY_PROFILE_NAME}
+    username: ${EJBCA_USERNAME}
+    password: ${EJBCA_PASSWORD}
+    includeChain: true
+    countries:
+      - country: CZ
+        certificateAuthorityName: PID Issuer CA - CZ 02
+      - country: EE
+        certificateAuthorityName: PID Issuer CA - EE 02
+      - country: EU
+        certificateAuthorityName: PID Issuer CA - EU 02
+      - country: LU
+        certificateAuthorityName: PID Issuer CA - LU 02
+      - country: NL
+        certificateAuthorityName: PID Issuer CA - NL 02
+      - country: PT
+        certificateAuthorityName: PID Issuer CA - PT 02
+      - country: default
+        certificateAuthorityName: PID Issuer CA - UT 02

@@ -16,6 +16,22 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.config;
 
+import eu.europa.ec.eudi.signer.r3.resource_server.config.AuthConfig;
+import eu.europa.ec.eudi.signer.r3.resource_server.config.CertificatesProperties;
+import eu.europa.ec.eudi.signer.r3.resource_server.config.KeysProperties;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.EjbcaCertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.LocalCertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.SecretKeyRepository;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.EncryptionHelper;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeysService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.LocalKeysService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -27,6 +43,8 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @Configuration(proxyBeanMethods = false)
 public class WebSecurity {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSecurity.class);
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -46,6 +64,41 @@ public class WebSecurity {
                     oauth2ResourceServer.jwt(Customizer.withDefaults())
               );
         return http.build();
+    }
+
+    @Bean
+    public IKeysService setKeysService(@Autowired KeysProperties keysProperties, @Autowired AuthConfig authProperties, @Autowired SecretKeyRepository configRep) throws Exception {
+        logger.info("Use HSM? {}", keysProperties.useHsm());
+
+        EncryptionHelper encryptionHelper = new EncryptionHelper(authProperties);
+
+        if(keysProperties.useHsm()){
+            HsmService hsmService = new HsmService();
+            IKeysService keysService = new KeysService(hsmService, configRep, encryptionHelper);
+            logger.info("Set up Keys Service that uses HSM.");
+            return keysService;
+        }
+        else{
+            IKeysService keysService = new LocalKeysService(encryptionHelper, configRep);
+            logger.info("Set up Keys Service that doesn't use HSM.");
+            return keysService;
+        }
+    }
+
+    @Bean
+    public ICertificateIssuer setCertificateService(@Autowired CertificatesProperties certificatesProperties) throws Exception {
+        logger.info("Use EJBCA? {}", certificatesProperties.useEjbca());
+        if(certificatesProperties.useEjbca()){
+            EjbcaService ejbcaServiceService = new EjbcaService(certificatesProperties.getEjbca());
+            ICertificateIssuer certificatesService = new EjbcaCertificateIssuer(ejbcaServiceService);
+            logger.info("Set up Certificate Service that uses EJBCA.");
+            return certificatesService;
+        }
+        else {
+            ICertificateIssuer certificatesService = new LocalCertificateIssuer(certificatesProperties.getCaSubject());
+            logger.info("Set up Certificate Service that doesn't use EJBCA.");
+            return certificatesService;
+        }
     }
 
 }

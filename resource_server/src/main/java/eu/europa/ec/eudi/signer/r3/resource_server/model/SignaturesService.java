@@ -18,7 +18,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
 import eu.europa.esig.dss.enumerations.*;
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -37,13 +37,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class SignaturesService {
     private final CredentialsRepository credentialsRepository;
-    private final HsmService hsmService;
+    private final IKeysService iKeysService;
     private static final Logger logger = LoggerFactory.getLogger(SignaturesService.class);
 
-    public SignaturesService(@Autowired HsmService hsmService,
-                             @Autowired CredentialsRepository credentialsRepository){
+    public SignaturesService(@Autowired IKeysService keysService, @Autowired CredentialsRepository credentialsRepository){
         this.credentialsRepository = credentialsRepository;
-        this.hsmService = hsmService;
+        this.iKeysService = keysService;
     }
 
     /**
@@ -144,7 +143,7 @@ public class SignaturesService {
                 String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
                 byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
                 byte[] dtbsr = wrapForRsaSign(dtbsBytes, hashAlgorithmOID);
-                byte[] signatureBytes = this.hsmService.signDTBSWithRSAAndGivenAlgorithm(privateKeyBytes, dtbsr, signatureAlgorithm);
+                byte[] signatureBytes = this.iKeysService.signDTBSWithRSAAndGivenAlgorithm(privateKeyBytes, dtbsr, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
                 signatures.add(signature);
             }
@@ -154,7 +153,7 @@ public class SignaturesService {
             for (String dtbs : hashes) {
                 String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
                 byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
-                byte[] signatureBytes = this.hsmService.signDTBSWithECDSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
+                byte[] signatureBytes = this.iKeysService.signDTBSWithECDSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
                 signatures.add(signature);
             }
@@ -172,7 +171,9 @@ public class SignaturesService {
             throw new DigestException(e);
         }
     }
-    
+
+
+    // SHA256withRSA, SHA384withRSA, SHA512withRSA, SHA256withECDSA, SHA384withECDSA, SHA512withECDSA
     private String getSignatureAlgorithm(String signAlgo, String signAlgoParams, String hashAlgorithmOID) throws Exception {
         DefaultAlgorithmNameFinder algFinder = new DefaultAlgorithmNameFinder();
         ASN1ObjectIdentifier signAlgoOID = new ASN1ObjectIdentifier(signAlgo);
@@ -181,9 +182,8 @@ public class SignaturesService {
             SignatureAlgorithm signAlgorithm = SignatureAlgorithm.forOID(signAlgoOID.getId());
             logger.info("Encryption Algorithm from the Signature Algorithm: {}", signAlgorithm.getEncryptionAlgorithm().getName());
             String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signAlgorithm.getEncryptionAlgorithm().getOid()));
+            logger.info("The algorithm defined in the signAlgo parameter already contains an hash algorithm. Algorithm Name found: {}", algorithmName);
 
-            logger.info("The algorithm defined in the signAlgo parameter already contains an hash algorithm." +
-                  " Algorithm Name found: {}", algorithmName);
             return signAlgorithm.getEncryptionAlgorithm().getName();
         }
         catch (IllegalArgumentException e){
@@ -197,11 +197,11 @@ public class SignaturesService {
             logger.info("Found the digestion algorithm from the hashAlgorithm OID: {}", digestAlgorithm.getName());
 
             SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.getAlgorithm(encryptionAlgorithm, digestAlgorithm);
+            logger.info(signatureAlgorithm.getName());
             String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signatureAlgorithm.getOid()));
-            logger.info("From the signAlgo and the hashAlgorithmOID, the signature algorithm was obtained: {}",
-                  algorithmName);
+            logger.info("From the signAlgo and the hashAlgorithmOID, the signature algorithm was obtained: {}", algorithmName);
 
-            return encryptionAlgorithm.getName();
+            return algorithmName;
         }
     }
 

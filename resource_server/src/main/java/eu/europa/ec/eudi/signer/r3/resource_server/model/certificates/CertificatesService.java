@@ -16,8 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model.certificates;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.pkcs.CertificationRequest;
 import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
@@ -29,19 +29,13 @@ import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import javax.security.auth.x500.X500Principal;
 import java.io.*;
 import java.security.*;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
@@ -50,13 +44,13 @@ import java.util.*;
  * The module response for managing certificates and certificate chains
  */
 public class CertificatesService {
-    private final HsmService hsmService;
-    private final EjbcaService ejbcaService;
+    private final IKeysService keysService;
+    private final ICertificateIssuer certificateIssuer;
     private static final Logger logger = LoggerFactory.getLogger(CertificatesService.class);
 
-    public CertificatesService(HsmService hsmService, EjbcaService ejbcaService){
-        this.hsmService = hsmService;
-        this.ejbcaService = ejbcaService;
+    public CertificatesService(IKeysService keysService, ICertificateIssuer certificateIssuer){
+        this.keysService = keysService;
+        this.certificateIssuer = certificateIssuer;
     }
 
     public String base64EncodeCertificate(X509Certificate certificate) throws Exception{
@@ -88,7 +82,9 @@ public class CertificatesService {
         logger.info("Generated the Certificate Signing Request.");
 
         // Makes a request to the CA
-        List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
+        // List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
+        List<X509Certificate> certificateAndCertificateChain = this.certificateIssuer.issueCertificate(certificateString, countryCode);
+
         logger.info("Retrieved the certificate and certificate chain from the CA.");
         if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
             throw new Exception("Certificates received from CA are not valid");
@@ -96,7 +92,6 @@ public class CertificatesService {
         logger.info("Validated the certificate and certificate chain received from the CA.");
         return certificateAndCertificateChain;
     }
-
 
     private byte[] generateCertificateRequestInfo(PublicKey publicKey, String givenName, String surname, String commonName, String countryName) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
@@ -114,15 +109,15 @@ public class CertificatesService {
         return cri.getEncoded();
     }
 
-    private PKCS10CertificationRequest generateCertificateRequest( byte[] privateKeyValues, byte[] certRequestInfo, String keyAlgorithm) throws Exception {
+    private PKCS10CertificationRequest generateCertificateRequest(byte[] privateKeyValues, byte[] certRequestInfo, String keyAlgorithm) throws Exception {
         byte[] signature = null;
         AlgorithmIdentifier algorithmIdentifier = null;
         if(keyAlgorithm.equals("RSA")) {
-            signature = hsmService.signDTBSWithRSAAndSHA256(privateKeyValues, certRequestInfo);
+            signature = keysService.signDTBSWithRSAAndGivenAlgorithm(privateKeyValues, certRequestInfo, "SHA256WITHRSA");
             algorithmIdentifier = new AlgorithmIdentifier(PKCSObjectIdentifiers.sha256WithRSAEncryption);
         }
         else if(keyAlgorithm.equals("ECDSA")){
-            signature = hsmService.signDTBSWithECDSAAndSHA256(privateKeyValues, certRequestInfo);
+            signature = keysService.signDTBSWithECDSAAndGivenAlgorithm(privateKeyValues, certRequestInfo, "SHA256WITHECDSA");
             algorithmIdentifier = new AlgorithmIdentifier(X9ObjectIdentifiers.ecdsa_with_SHA256);
         }
 
@@ -186,7 +181,9 @@ public class CertificatesService {
             return false;
         }
 
-        String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(expectedCountryCode);
+        // String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(expectedCountryCode);
+        String expectedIssuerSubjectCN = this.certificateIssuer.getExpectedIssuerSubjectCN(expectedCountryCode);
+
         X500Principal issuerX500Principal = certificate.getIssuerX500Principal();
         X500Name x500IssuerName = new X500Name(issuerX500Principal.getName());
         RDN[] rdnIssuerSubjectCN = x500IssuerName.getRDNs(BCStyle.CN);

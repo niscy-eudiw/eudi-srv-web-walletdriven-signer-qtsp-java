@@ -1,7 +1,7 @@
 # Changelog
 
 ## [0.5.0]
-_6 Oct 2025_
+_5 Jan 2026_
 
 ### Added
 - Additional logging and debug messages to aid troubleshooting.
@@ -9,6 +9,7 @@ _6 Oct 2025_
 ### Changed
 - Minor improvements to the deployment bash script.
 - Updated OID4VP-related code to support OpenID4VP v1.
+- Made the use of EJBCA and HSM optional.
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.
