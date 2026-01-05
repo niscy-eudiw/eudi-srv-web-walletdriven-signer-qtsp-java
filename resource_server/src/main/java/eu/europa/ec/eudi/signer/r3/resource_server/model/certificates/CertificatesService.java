@@ -29,11 +29,7 @@ import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import javax.security.auth.x500.X500Principal;
 import java.io.*;
 import java.security.*;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.*;
@@ -80,7 +75,7 @@ public class CertificatesService {
 
     private List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues, String keyAlgorithm) throws Exception{
 
-        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
+        byte[] csrInfo = generateCertificateRequestInfo(publicKey, removeSemicolon(givenName), removeSemicolon(surname), removeSemicolon(subjectCN), countryCode);
         logger.info("Retrieved Certificate Signing Request Information.");
 
         PKCS10CertificationRequest certificateHSM = generateCertificateRequest(privateKeyValues, csrInfo, keyAlgorithm);
@@ -90,7 +85,7 @@ public class CertificatesService {
         // Makes a request to the CA
         List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
         logger.info("Retrieved the certificate and certificate chain from the CA.");
-        if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
+        if(!validateCertificateFromCA(certificateAndCertificateChain, escapeString(givenName), escapeString(surname), escapeString(subjectCN), countryCode)){
             throw new Exception("Certificates received from CA are not valid");
         }
         logger.info("Validated the certificate and certificate chain received from the CA.");
@@ -211,5 +206,34 @@ public class CertificatesService {
                 return false;
         }
         return true;
+    }
+
+    private static String removeSemicolon(String input) {
+        return input.replace(";", "-");
+    }
+
+    private static String escapeString(String input) {
+        String result = input.replace("\\", "\\\\")
+              .replace(",", "\\,")
+              .replace("+", "\\+")
+              .replace("=", "\\=")
+              .replace("<", "\\<")
+              .replace(">", "\\>")
+              .replace(";", "-")
+              .replace("\"", "\\\"");
+
+        // Escape trailing spaces (one or more)
+        if (result.endsWith(" ")) {
+            int i = result.length();
+            while (i > 0 && result.charAt(i - 1) == ' ') {
+                i--;
+            }
+            // keep the part before spaces and escape each trailing space
+            String prefix = result.substring(0, i);
+            String escapedSpaces = "\\ ".repeat(result.length() - i);
+            result = prefix + escapedSpaces;
+        }
+
+        return result;
     }
 }
