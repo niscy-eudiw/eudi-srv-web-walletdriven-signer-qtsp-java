@@ -208,11 +208,11 @@ public class CertificatesService {
         return true;
     }
 
-    private static String removeSemicolon(String input) {
+    protected static String removeSemicolon(String input) {
         return input.replace(";", "-");
     }
 
-    private static String escapeString(String input) {
+    protected static String escapeString(String input) {
         String result = input.replace("\\", "\\\\")
               .replace(",", "\\,")
               .replace("+", "\\+")

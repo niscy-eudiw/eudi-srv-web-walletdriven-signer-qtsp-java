@@ -51,10 +51,6 @@ public class EjbcaProperties {
         this.countries = countries;
     }
 
-    public List<CountryConfig> getCountries() {
-        return countries;
-    }
-
     public String getCertificateAuthorityName(String country) {
         String def = null;
         boolean found = false;

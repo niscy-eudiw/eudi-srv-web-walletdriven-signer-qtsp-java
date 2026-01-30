@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0]
+_X Jan 2026_
+
+### Changed
+- Improved handling and validation of certificate SubjectDN values containing special characters.
+- Updated Docker Java and Maven base images version.
+
 ## [0.5.0]
 _6 Oct 2025_
 
