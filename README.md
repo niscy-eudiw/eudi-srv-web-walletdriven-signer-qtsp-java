@@ -344,7 +344,7 @@ Follow the steps below to set up the database:
       driver-class-name: com.mysql.cj.jdbc.Driver
    ```
 
-   If deploying via Docker, update application-docker.yml files (in the resources folder in the modules authorization_server and resource_server) accordingly:
+   If deploying via Docker, update the value of the variable '{SPRING_DATASOURCE_SERVER}' to 'host.docker.internal:3306/' as the example:
    ```
    datasource:
        url: jdbc:mysql://host.docker.internal:3306/{database_name}?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
@@ -497,8 +497,8 @@ spring:
 
 2. **Set parameters value for authentication using OpenId4VP**
 
-   This application requires users to authenticate and authorize the signature of documents with Certificates they own through their EUDI Wallet.
-   To enable this feature (authentication using PID), communication with a backend Verifier is necessary. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
+   This application requires users to authenticate and authorize the signature of documents with certificates they own through their EUDI Wallet.
+   To enable this feature (authentication using PID), communication with a backend Verifier that supports OID4VP v1 is required. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
 
    ```
    verifier:
@@ -515,7 +515,7 @@ spring:
       address: verifier-backend.eudiw.dev
       presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
       validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
-      client_id: x509_san_dns:verifier-backend.eudiw.dev
+      client_id: verifier-backend.eudiw.dev
    ```
 
 3. **Update the application.yml**

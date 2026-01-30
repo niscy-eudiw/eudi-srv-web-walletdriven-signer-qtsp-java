@@ -25,7 +25,6 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestException;
 import java.util.*;
-
 import org.bouncycastle.asn1.*;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
@@ -56,18 +55,25 @@ public class SignaturesService {
                                             int numSignaturesRequested, int numSignaturesAuthorized,
                                             String hashAlgorithmOIDRequested, String hashAlgorithmOIDAuthorized,
                                             List<String> hashesRequested, List<String> hashesAuthorized){
+        logger.info("Validating CredentialIds. CredentialId in Request: {} and CredentialId in JWT: {}", credentialIDRequested, credentialIDAuthorized);
         if(!credentialIDRequested.equals(credentialIDAuthorized)){
             logger.error("The credentialId requested doesn't match the credentialId authorized.");
             return false;
         }
+
+        logger.info("Validating NumSignatures. NumSignatures in Request: {} and NumSignatures in JWT: {}", numSignaturesRequested, numSignaturesAuthorized);
         if(numSignaturesRequested != numSignaturesAuthorized) {
             logger.error("The number of signatures requested doesn't match the number of signatures authorized.");
             return false;
         }
+
+        logger.info("Validating HashAlgorithmOID. HashAlgorithmOID in Request: {} and HashAlgorithmOID in JWT: {}", hashAlgorithmOIDRequested, hashAlgorithmOIDAuthorized);
         if(!hashAlgorithmOIDRequested.equals(hashAlgorithmOIDAuthorized)){
             logger.error("The hashAlgorithmOID requested doesn't match the hashAlgorithmOID authorized.");
             return false;
         }
+
+        logger.info("Validating CredentialID {} belongs to User {}", credentialIDRequested, userHash);
         Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userHash, credentialIDRequested);
         if(credentials.isEmpty()){
             logger.error("The credentialId requested doesn't belong to the user.");
@@ -198,4 +204,5 @@ public class SignaturesService {
             return encryptionAlgorithm.getName();
         }
     }
+
 }

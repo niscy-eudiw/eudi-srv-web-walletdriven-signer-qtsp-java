@@ -16,13 +16,14 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoProperties;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.SignaturesService;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashRequest;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashResponse;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,10 +44,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class SignaturesController {
 
     private final SignaturesService signaturesService;
+    private final CryptoUtils cryptoUtils;
     private static final Logger logger = LoggerFactory.getLogger(SignaturesController.class);
 
-    public SignaturesController(@Autowired SignaturesService signaturesService) {
+    public SignaturesController(@Autowired SignaturesService signaturesService, @Autowired CryptoProperties cryptoProperties) {
         this.signaturesService = signaturesService;
+        this.cryptoUtils = new CryptoUtils(cryptoProperties);
     }
 
     private void auxDebugLogs(Map<String, Object> claims){
@@ -54,7 +57,7 @@ public class SignaturesController {
         for(Map.Entry<String, Object> c: claims.entrySet()){
             stringBuilder.append(c.getKey()).append(": ").append(c.getValue());
         }
-        logger.debug("Access Token Claims: {}", stringBuilder.toString());
+        logger.debug("Access Token Claims: {}", stringBuilder);
     }
 
     /***
@@ -69,18 +72,16 @@ public class SignaturesController {
         Map<String, Object> claims = ((Jwt) principal).getClaims();
         if(logger.isDebugEnabled()) auxDebugLogs(claims);
 
-        String userHash = claims.get("sub").toString();
-        logger.debug("Request received at /csc/v2/credentials/list with the body {} from the user {}",
-              signHashRequest.toString(), userHash);
 
+        String userHash = claims.get("sub").toString();
+        logger.info("Request received at /csc/v2/signatures/signHash with the body {} from the user {}", signHashRequest.toString(), userHash);
         if(userHash == null){
             logger.error("invalid_request: Invalid user sub in the Authorization Header.");
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: Invalid or missing user identifier.");
         }
 
-        if(!claims.containsKey("credentialID") || !claims.containsKey("numSignatures") ||
-              !claims.containsKey("hashAlgorithmOID") || !claims.containsKey("hashes")){
-            logger.error("Missing required claims from Authentication Header.");
+        if(!claims.containsKey("credentialID") || !claims.containsKey("numSignatures") || !claims.containsKey("hashAlgorithmOID") || !claims.containsKey("hashes")){
+            logger.error("Missing required claims from Authentication Header. Present CredentialID? {}; NumSignatures? {}; HashAlgorithmOID? {}; Hashes? {}", claims.containsKey("credentialID"), claims.containsKey("numSignatures"), claims.containsKey("hashAlgorithmOID"), claims.containsKey("hashes"));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required claims from Authentication Header.");
         }
 
@@ -101,37 +102,29 @@ public class SignaturesController {
             Collections.sort(hashesRequestedEncoded);
             List<String> hashesRequested = new ArrayList<>();
             for(String s: hashesRequestedEncoded){
-                logger.debug(s);
                 String urlDecodedHash = URLDecoder.decode(s, StandardCharsets.UTF_8);
                 hashesRequested.add(urlDecodedHash);
             }
 
-            if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(),
-                  credentialIDAuthorized, signHashRequest.getHashes().size(), numSignaturesAuthorized,
-                  signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized, hashesRequested, hashesAuthorized)){
+            if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(), credentialIDAuthorized, signHashRequest.getHashes().size(), numSignaturesAuthorized, signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized, hashesRequested, hashesAuthorized)){
                 logger.error("The Authorization Header doesn't authorize the current Signature Request.");
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the authorization header " +
-                      "doesn't authorize the signature request.");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the authorization header doesn't authorize the signature request.");
             }
             logger.info("Validated that the Authorization Header authorizes the current Signature Request.");
 
             if(Objects.equals(signHashRequest.getOperationMode(), "A")){
                 logger.error("Currently asynchronous responses are not supported");
-                throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "not_implemented: asynchronous responses " +
-                      "are not supported.");
+                throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, "not_implemented: asynchronous responses are not supported.");
             }
             else if(Objects.equals(signHashRequest.getOperationMode(), "S")){
                 logger.info("Starting synchronous signature flow...");
                 SignaturesSignHashResponse signaturesSignHashResponse = new SignaturesSignHashResponse();
-                List<String> signatures = signaturesService.signHash(userHash, signHashRequest.getCredentialID(),
-                      signHashRequest.getHashes(), signHashRequest.getHashAlgorithmOID(), signHashRequest.getSignAlgo(),
-                      signHashRequest.getSignAlgoParams());
+                List<String> signatures = signaturesService.signHash(userHash, signHashRequest.getCredentialID(), signHashRequest.getHashes(), signHashRequest.getHashAlgorithmOID(), signHashRequest.getSignAlgo(), signHashRequest.getSignAlgoParams());
                 signaturesSignHashResponse.setSignatures(signatures);
                 logger.info("Set the Signatures Values in the Response.");
                 return signaturesSignHashResponse;
             }
-            else throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the operation mode in the " +
-                      "request is invalid.");
+            else throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the operation mode in the request is invalid.");
         }
         catch (ResponseStatusException ex){
             throw ex;

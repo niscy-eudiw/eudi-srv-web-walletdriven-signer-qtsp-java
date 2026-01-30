@@ -1,9 +1,22 @@
 # Changelog
 
+## [0.5.0]
+_6 Oct 2025_
+
+### Added
+- Additional logging and debug messages to aid troubleshooting.
+
+### Changed
+- Minor improvements to the deployment bash script.
+- Updated OID4VP-related code to support OpenID4VP v1.
+
+### Fixed
+- Resolved issues flagged by SonarCloud, improving code quality.
+
 ## [0.4.0]
 _29 May 2025_
 
-### Added:
+### Added
 - Docker support for the application:
   - Added Dockerfile to build the application image.
   - Added docker-compose.yml.
@@ -12,11 +25,11 @@ _29 May 2025_
 ## [0.3.0]
 _09 May 2025_
 
-### Added:
+### Added
 - Error page to display issues encountered during the OID4VP authentication process.
 - Support for the OID4VP cross-device authentication flow.
 
-### Changed:
+### Changed
 - Update Maven dependencies and remove unused javascript/CSS libraries.
 - Refactored how required OID4VP authentication local variables are managed.
 - Updated OAuth 2.0 client registration and logic to determine whether cross-device or same-device authentication applies.
@@ -33,7 +46,7 @@ _09 May 2025_
 
 _18 Nov 2024_
 
-### Added:
+### Added
 
 - Endpoints based on the CSC 2.0 Specification ('credentials/list', 'credentials/info' and 'signatures/signHash').
 - OAuth2.0 Authorization Endpoints for service and credential authorization.

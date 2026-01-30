@@ -41,8 +41,6 @@
         <logger name="com.example" level="INFO"/>
         <root level="INFO">
             <appender-ref ref="ROLLINGFILE"/>
-
-            <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
     <springProfile name="!dev &amp; !docker">

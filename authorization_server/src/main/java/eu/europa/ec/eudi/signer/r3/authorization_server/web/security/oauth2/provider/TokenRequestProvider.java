@@ -314,11 +314,12 @@ public class TokenRequestProvider implements AuthenticationProvider {
         } else {
             authorizationBuilder.accessToken(accessToken);
         }
-        authorization = authorizationBuilder.build();
+
+        OAuth2Authorization updatedAuthorization = authorizationBuilder.build();
 
         // Invalidate the authorization code as it can only be used once
-        authorization = invalidate(authorization, authorizationCode.getToken());
-        this.authorizationService.save(authorization);
+        OAuth2Authorization invalidatedAuthorization = invalidate(updatedAuthorization, authorizationCode.getToken());
+        this.authorizationService.save(invalidatedAuthorization);
         logger.info("Saved Authorization");
 
         OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;

@@ -184,30 +184,47 @@ _2025-05-09 13:10:00 CET_
 > -   **POM Project URL**: [https://github.com/joelhockey/jacknji11](https://github.com/joelhockey/jacknji11)
 > -   **POM License**: MIT License - [https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt](https://github.com/joelhockey/jacknji11/blob/master/LICENSE.txt)
 
+**35** **Name:** `Bootstrap` **Version:** `5.3.0-alpha3`
+
+> - **Project URL**: [https://getbootstrap.com/](https://getbootstrap.com/)
+> - **License**: MIT License - [https://github.com/twbs/bootstrap/blob/v5.3.0-alpha3/LICENSE](https://github.com/twbs/bootstrap/blob/v5.3.0-alpha3/LICENSE)
+
+**36** **Name:** `jQuery` **Version:** `3.6.3`
+
+> - **Project URL**: [https://jquery.com](https://jquery.com)
+> - **License**: MIT License - [https://jquery.com/license](https://jquery.com/license)
+
 ## LGPL 2.1 License
 
-**35** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
+**37** **Group:** `eu.europa.ec.joinup.sd-dss` **Name:** `dss-enumerations` **Version:** `6.0`
 
 > -   **POM Project URL**: [https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS](https://ec.europa.eu/digital-building-blocks/sites/display/DIGITAL/Digital+Signature+Service+-++DSS)
 > -   **POM License**: LGPL 2.1 - [https://opensource.org/license/LGPL-2.1](https://opensource.org/license/LGPL-2.1)
 
 ## Org.Json Public Domain License
 
-**36** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
+**38** **Group:** `org.json` **Name:** `json` **Version:** `20231013`
 
 > -   **POM Project URL**: [https://github.com/douglascrockford/JSON-java](https://github.com/douglascrockford/JSON-java)
 > -   **POM License**: Public Domain - [https://github.com/stleary/JSON-java/blob/master/LICENSE](https://github.com/stleary/JSON-java/blob/master/LICENSE)
 
 ## EPL 1.0 License
 
-**37** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
+**39** **Group:** `junit` **Name:** `junit` **Version:** `4.13.2`
 
 > -   **POM Project URL**: [http://junit.org](http://junit.org)
 > -   **POM License**: EPL 1.0 - [https://junit.org/junit4/license.html](https://junit.org/junit4/license.html)
 
+## Open Font License
+
+**40** **Name:** `Poppins`
+
+> - **Project URL**: [https://fonts.google.com/specimen/Poppins](https://fonts.google.com/specimen/Poppins)
+> - **License**: Open Font License - [https://fonts.google.com/specimen/Poppins/license](https://fonts.google.com/specimen/Poppins/license)
+
 ## rQES R2 License
 
-**38** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
+**41** **Name:** `eudi-srv-web-trustprovider-signer-java` **Version:** `0.3.0`
 
 > -   **POM Project URL**: [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java)
 > -   **POM License**: Apache License, Version 2.0 - [https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt](https://github.com/eu-digital-identity-wallet/eudi-srv-web-trustprovider-signer-java/blob/main/LICENSE.txt)
