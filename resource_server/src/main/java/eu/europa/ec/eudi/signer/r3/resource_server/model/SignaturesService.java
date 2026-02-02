@@ -174,7 +174,7 @@ public class SignaturesService {
 
 
     // SHA256withRSA, SHA384withRSA, SHA512withRSA, SHA256withECDSA, SHA384withECDSA, SHA512withECDSA
-    private String getSignatureAlgorithm(String signAlgo, String signAlgoParams, String hashAlgorithmOID) throws Exception {
+    private String getSignatureAlgorithm(String signAlgo, String signAlgoParams, String hashAlgorithmOID) {
         DefaultAlgorithmNameFinder algFinder = new DefaultAlgorithmNameFinder();
         ASN1ObjectIdentifier signAlgoOID = new ASN1ObjectIdentifier(signAlgo);
 
@@ -197,12 +197,10 @@ public class SignaturesService {
             logger.info("Found the digestion algorithm from the hashAlgorithm OID: {}", digestAlgorithm.getName());
 
             SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.getAlgorithm(encryptionAlgorithm, digestAlgorithm);
-            logger.info(signatureAlgorithm.getName());
             String algorithmName = algFinder.getAlgorithmName(new ASN1ObjectIdentifier(signatureAlgorithm.getOid()));
             logger.info("From the signAlgo and the hashAlgorithmOID, the signature algorithm was obtained: {}", algorithmName);
 
-            return algorithmName;
+            return encryptionAlgorithm.getName();
         }
     }
-
 }

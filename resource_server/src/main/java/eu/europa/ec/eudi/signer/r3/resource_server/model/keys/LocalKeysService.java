@@ -119,6 +119,13 @@ public class LocalKeysService implements IKeysService{
 		KeyFactory kf = KeyFactory.getInstance("EC", "BC");
 		PrivateKey privateKey = kf.generatePrivate(spec);
 
+		if(signatureAlgorithm.equals("ECDSA")){
+			signatureAlgorithm = "NONEwithECDSA";
+		}
+		else if(signatureAlgorithm.equals("RSA")){
+			signatureAlgorithm = "NONEwithRSA";
+		}
+
 		Signature signer = Signature.getInstance(signatureAlgorithm);
 		signer.initSign(privateKey);
 		signer.update(data); // input data to be signed
