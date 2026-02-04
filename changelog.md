@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0]
+_X Jan 2026_
+
+### Changed
+- Improved handling and validation of certificate SubjectDN values containing special characters.
+- Updated Docker Java and Maven base images version.
+
 ## [0.5.0]
 _6 Oct 2025_
 
@@ -9,6 +16,7 @@ _6 Oct 2025_
 ### Changed
 - Minor improvements to the deployment bash script.
 - Updated OID4VP-related code to support OpenID4VP v1.
+- Updated OID4VP configuration: the wallet scheme and verifier domain are now configurable via environment variables.
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.

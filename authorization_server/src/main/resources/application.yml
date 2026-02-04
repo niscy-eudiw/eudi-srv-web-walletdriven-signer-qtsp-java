@@ -17,10 +17,13 @@ server:
   error:
     include-message: always
 
-verifier:
-  address: verifier-backend.eudiw.dev
-  presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
-  validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
+oid4vp:
+  verifier:
+    domain: ${VERIFIER-DOMAIN}
+    presentation-url: https://${VERIFIER-DOMAIN}/ui/presentations
+    validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/msoMdoc/deviceResponse
+  wallet:
+    scheme: ${WALLET-SCHEME}
 
 service-url-config:
   oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER} # Example: http://localhost:8084
