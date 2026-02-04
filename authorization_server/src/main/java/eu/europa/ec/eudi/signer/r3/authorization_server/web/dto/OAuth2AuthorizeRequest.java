@@ -18,6 +18,10 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
@@ -210,43 +214,84 @@ public class OAuth2AuthorizeRequest {
 
     public static OAuth2AuthorizeRequest from(HttpServletRequest request) throws IllegalArgumentException{
         OAuth2AuthorizeRequest authRequest = new OAuth2AuthorizeRequest();
+        Map<String, String[]> parameters = getParametersFromQueryOrForm(request);
+        if (parameters == null)
+            throw new IllegalArgumentException("No parameters were received for the OAuth2 /authorize request.");
 
-        authRequest.setResponse_type(getRequiredParameter(request, "response_type"));
-        authRequest.setClient_id(getRequiredParameter(request, "client_id"));
-        authRequest.setRedirect_uri(request.getParameter("redirect_uri"));
-        authRequest.setScope(request.getParameter("scope"));
-        authRequest.setAuthorization_details(request.getParameter("authorization_details"));
+        authRequest.setResponse_type(getRequiredParameter(parameters, "response_type"));
+        authRequest.setClient_id(getRequiredParameter(parameters, "client_id"));
+        authRequest.setRedirect_uri(getFirst(parameters, "redirect_uri"));
+        authRequest.setScope(getFirst(parameters, "scope"));
+        authRequest.setAuthorization_details(getFirst(parameters, "authorization_details"));
 
         // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
-        if(authRequest.getScope() == null && authRequest.getAuthorization_details() == null )
+        if (authRequest.getScope() == null && authRequest.getAuthorization_details() == null)
             authRequest.setScope("service");
 
-        authRequest.setCode_challenge(getRequiredParameter(request, "code_challenge"));
-        authRequest.setCode_challenge_method(request.getParameter("code_challenge_method"));
-        authRequest.setState(request.getParameter("state"));
-        authRequest.setRequest_uri(request.getParameter("request_uri"));
-
-        authRequest.setLang(request.getParameter("lang"));
-        authRequest.setCredentialID(request.getParameter("credentialID"));
-        authRequest.setSignatureQualifier(request.getParameter("signatureQualifier"));
-        authRequest.setNumSignatures(request.getParameter("numSignatures"));
-        authRequest.setHashes(request.getParameter("hashes"));
-        authRequest.setHashAlgorithmOID(request.getParameter("hashAlgorithmOID"));
-        authRequest.setDescription(request.getParameter("description"));
-        authRequest.setAccount_token(request.getParameter("account_token"));
-        authRequest.setClientData(request.getParameter("clientData"));
+        authRequest.setCode_challenge(getRequiredParameter(parameters, "code_challenge"));
+        authRequest.setCode_challenge_method(getFirst(parameters, "code_challenge_method"));
+        authRequest.setState(getFirst(parameters, "state"));
+        authRequest.setRequest_uri(getFirst(parameters, "request_uri"));
+        authRequest.setLang(getFirst(parameters, "lang"));
+        authRequest.setCredentialID(getFirst(parameters, "credentialID"));
+        authRequest.setSignatureQualifier(getFirst(parameters, "signatureQualifier"));
+        authRequest.setNumSignatures(getFirst(parameters, "numSignatures"));
+        authRequest.setHashes(getFirst(parameters, "hashes"));
+        authRequest.setHashAlgorithmOID(getFirst(parameters, "hashAlgorithmOID"));
+        authRequest.setDescription(getFirst(parameters,"description"));
+        authRequest.setAccount_token(getFirst(parameters, "account_token"));
+        authRequest.setClientData(getFirst(parameters, "clientData"));
         return authRequest;
     }
 
-    private static String getRequiredParameter(HttpServletRequest request, String name) throws IllegalArgumentException {
-        String value = request.getParameter(name);
-        if (value == null || value.isBlank() || !StringUtils.hasText(value)) {
-            throw new IllegalArgumentException("Missing required parameter: " + name);
+    private static Map<String, String[]> getParametersFromQueryOrForm(HttpServletRequest request){
+        String query = request.getQueryString();
+        if(query == null)
+            return request.getParameterMap();
+
+        String[] pares = query.split("&");
+        Map<String, String[]> parameters = new HashMap<>();
+        for (String pare : pares) {
+            String[] nameAndValue = pare.split("=", 2);
+            String key = nameAndValue[0];
+            String value = nameAndValue[1];
+            if(Objects.equals(key, "redirect_uri") || Objects.equals(key, "authorization_details") ||
+                  Objects.equals(key, "request_uri") || Objects.equals(key, "credentialID")){
+                value = decode(value);
+            }
+
+            if(parameters.containsKey(key)){
+                String[] oldValues = parameters.get(key);
+                String[] newValues = new String[oldValues.length + 1];
+                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length); // copy old values
+                newValues[oldValues.length] = value;
+                parameters.put(key, newValues);
+            }
+            else parameters.put(key, new String[]{value});
         }
-        if(request.getParameterValues(name).length != 1){
+        return parameters;
+    }
+
+    private static String decode(String value) {
+        return value == null ? null : URLDecoder.decode(value, StandardCharsets.UTF_8);
+    }
+
+    private static String getFirst(Map<String, String[]> params, String key) {
+        if (params == null) return null;
+        String[] values = params.get(key);
+        if (values == null || values.length == 0) return null;
+        return values[0];
+    }
+
+    private static String getRequiredParameter(Map<String, String[]> parameters, String name) throws IllegalArgumentException {
+        String[] value = parameters.get(name);
+        if(value.length != 1){
             throw new IllegalArgumentException("Too many values for the parameter: " + name);
         }
-        return value;
+        if (value[0] == null || value[0].isBlank() || !StringUtils.hasText(value[0])) {
+            throw new IllegalArgumentException("Missing required parameter: " + name);
+        }
+        return value[0];
     }
 
     public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails(){

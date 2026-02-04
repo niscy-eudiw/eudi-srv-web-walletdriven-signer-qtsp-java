@@ -163,9 +163,9 @@ public class TokenRequestProvider implements AuthenticationProvider {
         // Validate Authorization Details: if the authorization details are set in the previous request, that should know be also present and be equal
         if(authorization.getAuthorizedScopes().contains("credential") && authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
             if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null && authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details") == null) {
-                throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details from the tokenRequest doesn't match the Authorization Details from the authorizationRequest."));
+                throw new OAuth2AuthenticationException(getOAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The Authorization Details are either missing from the tokenRequest or from the authorizationRequest."));
             } else {
-                String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+                String authDetailsAuthorization = authorizationRequest.getAdditionalParameters().get("authorization_details").toString();
                 String authDetailsToken = URLDecoder.decode(authorizationCodeAuthentication.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
 
                 JSONArray authDetailsAuthorizationArray = new JSONArray(authDetailsAuthorization);
@@ -197,7 +197,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         Map<String, Object> additionalParameters = new HashMap<>(authorizationRequest.getAdditionalParameters());
 
         if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
-            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+            String authDetailsToken = authorizationRequest.getAdditionalParameters().get("authorization_details").toString();
             JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
             JSONObject authorization_details_json = authDetailsTokenArray.getJSONObject(0);
             if(!authorization_details_json.has("credentialID") && authorization_details_json.has("signatureQualifier")){
@@ -325,7 +325,7 @@ public class TokenRequestProvider implements AuthenticationProvider {
         OAuth2AccessTokenAuthenticationToken accessTokenAuthenticationToken;
 
         if(authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
-            String authDetailsToken = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
+            String authDetailsToken = authorizationRequest.getAdditionalParameters().get("authorization_details").toString();
             Map<String, Object> additionalParameters = new HashMap<>();
             JSONArray authDetailsTokenArray = new JSONArray(authDetailsToken);
             List<Object> authDetailsList = authDetailsTokenArray.toList();
