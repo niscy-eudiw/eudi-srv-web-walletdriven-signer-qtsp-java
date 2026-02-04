@@ -23,7 +23,6 @@ public class VerifierConfig {
     private String address;
     private String presentationUrl;
     private String validationUrl;
-    private String clientId;
 
     public String getAddress() {
         return address;
@@ -47,13 +46,5 @@ public class VerifierConfig {
 
     public void setValidationUrl(String validationUrl) {
         this.validationUrl = validationUrl;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
     }
 }
