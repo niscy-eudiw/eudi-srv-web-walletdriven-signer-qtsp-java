@@ -16,21 +16,17 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
-@ConfigurationProperties(prefix = "verifier")
 public class VerifierConfig {
-    private String address;
+    private String domain;
     private String presentationUrl;
     private String validationUrl;
-    private String clientId;
 
-    public String getAddress() {
-        return address;
+    public String getDomain() {
+        return domain;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public String getPresentationUrl() {
@@ -47,13 +43,5 @@ public class VerifierConfig {
 
     public void setValidationUrl(String validationUrl) {
         this.validationUrl = validationUrl;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
     }
 }
