@@ -26,6 +26,8 @@ public class CredentialsInfoCert {
     private String subjectDN; // the subject distinguished name from the end entity certificate
     private String validFrom; // the validity start date from the end entity certificate
     private String validTo; // the validity end date from the end entity certificate
+    private List<String> qcStatements; // OIDs of QC statements present in the certificate (required)
+    private List<String> policy; // OIDs of certificate policies present in the certificate (optional)
 
     public String getStatus() {
         return status;
@@ -83,6 +85,22 @@ public class CredentialsInfoCert {
         this.validTo = validTo;
     }
 
+    public List<String> getQcStatements() {
+        return qcStatements;
+    }
+
+    public void setQcStatements(List<String> qcStatements) {
+        this.qcStatements = qcStatements;
+    }
+
+    public List<String> getPolicy() {
+        return policy;
+    }
+
+    public void setPolicy(List<String> policy) {
+        this.policy = policy;
+    }
+
     @Override
     public String toString() {
         return "CredentialsInfoCert{" +
@@ -93,6 +111,8 @@ public class CredentialsInfoCert {
                 ", subjectDN='" + subjectDN + '\'' +
                 ", validFrom='" + validFrom + '\'' +
                 ", validTo='" + validTo + '\'' +
+                ", qcStatements=" + qcStatements +
+                ", policy=" + policy +
                 '}';
     }
 }

@@ -36,9 +36,13 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepositor
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtendedMixIn;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.handler.OAuth2AuthorizationSuccessHandler;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.JWTCustomClaimNames;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipalMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
@@ -46,19 +50,20 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.conv
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -92,6 +97,7 @@ import org.springframework.security.oauth2.server.authorization.token.*;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -180,6 +186,29 @@ public class AuthorizationServerConfig {
 		return (authenticationProviders) -> {
 			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
 		};
+	}
+
+	@Bean
+	public CommonsRequestLoggingFilter logFilter() {
+		CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
+		// added logs of the requests received in the AS endpoints
+		filter.setIncludePayload(true);
+		filter.setMaxPayloadLength(10000);
+		filter.setIncludeHeaders(false);
+		filter.setAfterMessagePrefix("REQUEST DATA : ");
+		return filter;
+	}
+
+	@Bean
+	public FilterRegistrationBean<CommonsRequestLoggingFilter> loggingFilterRegistration() {
+		CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
+		filter.setIncludePayload(true);
+		filter.setMaxPayloadLength(10000);
+		filter.setIncludeQueryString(true);
+
+		FilterRegistrationBean<CommonsRequestLoggingFilter> registration = new FilterRegistrationBean<>(filter);
+		registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+		return registration;
 	}
 
 	@Bean
@@ -286,10 +315,6 @@ public class AuthorizationServerConfig {
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
 		logger.info("Setting up OAuth2TokenCustomizer");
-		String credentialIdParameter = "credentialID";
-		String hashAlgorithmOIDParameter = "hashAlgorithmOID";
-		String numSignaturesParameter = "numSignatures";
-		String hashesParameter = "hashes";
 
 		return context -> {
 			if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) return;
@@ -298,40 +323,26 @@ public class AuthorizationServerConfig {
 			OAuth2Authorization authorization = context.getAuthorization();
 			if (authorization == null) return;
 
-			if(authorization.getAuthorizedScopes().contains("service")){
+			if(authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.SERVICE)){
 				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
 					Authentication token = context.getPrincipal();
 					addUserClaims(token, claims, userRepository);
 				}
 			}
-
-			if (authorization.getAuthorizedScopes().contains("credential")) {
-					OAuth2AuthorizationRequest authorizationRequest = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
-                    assert authorizationRequest != null;
-                    if (authorizationRequest.getAdditionalParameters().get("authorization_details") != null) {
-						String authDetailsAuthorization = URLDecoder.decode(authorizationRequest.getAdditionalParameters().get("authorization_details").toString(), StandardCharsets.UTF_8);
-						JSONArray authDetailsAuthorizationArray = new JSONArray(authDetailsAuthorization);
-						JSONObject authDetailsAuthorizationJSON = authDetailsAuthorizationArray.getJSONObject(0);
-
-						JSONArray documentDigests = authDetailsAuthorizationJSON.getJSONArray("documentDigests");
-						List<String> hashesList = new ArrayList<>();
-						for (int i = 0; i < documentDigests.length(); i++) {
-							JSONObject document = documentDigests.getJSONObject(i);
-							String hashValue = document.getString("hash");
-							hashesList.add(hashValue);
-						}
-						String hashes = String.join(",", hashesList);
-
-						claims.claim(credentialIdParameter, authDetailsAuthorizationJSON.get(credentialIdParameter));
-						claims.claim(hashAlgorithmOIDParameter, authDetailsAuthorizationJSON.get(hashAlgorithmOIDParameter));
-						claims.claim(numSignaturesParameter, documentDigests.length());
-						claims.claim(hashesParameter, hashes);
-					} else {
-						claims.claim(credentialIdParameter, authorizationRequest.getAdditionalParameters().get(credentialIdParameter).toString());
-						claims.claim(numSignaturesParameter, authorizationRequest.getAdditionalParameters().get(numSignaturesParameter).toString());
-						claims.claim(hashesParameter, authorizationRequest.getAdditionalParameters().get(hashesParameter).toString());
-						claims.claim(hashAlgorithmOIDParameter, authorizationRequest.getAdditionalParameters().get(hashAlgorithmOIDParameter).toString());
-					}
+			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL)) {
+				addCredentialClaims(claims, authorization);
+			}
+			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_CREATION)) {
+				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
+					Authentication token = context.getPrincipal();
+					addCreationCredentialClaims(token, claims, userRepository, authorization);
+				}
+			}
+			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_DELETION)) {
+				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
+					Authentication token = context.getPrincipal();
+					addDeletionCredentialClaims(token, claims, authorization);
+				}
 			}
 		};
 	}
@@ -339,10 +350,10 @@ public class AuthorizationServerConfig {
 	private void addUserClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository) {
 		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 			UserPrincipal up = (UserPrincipal) token.getPrincipal();
-			claims.claim("givenName", this.cryptoUtils.encryptString(up.getGivenName()));
-			claims.claim("surname", this.cryptoUtils.encryptString(up.getSurname()));
+			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
+			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
 			User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-			claims.claim("issuingCountry", u.getIssuingCountry());
+			claims.claim(JWTCustomClaimNames.ISSUING_COUNTRY, u.getIssuingCountry());
 		}
 	}
 
@@ -351,29 +362,80 @@ public class AuthorizationServerConfig {
 		if (request == null) return;
 
 		Map<String, Object> params = request.getAdditionalParameters();
-		Object authDetails = params.get("authorization_details");
 
-		if (authDetails != null) {
-			JSONObject authDetailsJSON = new JSONArray(
-				  URLDecoder.decode(authDetails.toString(), StandardCharsets.UTF_8))
-				  .getJSONObject(0);
-
-			claims.claim("credentialID", authDetailsJSON.get("credentialID"));
-			claims.claim("hashAlgorithmOID", authDetailsJSON.get("hashAlgorithmOID"));
-
-			JSONArray docs = authDetailsJSON.getJSONArray("documentDigests");
+		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
+			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
+			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, authDetailsJSON.get(OAuth2AuthorizationDetailsNames.CREDENTIAL_ID));
+			claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, authDetailsJSON.get(OAuth2AuthorizationDetailsNames.HASH_ALGORITHM_OID));
+			JSONArray docs = authDetailsJSON.getJSONArray(OAuth2AuthorizationDetailsNames.DOCUMENT_DIGESTS);
 			List<String> hashes = new ArrayList<>();
 			for (int i = 0; i < docs.length(); i++) {
-				hashes.add(docs.getJSONObject(i).getString("hash"));
+				hashes.add(docs.getJSONObject(i).getString(OAuth2AuthorizationDetailsNames.HASH));
+			}
+			claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, docs.length());
+			claims.claim(JWTCustomClaimNames.HASHES, String.join(",", hashes));
+		} else {
+			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, params.get(OAuth2CustomParameterNames.CREDENTIAL_ID).toString());
+			claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, params.get(OAuth2CustomParameterNames.NUM_SIGNATURES).toString());
+
+			String hashes = (String) params.get(OAuth2CustomParameterNames.HASHES);
+			String base64EncodedHashes = Arrays.stream(hashes.split(","))
+				  .map(h -> Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(h)))
+				  .collect(Collectors.joining(","));
+
+			claims.claim(JWTCustomClaimNames.HASHES, String.join(",", base64EncodedHashes));
+			claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, params.get(OAuth2CustomParameterNames.HASH_ALGORITHM_OID).toString());
+		}
+	}
+
+	private void addCreationCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository, OAuth2Authorization authorization) {
+		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+			UserPrincipal up = (UserPrincipal) token.getPrincipal();
+			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
+			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
+			User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+			claims.claim(JWTCustomClaimNames.ISSUING_COUNTRY, u.getIssuingCountry());
+		}
+
+		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+		if (request == null) return;
+		Map<String, Object> params = request.getAdditionalParameters();
+		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
+			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
+
+			if(authDetailsJSON.has(OAuth2AuthorizationDetailsNames.ACR_VALUES)) {
+				JSONArray acr_values = authDetailsJSON.getJSONArray(OAuth2AuthorizationDetailsNames.ACR_VALUES);
 			}
 
-			claims.claim("numSignatures", docs.length());
-			claims.claim("hashes", String.join(",", hashes));
-		} else {
-			claims.claim("credentialID", params.get("credentialID").toString());
-			claims.claim("numSignatures", params.get("numSignatures").toString());
-			claims.claim("hashes", params.get("hashes").toString());
-			claims.claim("hashAlgorithmOID", params.get("hashAlgorithmOID").toString());
+			if(authDetailsJSON.has(OAuth2AuthorizationDetailsNames.CREDENTIAL_CREATION_REQUEST)) {
+				JSONObject credentialCreationRequest = authDetailsJSON.getJSONObject(OAuth2AuthorizationDetailsNames.CREDENTIAL_CREATION_REQUEST);
+				if (credentialCreationRequest.has(OAuth2AuthorizationDetailsNames.CERTIFICATE_POLICY)) {
+					String certificatePolicy = credentialCreationRequest.getString(OAuth2AuthorizationDetailsNames.CERTIFICATE_POLICY);
+					claims.claim(JWTCustomClaimNames.CERTIFICATE_POLICY, certificatePolicy);
+				}
+				if (credentialCreationRequest.has(OAuth2AuthorizationDetailsNames.SUBJECT_DATA)) {
+					String subjectData = credentialCreationRequest.getString(OAuth2AuthorizationDetailsNames.SUBJECT_DATA);
+					claims.claim(JWTCustomClaimNames.SUBJECT_DATA, subjectData);
+				}
+			}
+		}
+	}
+
+	private void addDeletionCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
+		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
+			UserPrincipal up = (UserPrincipal) token.getPrincipal();
+			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
+			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
+		}
+
+		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+		if (request == null) return;
+		Map<String, Object> params = request.getAdditionalParameters();
+		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
+			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
+
+			String credentialId = authDetailsJSON.getString(OAuth2AuthorizationDetailsNames.CREDENTIAL_ID);
+			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, credentialId);
 		}
 	}
 

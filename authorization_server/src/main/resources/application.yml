@@ -17,11 +17,13 @@ server:
   error:
     include-message: always
 
-verifier:
-  address: dev.verifier-backend.eudiw.dev
-  presentation-url: https://dev.verifier-backend.eudiw.dev/ui/presentations
-  validation-url: https://dev.verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
-  client-id: dev.verifier-backend.eudiw.dev
+oid4vp:
+  verifier:
+    domain: ${VERIFIER-DOMAIN}
+    presentation-url: https://${VERIFIER-DOMAIN}/ui/presentations
+    validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/msoMdoc/deviceResponse
+  wallet:
+    scheme: ${WALLET-SCHEME}
 
 service-url-config:
   oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER} # Example: http://localhost:8084
@@ -32,7 +34,7 @@ trusted-issuers:
 
 spring:
   #config:
-  #  import: file:.env[.properties]
+  # import: file:.env[.properties]
   datasource:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
@@ -58,5 +60,5 @@ logging:
   level:
     root: INFO
     org.springframework.web: INFO
-    org.springframework.security: INFO
-    org.springframework.security.oauth2: INFO
+    org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
+    org.springframework.security.oauth2.server.authorization: DEBUG

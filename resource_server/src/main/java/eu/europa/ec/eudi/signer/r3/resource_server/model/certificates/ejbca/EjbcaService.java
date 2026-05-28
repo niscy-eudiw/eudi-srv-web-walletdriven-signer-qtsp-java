@@ -19,8 +19,6 @@ package eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca;
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -171,62 +169,4 @@ public class EjbcaService {
         return certs;
     }
 
-    // If the value false is return then the issuerDN certificate is NOT revoked.
-    // If the value is true then the issuerDN certificate is revoked and cannot be trusted.
-    public Boolean revocationStatus(String issuerDN, String serialNumberHex) throws Exception {
-        String issuerDNUrlEncode = URLEncoder.encode(issuerDN, StandardCharsets.UTF_8).replace("+", "%20");
-        String getUrl = "https://" + this.ejbcaProperties.getCahost() + "/ejbca/ejbca-rest-api/v1/certificate/"
-              + issuerDNUrlEncode + "/" + serialNumberHex + "/revocationstatus";
-
-        // Set up headers
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Accept", "application/json");
-        headers.put("Content-Type", "application/json");
-
-        String clientP12ArchiveFilepath = this.ejbcaProperties.getClientP12ArchiveFilepath();
-        String clientP12ArchivePassword = this.ejbcaProperties.getClientP12ArchivePassword();
-        KeyManager[] keyStorePKCS12 = getKeyStoreFromPKCS12File(clientP12ArchiveFilepath, clientP12ArchivePassword);
-        String ManagementCA = this.ejbcaProperties.getManagementCA();
-        TrustManager[] trustManagerCA = getTrustManagerOfCACertificate(ManagementCA);
-        HttpResponse response = WebUtils.httpGetRequestsWithCustomSSLContext(trustManagerCA, keyStorePKCS12, getUrl,
-              headers);
-
-        if (response.getStatusLine().getStatusCode() != 200) {
-            throw new Exception("Certificate was not found.");
-        }
-        if (response.getStatusLine().getStatusCode() == 404) {
-            return false;
-        }
-        HttpEntity entity = response.getEntity();
-        if (entity == null) {
-            throw new Exception("Message from EJBCA is empty.");
-        }
-
-        InputStream inStream = entity.getContent();
-        String result = WebUtils.convertStreamToString(inStream);
-        JSONObject resultJson;
-        try{
-            resultJson = new JSONObject(result);
-        }
-        catch (JSONException e){
-            throw new Exception("The response from the revocation status request to EJBCA doesn't contain a correctly formatted JSON string.");
-        }
-
-        Set<String> resultJsonKeySet = resultJson.keySet();
-        if(resultJsonKeySet.contains("revoked") && resultJsonKeySet.contains("issuer_dn") && resultJsonKeySet.contains("serial_number")){
-            if(!resultJson.getString("issuer_dn").equals(issuerDN)){
-                log.error("The issuer_dn in the revocation status response is not the one requested.");
-                return true;
-            }
-            if(!resultJson.getString("serial_number").equals(serialNumberHex)){
-                log.error("The serial_number in the revocation status response is not the one requested.");
-                return true;
-            }
-            return resultJson.getBoolean("revoked");
-        }
-        else{
-            log.error("Not all the expected values are present in the response, and the validation of the response can't be ensured.");
-            return true;
-        }
-    }
 }

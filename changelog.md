@@ -1,17 +1,24 @@
 # Changelog
 
 ## [0.5.0]
-_6 Oct 2025_
+_8 Apr 2026_
 
 ### Added
 - Additional logging and debug messages to aid troubleshooting.
 
 ### Changed
+- Upgraded Cloud Signature Consortium (CSC) API from v2.0 to v2.2.
 - Minor improvements to the deployment bash script.
 - Updated OID4VP-related code to support OpenID4VP v1.
+- Updated OID4VP configuration: the wallet scheme and verifier domain are now configurable via environment variables.
+- Improved handling and validation of certificate SubjectDN values containing special characters.
+- Updated Docker Java and Maven base images version.
+- Extracted OAuth2 constants into dedicated constants classes for improved maintainability.
+- Extracted OAuth2 flow logic into `OAuth2ValidationUtils`, centralizing reusable validation helpers. 
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.
+- Issue #27 - `signatures/signHash`: hashes parameter now correctly expects Base64-encoded strings instead of URL-encoded strings, in compliance with the CSC API specification.
 
 ## [0.4.0]
 _29 May 2025_

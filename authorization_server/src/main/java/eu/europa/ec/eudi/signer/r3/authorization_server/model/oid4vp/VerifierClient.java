@@ -16,11 +16,11 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OID4VPConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables.VerifierCreatedVariable;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.VerifierConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 
 import java.io.IOException;
@@ -48,12 +48,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class VerifierClient {
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
-	private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
-    private final VerifierConfig verifierProperties;
+    private final String request_uri = "request_uri";
+    private final String client_id = "client_id";
+    private final String transaction_id = "transaction_id";
+
+    private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
+    private final OID4VPConfig oid4VPConfig;
     private final VerifierCreatedVariables verifierVariables;
 
-    public VerifierClient(VerifierConfig verifierProperties) {
-        this.verifierProperties = verifierProperties;
+    public VerifierClient(OID4VPConfig oid4VPConfig) {
+        this.oid4VPConfig = oid4VPConfig;
         this.verifierVariables = new VerifierCreatedVariables();
     }
 
@@ -102,10 +106,6 @@ public class VerifierClient {
 		log.info("Encoded Request URI: {}", encoded_request_uri);
         String client_id = responseFromVerifier.getString(client_id1);
 		log.info("Client Id: {}", client_id);
-        /*if(!client_id.contains(this.verifierProperties.getClientId())) {
-            log.error("Client Id Received different from Client Id expected");
-            throw new Exception(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
-        }*/
         String presentation_id = responseFromVerifier.getString(transaction_id);
 		log.info("Transaction Id: {}", presentation_id);
 
@@ -140,7 +140,7 @@ public class VerifierClient {
         // makes a request to the verifier
         HttpResponse response;
         try {
-            response = WebUtils.httpPostRequest(verifierProperties.getPresentationUrl(), headers, bodyMessage);
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getPresentationUrl(), headers, bodyMessage);
         } catch (Exception e) {
             log.error("An error occurred when trying to connect to the Verifier. {}", e.getMessage());
             throw new Exception("An error occurred when trying to connect to the Verifier");
@@ -277,7 +277,7 @@ public class VerifierClient {
     }
 
     private String getLinkToWallet(String request_uri, String client_id) {
-        return "eudi-openid4vp://" + verifierProperties.getAddress() + "?client_id=" +
+        return this.oid4VPConfig.getWallet().getScheme() + this.oid4VPConfig.getVerifier().getDomain() + "?client_id=" +
                 client_id + "&request_uri=" + request_uri;
     }
 
@@ -383,11 +383,11 @@ public class VerifierClient {
     }
 
     private String getUrlToRetrieveVPTokenWithResponseCode(String presentation_id, String nonce, String code) {
-        return verifierProperties.getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce + "&response_code=" + code;
+        return this.oid4VPConfig.getVerifier().getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce + "&response_code=" + code;
     }
 
     private String getUrlToRetrieveVPToken(String presentation_id, String nonce) {
-        return verifierProperties.getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce;
+        return this.oid4VPConfig.getVerifier().getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce;
     }
 
     public JSONObject validateMSOMDocDeviceResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
@@ -398,7 +398,7 @@ public class VerifierClient {
 
         HttpResponse response;
         try{
-            response = WebUtils.httpPostRequest(this.verifierProperties.getValidationUrl(), headers, body);
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getValidationUrl(), headers, body);
         }
         catch (Exception e){
             log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());

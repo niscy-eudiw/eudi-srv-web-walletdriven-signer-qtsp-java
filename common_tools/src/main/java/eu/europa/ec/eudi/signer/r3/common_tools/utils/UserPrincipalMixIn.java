@@ -55,8 +55,8 @@ class UserPrincipalDeserializer extends JsonDeserializer<UserPrincipal> {
           throws IOException {
         String id = readJsonNode(root, "id").asText();
         String hash = readJsonNode(root, "hash").asText();
-        String givenName = readJsonNode(root, "givenName").asText();
-        String surname = readJsonNode(root, "surname").asText();
+        String givenName = readJsonNode(root, JWTCustomClaimNames.GIVEN_NAME).asText();
+        String surname = readJsonNode(root, JWTCustomClaimNames.SURNAME).asText();
         List<GrantedAuthority> authorities = mapper.readValue(readJsonNode(root, "authorities").traverse(mapper), GRANTED_AUTHORITY_LIST);
         String password = readJsonNode(root, "password").asText();
         return new UserPrincipal(id, hash, givenName, surname, authorities, password);

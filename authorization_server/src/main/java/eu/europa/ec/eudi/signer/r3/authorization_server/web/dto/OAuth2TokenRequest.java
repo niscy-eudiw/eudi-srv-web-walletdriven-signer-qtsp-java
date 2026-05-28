@@ -16,10 +16,17 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Objects;
+
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.util.StringUtils;
 
 public class OAuth2TokenRequest {
     // authorization_code | client_credentials | refresh_token
@@ -143,24 +150,25 @@ public class OAuth2TokenRequest {
 
     public static RequestMatcher requestMatcher(){
         return request ->
-              request.getParameter("grant_type") != null &&
-              (!Objects.equals(request.getParameter("grant_type"), "authorization_code") || request.getParameter("code") != null) &&
-              request.getParameter("client_id") != null;
+              Objects.equals(request.getParameter(OAuth2ParameterNames.GRANT_TYPE), AuthorizationGrantType.AUTHORIZATION_CODE.getValue()) && // Grant type should be 'authorization_code'
+              StringUtils.hasText(request.getParameter(OAuth2ParameterNames.CODE)) && request.getParameterValues(OAuth2ParameterNames.CODE).length == 1 &&
+              request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null &&
+              (!StringUtils.hasText(request.getParameter(OAuth2ParameterNames.REDIRECT_URI)) || request.getParameterValues(OAuth2ParameterNames.REDIRECT_URI).length == 1);
     }
 
     public static OAuth2TokenRequest from(HttpServletRequest request) throws IllegalArgumentException{
         OAuth2TokenRequest oauthRequest = new OAuth2TokenRequest();
-        oauthRequest.setGrant_type(request.getParameter("grant_type"));
-        oauthRequest.setCode(request.getParameter("code"));
-        oauthRequest.setRefresh_token(request.getParameter("refresh_token"));
-        oauthRequest.setClient_id(request.getParameter("client_id"));
-        oauthRequest.setClient_secret(request.getParameter("client_secret"));
-        oauthRequest.setCode_verifier(request.getParameter("code_verifier"));
-        oauthRequest.setClient_assertion(request.getParameter("client_assertion"));
-        oauthRequest.setClient_assertion_type(request.getParameter("client_assertion_type"));
-        oauthRequest.setRedirect_uri(request.getParameter("redirect_uri"));
-        oauthRequest.setAuthorization_details(request.getParameter("authorization_details"));
-        oauthRequest.setClientData(request.getParameter("clientData"));
+        oauthRequest.setGrant_type(request.getParameter(OAuth2ParameterNames.GRANT_TYPE));
+        oauthRequest.setCode(request.getParameter(OAuth2ParameterNames.CODE));
+        oauthRequest.setRefresh_token(request.getParameter(OAuth2TokenType.REFRESH_TOKEN.getValue()));
+        oauthRequest.setClient_id(request.getParameter(OAuth2ParameterNames.CLIENT_ID));
+        oauthRequest.setClient_secret(request.getParameter(OAuth2ParameterNames.CLIENT_SECRET));
+        oauthRequest.setCode_verifier(request.getParameter(PkceParameterNames.CODE_VERIFIER));
+        oauthRequest.setClient_assertion(request.getParameter(OAuth2ParameterNames.CLIENT_ASSERTION));
+        oauthRequest.setClient_assertion_type(request.getParameter(OAuth2ParameterNames.CLIENT_ASSERTION_TYPE));
+        oauthRequest.setRedirect_uri(request.getParameter(OAuth2ParameterNames.REDIRECT_URI));
+        oauthRequest.setAuthorization_details(request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS));
+        oauthRequest.setClientData(request.getParameter(OAuth2CustomParameterNames.CLIENT_DATA));
         return oauthRequest;
     }
 

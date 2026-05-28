@@ -19,13 +19,15 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
 
 import jakarta.validation.constraints.NotBlank;
 
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class InfoResponse {
     @NotBlank
-    private String specs = "2.0.0.0";
+    private String specs = "2.2.0.0";
     @NotBlank
     private String name = "Trust Provider Signer R3 QTSP";
     @NotBlank
@@ -56,11 +58,11 @@ public class InfoResponse {
     @NotBlank
     private SignatureFormats signature_formats;
 
-    private static class SignatureFormats{
+    private static class SignatureFormats {
         private List<String> formats;
         private List<List<String>> envelope_properties;
 
-        public SignatureFormats(){
+        public SignatureFormats() {
             this.formats = new ArrayList<>();
             this.envelope_properties = new ArrayList<>();
         }
@@ -90,6 +92,12 @@ public class InfoResponse {
     @NotBlank
     private List<String> conformance_levels;
 
+    // New fields for CSC API 2.2.0.0
+    private List<InfoConfig.OAuth2Server> oauth2Servers;
+    private Boolean supportsRar;
+    private List<String> supportedHashTypes;
+    private List<String> documentTypes;
+
     public InfoResponse() {
         this.authType = new ArrayList<>();
         this.methods = new ArrayList<>();
@@ -99,9 +107,9 @@ public class InfoResponse {
     }
 
     public InfoResponse(String specs, String name, String logo, String region, String lang, String description,
-                        List<String> authType, String oauth2, boolean asynchronousOperationMode, List<String> methods,
-                        boolean validationInfo, InfoConfig.SignAlgorithms signAlgorithms, List<String> signature_formats_formats,
-                        List<List<String>> signature_formats_envelope_properties, List<String> conformance_levels) {
+            List<String> authType, String oauth2, boolean asynchronousOperationMode, List<String> methods,
+            boolean validationInfo, InfoConfig.SignAlgorithms signAlgorithms, List<String> signature_formats_formats,
+            List<List<String>> signature_formats_envelope_properties, List<String> conformance_levels) {
         this.specs = specs;
         this.name = name;
         this.logo = logo;
@@ -136,6 +144,10 @@ public class InfoResponse {
                 ", signAlgorithms=" + signAlgorithms +
                 ", signature_formats=" + signature_formats +
                 ", conformance_levels=" + conformance_levels +
+                ", oauth2Servers=" + oauth2Servers +
+                ", supportsRar=" + supportsRar +
+                ", supportedHashTypes=" + supportedHashTypes +
+                ", documentTypes=" + documentTypes +
                 '}';
     }
 
@@ -145,6 +157,38 @@ public class InfoResponse {
 
     public void setConformance_levels(@NotBlank List<String> conformance_levels) {
         this.conformance_levels = conformance_levels;
+    }
+
+    public List<InfoConfig.OAuth2Server> getOauth2Servers() {
+        return oauth2Servers;
+    }
+
+    public void setOauth2Servers(List<InfoConfig.OAuth2Server> oauth2Servers) {
+        this.oauth2Servers = oauth2Servers;
+    }
+
+    public Boolean getSupportsRar() {
+        return supportsRar;
+    }
+
+    public void setSupportsRar(Boolean supportsRar) {
+        this.supportsRar = supportsRar;
+    }
+
+    public List<String> getSupportedHashTypes() {
+        return supportedHashTypes;
+    }
+
+    public void setSupportedHashTypes(List<String> supportedHashTypes) {
+        this.supportedHashTypes = supportedHashTypes;
+    }
+
+    public List<String> getDocumentTypes() {
+        return documentTypes;
+    }
+
+    public void setDocumentTypes(List<String> documentTypes) {
+        this.documentTypes = documentTypes;
     }
 
     public @NotBlank SignatureFormats getSignature_formats() {

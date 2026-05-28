@@ -38,12 +38,64 @@ public class InfoConfig {
     private SignAlgorithms signAlgorithms;
     private Map<String, List<String>> signature_formats;
     private List<String> conformance_levels;
+    private List<OAuth2Server> oauth2Servers = new ArrayList<>();;
+    private Boolean supportsRar;
+    private List<String> supportedHashTypes;
+    private List<String> documentTypes = new ArrayList<>();
 
-    public static class SignAlgorithms{
+    public static class OAuth2Server {
+        private String label;
+        private String baseUri;
+        private String issuerIdentifier;
+        private List<String> authType;
+        private Boolean supportsRar;
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
+        }
+
+        public String getBaseUri() {
+            return baseUri;
+        }
+
+        public void setBaseUri(String baseUri) {
+            this.baseUri = baseUri;
+        }
+
+        public String getIssuerIdentifier() {
+            return issuerIdentifier;
+        }
+
+        public void setIssuerIdentifier(String issuerIdentifier) {
+            this.issuerIdentifier = issuerIdentifier;
+        }
+
+        public List<String> getAuthType() {
+            return authType;
+        }
+
+        public void setAuthType(List<String> authType) {
+            this.authType = authType;
+        }
+
+        public Boolean getSupportsRar() {
+            return supportsRar;
+        }
+
+        public void setSupportsRar(Boolean supportsRar) {
+            this.supportsRar = supportsRar;
+        }
+    }
+
+    public static class SignAlgorithms {
         private List<String> algos;
         private List<String> algoParams;
 
-        public SignAlgorithms(){
+        public SignAlgorithms() {
             this.algos = new ArrayList<>();
             this.algoParams = new ArrayList<>();
         }
@@ -67,9 +119,9 @@ public class InfoConfig {
         @Override
         public String toString() {
             return "SignAlgorithms{" +
-                  "algos=" + algos +
-                  ", algoParams=" + algoParams +
-                  '}';
+                    "algos=" + algos +
+                    ", algoParams=" + algoParams +
+                    '}';
         }
     }
 
@@ -185,23 +237,55 @@ public class InfoConfig {
         this.conformance_levels = conformance_levels;
     }
 
+    public List<OAuth2Server> getOauth2Servers() {
+        return oauth2Servers;
+    }
+
+    public void setOauth2Servers(List<OAuth2Server> oauth2Servers) {
+        this.oauth2Servers = oauth2Servers;
+    }
+
+    public Boolean getSupportsRar() {
+        return supportsRar;
+    }
+
+    public void setSupportsRar(Boolean supportsRar) {
+        this.supportsRar = supportsRar;
+    }
+
+    public List<String> getSupportedHashTypes() {
+        return supportedHashTypes;
+    }
+
+    public void setSupportedHashTypes(List<String> supportedHashTypes) {
+        this.supportedHashTypes = supportedHashTypes;
+    }
+
+    public List<String> getDocumentTypes() {
+        return documentTypes;
+    }
+
+    public void setDocumentTypes(List<String> documentTypes) {
+        this.documentTypes = documentTypes;
+    }
+
     @Override
     public String toString() {
         return "InfoProperties{" +
-              "specs='" + specs + '\'' +
-              ", name='" + name + '\'' +
-              ", logo='" + logo + '\'' +
-              ", region='" + region + '\'' +
-              ", lang='" + lang + '\'' +
-              ", description='" + description + '\'' +
-              ", authType=" + authType +
-              ", oauth2='" + oauth2 + '\'' +
-              ", asynchronousOperationMode=" + asynchronousOperationMode +
-              ", methods=" + methods +
-              ", validationInfo=" + validationInfo +
-              ", signAlgorithms=" + signAlgorithms.toString() +
-              ", signature_formats=" + signature_formats +
-              ", conformance_levels=" + conformance_levels +
-              '}';
+                "specs='" + specs + '\'' +
+                ", name='" + name + '\'' +
+                ", logo='" + logo + '\'' +
+                ", region='" + region + '\'' +
+                ", lang='" + lang + '\'' +
+                ", description='" + description + '\'' +
+                ", authType=" + authType +
+                ", oauth2='" + oauth2 + '\'' +
+                ", asynchronousOperationMode=" + asynchronousOperationMode +
+                ", methods=" + methods +
+                ", validationInfo=" + validationInfo +
+                ", signAlgorithms=" + signAlgorithms.toString() +
+                ", signature_formats=" + signature_formats +
+                ", conformance_levels=" + conformance_levels +
+                '}';
     }
 }

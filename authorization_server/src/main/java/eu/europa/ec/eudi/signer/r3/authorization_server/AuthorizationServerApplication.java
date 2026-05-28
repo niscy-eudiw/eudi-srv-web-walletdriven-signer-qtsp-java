@@ -24,7 +24,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, VerifierConfig.class, OAuth2ClientRegistrationConfig.class, ServiceURLConfig.class})
+@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, OID4VPConfig.class, OAuth2ClientRegistrationConfig.class, ServiceURLConfig.class})
 @EnableScheduling
 @ComponentScan("eu.europa.ec.eudi.signer.r3")
 public class AuthorizationServerApplication {
