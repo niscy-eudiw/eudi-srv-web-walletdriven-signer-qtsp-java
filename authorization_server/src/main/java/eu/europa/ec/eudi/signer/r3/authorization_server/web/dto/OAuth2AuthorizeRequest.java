@@ -22,6 +22,10 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.cons
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -220,11 +224,42 @@ public class OAuth2AuthorizeRequest {
                 '}';
     }
 
+    public static OAuth2AuthorizeRequest from(URI uri) throws IllegalArgumentException {
+        String query = uri.getRawQuery();
+        Map<String, String[]> queryPairs = new HashMap<>();
+
+        if (query == null || query.isEmpty()) {
+            return from(queryPairs);
+        }
+
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            if (idx != -1) {
+                String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
+
+                queryPairs.merge(key, new String[]{value}, (existing, incoming) -> {
+                    String[] merged = new String[existing.length + incoming.length];
+                    System.arraycopy(existing, 0, merged, 0, existing.length);
+                    System.arraycopy(incoming, 0, merged, existing.length, incoming.length);
+                    return merged;
+                });
+            }
+        }
+        return from(queryPairs);
+    }
+
     public static OAuth2AuthorizeRequest from(HttpServletRequest request) throws IllegalArgumentException {
-        OAuth2AuthorizeRequest authRequest = new OAuth2AuthorizeRequest();
         Map<String, String[]> parameters = request.getParameterMap();
         if (parameters == null)
             throw new IllegalArgumentException("No parameters were received for the OAuth2 /authorize request.");
+
+        return from(parameters);
+    }
+
+    private static OAuth2AuthorizeRequest from(Map<String, String[]> parameters) throws IllegalArgumentException {
+        OAuth2AuthorizeRequest authRequest = new OAuth2AuthorizeRequest();
 
         authRequest.setResponse_type(getRequiredParameter(parameters, OAuth2ParameterNames.RESPONSE_TYPE));
         authRequest.setClient_id(getRequiredParameter(parameters, OAuth2ParameterNames.CLIENT_ID));

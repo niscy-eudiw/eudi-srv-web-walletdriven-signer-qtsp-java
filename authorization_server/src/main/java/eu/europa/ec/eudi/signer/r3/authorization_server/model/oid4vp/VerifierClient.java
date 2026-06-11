@@ -270,7 +270,7 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
-        jsonBodyToInitPresentation.put("request_uri_method", "post");
+        // jsonBodyToInitPresentation.put("request_uri_method", "post");
         if(transaction_data != null)
             jsonBodyToInitPresentation.put("transaction_data", transaction_data);
         return jsonBodyToInitPresentation.toString();
