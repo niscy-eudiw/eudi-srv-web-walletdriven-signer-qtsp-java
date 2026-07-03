@@ -101,6 +101,8 @@ public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthentication
                   "because the URL to return to after OID4VP Authentication is incorrectly formatted.");
             logger.error(e.getMessage());
             throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
-        }
-    }
+        } catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }

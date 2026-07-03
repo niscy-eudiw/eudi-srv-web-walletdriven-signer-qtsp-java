@@ -54,7 +54,6 @@ public class OpenIdForVPService {
 
     public String getCrossDeviceRedirectLink(String urlToReturnTo, String sanitizeCookie, String serviceUrl) throws Exception {
         JSONArray transactionData = transactionDataService.getTransactionData(urlToReturnTo);
-        log.info("Transaction_Data: {}", transactionData);
         String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
         log.info("Retrieved the redirect link for cross device authentication.");
         return redirectLink;
@@ -62,52 +61,42 @@ public class OpenIdForVPService {
 
     public String getSameDeviceRedirectLink(HttpServletRequest request, String sanitizeCookie, String serviceUrl) throws Exception {
         JSONArray transactionData = transactionDataService.getTransactionData(request);
-        log.info("Transaction_Data: {}", transactionData);
         String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
-        log.info("Retrieved the redirect link for cross device authentication.");
+        log.info("Retrieved the redirect link for same device authentication.");
         return redirectLink;
+    }
+
+    public OID4VPAuthenticationToken pollVPTokenAndCreateOID4VPAuthToken(String sessionId, URI url) throws OID4VPException, InterruptedException {
+        return retrieveVPToken(true, sessionId, null, url);
+    }
+
+    public OID4VPAuthenticationToken getVPTokenAndCreateOID4VPAuthToken(String sessionId, String code, URI url) throws OID4VPException, InterruptedException {
+        return retrieveVPToken(false, sessionId, code, url);
     }
 
     /**
      * Function that allows to retrieve the VP Token from the OID4VP Verifier, validate the 'transaction_data' if the value is present
      * and returns an 'OID4VPAuthenticationToken'
-     * @param sessionId identifier of the session
-     * @param url the request url
      * @return an unauthenticated 'OID4VPAuthenticationToken'
      */
-    public OID4VPAuthenticationToken pollVPTokenAndCreateOID4VPAuthToken(String sessionId, URI url) throws OID4VPException, InterruptedException {
+    private OID4VPAuthenticationToken retrieveVPToken(boolean recursive, String sessionId, String code, URI url) throws OID4VPException, InterruptedException {
         String nonce = this.verifierClient.getNonce(sessionId);
-
-        String messageFromVerifier = this.verifierClient.getVPTokenFromVerifierRecursive(sessionId);
+        String messageFromVerifier;
+        if (recursive)
+            messageFromVerifier = this.verifierClient.getVPTokenFromVerifierRecursive(sessionId);
+        else
+            messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
         log.info("VP Token received: {}", messageFromVerifier);
 
-        transactionDataService.validateTransactionData(messageFromVerifier, url);
+        JSONObject vpToken = loadVerifierResponseAsJSONObject(messageFromVerifier);
+
+        transactionDataService.validateTransactionData(vpToken, url);
         log.info("Validated Transaction Data.");
 
-		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier, nonce);
+        return loadUserFromVerifierResponseWithVerifierValidation(vpToken, nonce);
     }
 
-    public OID4VPAuthenticationToken getVPTokenAndCreateOID4VPAuthToken(String sessionId, String code, URI url) throws OID4VPException {
-        String nonce = this.verifierClient.getNonce(sessionId);
-
-        // Returns OID4VPException with a correctly formatted messages from the Error.description
-        String messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
-        log.info("VP Token received: {}", messageFromVerifier);
-
-        transactionDataService.validateTransactionData(messageFromVerifier, url);
-        log.info("Validated Transaction Data.");
-
-        // Returns OID4VPException with a correctly formatted messages from the Error.description
-		return loadUserFromVerifierResponseWithVerifierValidation(messageFromVerifier, nonce);
-    }
-
-    /**
-     * Function that allows to load a User object from the VP Token received from the Verifier.
-     * Before creating the User object, the VP Token is validated.
-     * @param messageFromVerifier a json formatted string received from the OID4VP Verifier
-     * @return an unauthenticated token with information about the user to authenticate
-     */
-    private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(String messageFromVerifier, String nonce) throws OID4VPException {
+    private JSONObject loadVerifierResponseAsJSONObject(String messageFromVerifier) throws OID4VPException {
         log.info("Starting to load VP Token from Verifier Response...");
 
         JSONObject vpToken;
@@ -119,7 +108,15 @@ public class OpenIdForVPService {
             throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The message from Verifier is not a valid JSON.");
         }
         log.debug("VP Token: {}", vpToken);
+        return vpToken;
+    }
 
+    /**
+     * Function that allows to load a User object from the VP Token received from the Verifier.
+     * Before creating the User object, the VP Token is validated.
+     * @return an unauthenticated token with information about the user to authenticate
+     */
+    private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(JSONObject vpToken, String nonce) throws OID4VPException {
         String MSOMDocDeviceResponse = vpToken.getJSONObject("vp_token").getJSONArray("query_0").getString(0);
         JSONObject pidAttributes = verifierClient.validateSDJWTResponse(MSOMDocDeviceResponse, nonce);
         log.info("Validated and loaded the VP Token from the Verifier response.");

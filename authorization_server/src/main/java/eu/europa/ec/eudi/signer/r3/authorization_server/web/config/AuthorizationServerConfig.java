@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
@@ -29,11 +30,14 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.R
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetailsProcessing;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.CredentialCreationRequest;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.DocumentInfo;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtendedMixIn;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
@@ -177,15 +181,11 @@ public class AuthorizationServerConfig {
 	}
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
-		return (authenticationProviders) -> {
-			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
-		};
+		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
 	}
 
 	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
-		return (authenticationProviders) -> {
-			authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
-		};
+		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
 	}
 
 	@Bean
@@ -335,7 +335,11 @@ public class AuthorizationServerConfig {
 			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_CREATION)) {
 				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
 					Authentication token = context.getPrincipal();
-					addCreationCredentialClaims(token, claims, userRepository, authorization);
+					try {
+						addCreationCredentialClaims(token, claims, userRepository, authorization);
+					} catch (JsonProcessingException e) {
+						throw new RuntimeException(e);
+					}
 				}
 			}
 			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_DELETION)) {
@@ -364,16 +368,21 @@ public class AuthorizationServerConfig {
 		Map<String, Object> params = request.getAdditionalParameters();
 
 		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
-			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
-			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, authDetailsJSON.get(OAuth2AuthorizationDetailsNames.CREDENTIAL_ID));
-			claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, authDetailsJSON.get(OAuth2AuthorizationDetailsNames.HASH_ALGORITHM_OID));
-			JSONArray docs = authDetailsJSON.getJSONArray(OAuth2AuthorizationDetailsNames.DOCUMENT_DIGESTS);
-			List<String> hashes = new ArrayList<>();
-			for (int i = 0; i < docs.length(); i++) {
-				hashes.add(docs.getJSONObject(i).getString(OAuth2AuthorizationDetailsNames.HASH));
+			try {
+				List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsProcessing.fromAdditionalParameters(params);
+				AuthorizationDetails firstAuthorizationDetails = authorizationDetailsObject.get(0);
+				claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, firstAuthorizationDetails.getCredentialId());
+				claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, firstAuthorizationDetails.getHashAlgorithmOid());
+				claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, firstAuthorizationDetails.getNumSignatures());
+				List<String> hashes = new ArrayList<>();
+				for (DocumentInfo doc : firstAuthorizationDetails.getDocumentDigests()) {
+					hashes.add(doc.getHash());
+				}
+				claims.claim(JWTCustomClaimNames.HASHES, String.join(",", hashes));
 			}
-			claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, docs.length());
-			claims.claim(JWTCustomClaimNames.HASHES, String.join(",", hashes));
+			catch (Exception e){
+				logger.error(e.getMessage());
+			}
 		} else {
 			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, params.get(OAuth2CustomParameterNames.CREDENTIAL_ID).toString());
 			claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, params.get(OAuth2CustomParameterNames.NUM_SIGNATURES).toString());
@@ -388,7 +397,7 @@ public class AuthorizationServerConfig {
 		}
 	}
 
-	private void addCreationCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository, OAuth2Authorization authorization) {
+	private void addCreationCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository, OAuth2Authorization authorization) throws JsonProcessingException {
 		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
 			UserPrincipal up = (UserPrincipal) token.getPrincipal();
 			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
@@ -401,21 +410,19 @@ public class AuthorizationServerConfig {
 		if (request == null) return;
 		Map<String, Object> params = request.getAdditionalParameters();
 		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
-			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
+			List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsProcessing.fromAdditionalParameters(params);
+			AuthorizationDetails firstAuthorizationDetails = authorizationDetailsObject.get(0);
 
-			if(authDetailsJSON.has(OAuth2AuthorizationDetailsNames.ACR_VALUES)) {
-				JSONArray acr_values = authDetailsJSON.getJSONArray(OAuth2AuthorizationDetailsNames.ACR_VALUES);
+			if(!firstAuthorizationDetails.getAcrValues().isEmpty()) {
+				List<String> acr_values = firstAuthorizationDetails.getAcrValues();
 			}
-
-			if(authDetailsJSON.has(OAuth2AuthorizationDetailsNames.CREDENTIAL_CREATION_REQUEST)) {
-				JSONObject credentialCreationRequest = authDetailsJSON.getJSONObject(OAuth2AuthorizationDetailsNames.CREDENTIAL_CREATION_REQUEST);
-				if (credentialCreationRequest.has(OAuth2AuthorizationDetailsNames.CERTIFICATE_POLICY)) {
-					String certificatePolicy = credentialCreationRequest.getString(OAuth2AuthorizationDetailsNames.CERTIFICATE_POLICY);
-					claims.claim(JWTCustomClaimNames.CERTIFICATE_POLICY, certificatePolicy);
+			if(firstAuthorizationDetails.getCredentialCreationRequest() != null) {
+				CredentialCreationRequest credentialCreationRequest = firstAuthorizationDetails.getCredentialCreationRequest();
+				if (credentialCreationRequest.getCertificatePolicy() != null) {
+					claims.claim(JWTCustomClaimNames.CERTIFICATE_POLICY, credentialCreationRequest.getCertificatePolicy());
 				}
-				if (credentialCreationRequest.has(OAuth2AuthorizationDetailsNames.SUBJECT_DATA)) {
-					String subjectData = credentialCreationRequest.getString(OAuth2AuthorizationDetailsNames.SUBJECT_DATA);
-					claims.claim(JWTCustomClaimNames.SUBJECT_DATA, subjectData);
+				if (credentialCreationRequest.getSubjectData() != null) {
+					claims.claim(JWTCustomClaimNames.SUBJECT_DATA, credentialCreationRequest.getSubjectData());
 				}
 			}
 		}

@@ -48,9 +48,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class VerifierClient {
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
-    private final String request_uri = "request_uri";
-    private final String client_id = "client_id";
-    private final String transaction_id = "transaction_id";
 
     private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
     private final OID4VPConfig oid4VPConfig;
@@ -270,7 +267,6 @@ public class VerifierClient {
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
         jsonBodyToInitPresentation.put("dcql_query", dcqlQueryJSON);
-        // jsonBodyToInitPresentation.put("request_uri_method", "post");
         if(transaction_data != null)
             jsonBodyToInitPresentation.put("transaction_data", transaction_data);
         return jsonBodyToInitPresentation.toString();
