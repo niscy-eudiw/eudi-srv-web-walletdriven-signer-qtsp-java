@@ -21,7 +21,8 @@ import jakarta.validation.constraints.AssertTrue;
 public class VerifierConfig {
     private String domain;
     private String presentationUrl;
-    private String validationUrl;
+    private String mdocValidationUrl;
+    private String sdjwtValidationUrl;
     private String intendedUseId;
     private String registrationCertificateJwt;
 
@@ -47,12 +48,20 @@ public class VerifierConfig {
         this.presentationUrl = presentationUrl;
     }
 
-    public String getValidationUrl() {
-        return validationUrl;
+    public String getMdocValidationUrl() {
+        return mdocValidationUrl;
     }
 
-    public void setValidationUrl(String validationUrl) {
-        this.validationUrl = validationUrl;
+    public void setMdocValidationUrl(String mdocValidationUrl) {
+        this.mdocValidationUrl = mdocValidationUrl;
+    }
+
+    public String getSdjwtValidationUrl() {
+        return sdjwtValidationUrl;
+    }
+
+    public void setSdjwtValidationUrl(String sdjwtValidationUrl) {
+        this.sdjwtValidationUrl = sdjwtValidationUrl;
     }
 
     public String getIntendedUseId() {

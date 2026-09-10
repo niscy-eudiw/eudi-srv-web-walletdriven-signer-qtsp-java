@@ -397,7 +397,7 @@ public class VerifierClient {
 
         HttpResponse response;
         try{
-            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getValidationUrl(), headers, body);
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getMdocValidationUrl(), headers, body);
         }
         catch (Exception e){
             log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());
@@ -461,11 +461,12 @@ public class VerifierClient {
         Map<String, String> headers = new HashMap<>();
         headers.put("accept", "application/json");
         headers.put("Content-Type", "application/x-www-form-urlencoded");
-        String body = "sd_jwt_vc="+SD_JWT_Device_Response+"&nonce="+nonce;
+        String body = "sd_jwt_vc="+ URLEncoder.encode(SD_JWT_Device_Response, StandardCharsets.UTF_8)
+              +"&nonce="+URLEncoder.encode(nonce, StandardCharsets.UTF_8);
 
         HttpResponse response;
         try{
-            response = WebUtils.httpPostRequest("https://verifier-backend.eudiw.dev/utilities/validations/sdJwtVc", headers, body);
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getSdjwtValidationUrl(), headers, body);
         }
         catch (Exception e){
             log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());

@@ -20,8 +20,9 @@ server:
 oid4vp:
   verifier:
     domain: ${VERIFIER-DOMAIN}
-    presentation-url: https://${VERIFIER-DOMAIN}/ui/presentations/v2
-    validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/msoMdoc/deviceResponse
+    presentation-url: https://${VERIFIER-DOMAIN}/ui/presentations
+    mdoc-validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/msoMdoc/deviceResponse
+    sdjwt-validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/sdJwtVc
     intended_use_id: ${INTENDED-USE-ID:}
     registration_certificate_Jwt: ${REGISTRATION-CERTIFICATE-JWT:}
   wallet:
