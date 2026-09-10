@@ -1,7 +1,7 @@
 # Changelog
 
 ## [0.5.0]
-_8 Apr 2026_
+_1 Aug 2026_
 
 ### Added
 - Additional logging and debug messages to aid troubleshooting.
@@ -15,6 +15,7 @@ _8 Apr 2026_
 - Updated Docker Java and Maven base images version.
 - Extracted OAuth2 constants into dedicated constants classes for improved maintainability.
 - Extracted OAuth2 flow logic into `OAuth2ValidationUtils`, centralizing reusable validation helpers. 
+- Updated OID4VP requests to specify either a registration certificate or intended use on Verifier requests.
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.

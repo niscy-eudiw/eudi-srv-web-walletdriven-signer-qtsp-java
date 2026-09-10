@@ -1,9 +1,13 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
+import jakarta.validation.Valid;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
 @ConfigurationProperties(prefix = "oid4vp")
+@Validated
 public class OID4VPConfig {
+	@Valid
 	private VerifierConfig verifier;
 	private WalletConfig wallet;
 

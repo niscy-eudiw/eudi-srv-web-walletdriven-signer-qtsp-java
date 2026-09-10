@@ -1,6 +1,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,13 +26,17 @@ public class DocumentInfo {
 	@JsonProperty("circumstantialData")
 	private String circumstantialData;
 
-	private static final ObjectMapper MAPPER = new ObjectMapper();
+	@JsonProperty("href")
+	private String href = "default-value";
 
-	public DocumentInfo(){}
+	private static final ObjectMapper MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+
+	public DocumentInfo() {	}
 
 	public DocumentInfo(String label, String hash){
 		this.label = label;
 		this.hash = hash;
+		this.href = "something";
 	}
 
 	public String getHash() {
@@ -72,6 +77,14 @@ public class DocumentInfo {
 
 	public void setCircumstantialData(String circumstantialData) {
 		this.circumstantialData = circumstantialData;
+	}
+
+	public String getHref() {
+		return href;
+	}
+
+	public void setHref(String href) {
+		this.href = href;
 	}
 
 	public JSONObject toJSON() throws JsonProcessingException {

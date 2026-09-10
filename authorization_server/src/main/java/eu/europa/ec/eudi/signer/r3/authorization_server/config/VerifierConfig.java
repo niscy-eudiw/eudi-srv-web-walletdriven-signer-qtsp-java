@@ -16,10 +16,20 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
+import jakarta.validation.constraints.AssertTrue;
+
 public class VerifierConfig {
     private String domain;
     private String presentationUrl;
     private String validationUrl;
+    private String intendedUseId;
+    private String registrationCertificateJwt;
+
+    @AssertTrue(message = "Either 'intendedUseId' or 'registrationCertificateId' must be defined")
+    private boolean isIntendedUseOrRegistrationCertificateValid() {
+        return (intendedUseId != null && !intendedUseId.isBlank())
+              || (registrationCertificateJwt != null && !registrationCertificateJwt.isBlank());
+    }
 
     public String getDomain() {
         return domain;
@@ -43,5 +53,21 @@ public class VerifierConfig {
 
     public void setValidationUrl(String validationUrl) {
         this.validationUrl = validationUrl;
+    }
+
+    public String getIntendedUseId() {
+        return intendedUseId;
+    }
+
+    public void setIntendedUseId(String intendedUseId) {
+        this.intendedUseId = intendedUseId;
+    }
+
+    public String getRegistrationCertificateJwt() {
+        return registrationCertificateJwt;
+    }
+
+    public void setRegistrationCertificateJwt(String registrationCertificateId) {
+        this.registrationCertificateJwt = registrationCertificateId;
     }
 }
