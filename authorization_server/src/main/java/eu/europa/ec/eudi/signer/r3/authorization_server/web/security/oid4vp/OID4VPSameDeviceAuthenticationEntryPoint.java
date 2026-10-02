@@ -17,14 +17,13 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,14 +38,13 @@ import org.springframework.security.web.RedirectStrategy;
  */
 public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final Logger logger = LoggerFactory.getLogger(OID4VPSameDeviceAuthenticationEntryPoint.class);
-
-    private final VerifierClient verifierClient;
+    private final OpenIdForVPService openIdForVPService;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final ServiceURLConfig issuerConfig;
     private final SessionUrlRelationList sessionUrlRelationList;
 
-    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired VerifierClient service, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
-        this.verifierClient = service;
+    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
+        this.openIdForVPService = openIdForVPService;
         this.issuerConfig = issuerConfig;
         this.sessionUrlRelationList = sessionUrlRelationList;
     }
@@ -67,7 +65,7 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
         try{
-            String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
+            String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(request, sanitizeCookieString, serviceUrl);
             this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
             this.redirectStrategy.sendRedirect(request, response, redirectLink);
         }
