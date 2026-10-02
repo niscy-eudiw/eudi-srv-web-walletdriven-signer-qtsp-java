@@ -49,10 +49,6 @@ import org.springframework.stereotype.Component;
 public class VerifierClient {
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
 
-    private final String request_uri = "request_uri";
-    private final String client_id = "client_id";
-    private final String transaction_id = "transaction_id";
-
     private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
     private final OID4VPConfig oid4VPConfig;
     private final VerifierCreatedVariables verifierVariables;
@@ -62,21 +58,22 @@ public class VerifierClient {
         this.verifierVariables = new VerifierCreatedVariables();
     }
 
-    /**
-     * Function that allows to make a Presentation Request to the OpenID for Verifiable Presentations Verifier,
-     * following the OpenID for Verifiable Presentations - draft 20.
-     * @param userId an identifier of the user that made the request
-     * @param currentServiceUrl the url of the current service
-     * @return the deep link that redirects the client app to the EUDI Wallet
-     */
-    public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
+    public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
+        return initTransactionToVerifier(userId, currentServiceUrl, false, transaction_data);
+    }
+
+    public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {
+        return initTransactionToVerifier(userId, currentServiceUrl, true, transaction_data);
+    }
+
+    private String initTransactionToVerifier(String userId, String currentServiceUrl, boolean isCrossDevice, JSONArray transaction_data) throws Exception {
         log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
         String nonce = getNonce();
 
         // makes the http Presentation Request:
         JSONObject responseFromVerifier;
         try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, false);
+            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, isCrossDevice, transaction_data);
         } catch (Exception e) {
             throw new Exception(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER.getFormattedMessage());
         }
@@ -84,71 +81,30 @@ public class VerifierClient {
 
         // Validates if the values required are present in the JSON Object Response:
         Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains(this.request_uri)){
+		String request_uri1 = "request_uri";
+		if (!keys.contains(request_uri1)){
             log.error("Missing 'request_uri' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
-        if(!keys.contains(this.client_id)){
+		String client_id1 = "client_id";
+		if(!keys.contains(client_id1)){
             log.error("Missing 'client_id' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
-        if(!keys.contains(this.transaction_id)){
+		String transaction_id = "transaction_id";
+		if(!keys.contains(transaction_id)){
             log.error("Missing 'transaction_id' from InitTransaction Response");
             throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
         }
         log.info("All keys are present.");
 
-        String request_uri = responseFromVerifier.getString(this.request_uri);
+        String request_uri = responseFromVerifier.getString(request_uri1);
         String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
-        log.info("Encoded Request URI: "+encoded_request_uri);
-        String client_id = responseFromVerifier.getString(this.client_id);
-        log.info("Client Id: "+ client_id);
-        String presentation_id = responseFromVerifier.getString(this.transaction_id);
-        log.info("Transaction Id: "+presentation_id);
-
-        // Saves the values required associated to later retrieve the VP Token from the Verifier:
-        this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
-
-        // Generates a link to the Wallet, to where the client app will be redirected:
-        String linkToWallet = getLinkToWallet(encoded_request_uri, client_id);
-        log.info("Generated link to the Wallet for authentication of the user {}", userId);
-        return linkToWallet;
-    }
-
-    public String initCrossDeviceTransactionToVerifier(String userId, String currentServiceUrl) throws Exception {
-        log.info("Starting Presentation Request and redirection link generation for the user {}", userId);
-        String nonce = getNonce();
-
-        // makes the http Presentation Request:
-        JSONObject responseFromVerifier;
-        try {
-            responseFromVerifier = httpRequestToInitPresentation(userId, currentServiceUrl, nonce, true);
-        } catch (Exception e) {
-            throw new Exception(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER.getFormattedMessage());
-        }
-        log.info("Successfully completed the HTTP Post Presentation Request for authentication of the user {}", userId);
-
-        // Validates if the values required are present in the JSON Object Response:
-        Set<String> keys = responseFromVerifier.keySet();
-        if (!keys.contains(this.request_uri)){
-            log.error("Missing 'request_uri' from InitTransaction Response");
-            throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
-        }
-        if(!keys.contains(this.client_id)){
-            log.error("Missing 'client_id' from InitTransaction Response");
-            throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
-        }
-        if(!keys.contains(this.transaction_id)){
-            log.error("Missing 'transaction_id' from InitTransaction Response");
-            throw new Exception(OID4VPEnumError.MISSING_DATA_IN_RESPONSE_VERIFIER.getFormattedMessage());
-        }
-        String request_uri = responseFromVerifier.getString(this.request_uri);
-        String encoded_request_uri = URLEncoder.encode(request_uri, StandardCharsets.UTF_8);
-        log.info("Encoded Request URI: "+encoded_request_uri);
-        String client_id = responseFromVerifier.getString(this.client_id);
-        log.info("Client Id: "+ client_id);
-        String presentation_id = responseFromVerifier.getString(this.transaction_id);
-        log.info("Transaction Id: "+presentation_id);
+		log.info("Encoded Request URI: {}", encoded_request_uri);
+        String client_id = responseFromVerifier.getString(client_id1);
+		log.info("Client Id: {}", client_id);
+        String presentation_id = responseFromVerifier.getString(transaction_id);
+		log.info("Transaction Id: {}", presentation_id);
 
         // Saves the values required associated to later retrieve the VP Token from the Verifier:
         this.verifierVariables.addUsersVerifierCreatedVariable(userId, nonce, presentation_id);
@@ -167,12 +123,16 @@ public class VerifierClient {
         return Base64.getUrlEncoder().encodeToString(result);
     }
 
-    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce, boolean isCrossDevice) throws Exception {
+    private JSONObject httpRequestToInitPresentation(String userId, String serviceUrl, String nonce, boolean isCrossDevice, JSONArray transaction_data) throws Exception {
         Map<String, String> headers = getHeaders();
 
         String bodyMessage;
-        if(isCrossDevice) bodyMessage = getCrossDeviceMessage(nonce);
-        else bodyMessage = getSameDeviceMessage(userId, serviceUrl, nonce);
+
+        log.info("Transaction_data: {}", transaction_data);
+        if(isCrossDevice) bodyMessage = getCrossDeviceMessage(nonce, transaction_data);
+        else bodyMessage = getSameDeviceMessage(userId, serviceUrl, nonce, transaction_data);
+
+        log.info("Message to Verifier: {}", bodyMessage);
 
         log.info(bodyMessage);
 
@@ -231,7 +191,7 @@ public class VerifierClient {
         return headers;
     }
 
-    private JSONObject getDCQLQueryJSON(){
+    private JSONObject getDCQLQueryMSOMDoc(){
         String dcqlQuery = "{" +
               "'credentials': [" +
                 "{" +
@@ -266,9 +226,28 @@ public class VerifierClient {
         return new JSONObject(dcqlQuery);
     }
 
-    private JSONObject getCommonStructureMessage(String nonce) {
-        JSONObject dcqlQueryJSON = getDCQLQueryJSON();
+    private JSONObject getDCQLQuerySDJWT(){
+        String dcqlQuery = "{" +
+              "'credentials': [" +
+              "{" +
+              "'id': 'query_0'," +
+              "'format': 'dc+sd-jwt'," +
+              "'meta': {'vct_values': ['urn:eudi:pid:1']}," +
+              "'claims': [" +
+              "{'path': ['family_name']}," +
+              "{'path': ['given_name']}," +
+              "{'path': ['birthdate']}," +
+              "{'path': ['issuing_authority']}," +
+              "{'path': ['issuing_country']}" +
+              "]" +
+              "}" +
+              "]" +
+              "}";
+        return new JSONObject(dcqlQuery);
+    }
 
+    private JSONObject getCommonStructureMessage(String nonce, JSONArray transaction_data) {
+        JSONObject dcqlQueryJSON = getDCQLQuerySDJWT();
         JSONObject jsonBodyToInitPresentation = new JSONObject();
         jsonBodyToInitPresentation.put("type", "vp_token");
         jsonBodyToInitPresentation.put("nonce", nonce);
@@ -278,23 +257,38 @@ public class VerifierClient {
             jsonBodyToInitPresentation.put("registration_certificate", registrationCertificate);
         else
             jsonBodyToInitPresentation.put("intended_use_id", oid4VPConfig.getVerifier().getIntendedUseId());
+
+        if(transaction_data != null)
+            jsonBodyToInitPresentation.put("transaction_data", transaction_data);
+
         return jsonBodyToInitPresentation;
     }
 
-    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce) {
-        JSONObject jsonBodyToInitPresentation = getCommonStructureMessage(nonce);
+    private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
+        JSONObject jsonBodyToInitPresentation = getCommonStructureMessage(nonce, transaction_data);
         String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
         jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         return jsonBodyToInitPresentation.toString();
     }
 
-    private String getCrossDeviceMessage(String nonce) {
-        return getCommonStructureMessage(nonce).toString();
+    private String getCrossDeviceMessage(String nonce, JSONArray transaction_data) {
+        return getCommonStructureMessage(nonce, transaction_data).toString();
     }
 
     private String getLinkToWallet(String request_uri, String client_id) {
         return this.oid4VPConfig.getWallet().getScheme() + this.oid4VPConfig.getVerifier().getDomain() + "?client_id=" +
                 client_id + "&request_uri=" + request_uri;
+    }
+
+    private VerifierCreatedVariable retrieveAndRemoveVerifierVariables(String userId) throws OID4VPException {
+        VerifierCreatedVariable variables = verifierVariables.getAndRemoveUsersVerifierCreatedVariable(userId);
+        if (variables == null) {
+            log.error("Failed to retrieve the required local variables to complete the authentication.");
+            throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "Something went wrong on our end during sign-in. Please try again in a few moments.");
+        }
+        log.info("Retrieved the required local variables to complete the authentication.");
+        log.info("Current Verifier Variables State: {}", verifierVariables);
+        return variables;
     }
 
     private VerifierCreatedVariable retrieveVerifierVariables(String userId) throws OID4VPException {
@@ -328,7 +322,6 @@ public class VerifierClient {
         return message;
     }
 
-
     /**
      * Function that allows to retrieve the VP Token from the Verifier
      * @param userId an identifier of the user that made the request
@@ -338,7 +331,7 @@ public class VerifierClient {
     public String getVPTokenFromVerifier(String userId, String code) throws OID4VPException {
         log.info("Starting to retrieve the VP Token from the Verifier to authenticate the user {}...", userId);
 
-        VerifierCreatedVariable variables = retrieveVerifierVariables(userId);
+        VerifierCreatedVariable variables = retrieveAndRemoveVerifierVariables(userId);
 
         Map<String, String> headers = getHeaders();
         String url = getUrlToRetrieveVPTokenWithResponseCode(variables.getTransaction_id(), variables.getNonce(), code);
@@ -347,8 +340,11 @@ public class VerifierClient {
 
         WebUtils.StatusAndMessage response = getVerifierResponse(url, headers);
 
-        if(response.getStatusCode() == 200)
-            return extractVPTokenOrThrow(response);
+        if(response.getStatusCode() == 200) {
+            String message = extractVPTokenOrThrow(response);
+            log.info("Retrieved the VP Token from the Verifier.");
+            return message;
+        }
         else{
 			log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", response.getStatusCode(), response.getMessage());
             throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "The OID4VP Verifier service is currently unavailable.");
@@ -358,7 +354,7 @@ public class VerifierClient {
     public String getVPTokenFromVerifierRecursive(String user) throws OID4VPException, InterruptedException {
         log.info("Starting to recursively retrieve the VP Token from the Verifier to authenticate the user {}...", user);
 
-        VerifierCreatedVariable variables = retrieveVerifierVariables(user);
+        VerifierCreatedVariable variables = retrieveAndRemoveVerifierVariables(user);
 
         Map<String, String> headers = getHeaders();
         String url = getUrlToRetrieveVPToken(variables.getTransaction_id(), variables.getNonce());
@@ -370,8 +366,11 @@ public class VerifierClient {
             WebUtils.StatusAndMessage response = getVerifierResponse(url, headers);
             int status = response.getStatusCode();
 
-            if (status == 200)
-                return extractVPTokenOrThrow(response);
+            if (status == 200) {
+                String message = extractVPTokenOrThrow(response);
+                log.info("Retrieved the VP Token from the Verifier.");
+                return message;
+            }
             else if (status == 404 || status == 500) { // if unable to connect or exception...
                 log.error("Failed to connect with Verifier and retrieve the VP Token. Status Code: {}. Error: {}", status, response.getMessage());
                 throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "The OID4VP Verifier service is currently unavailable.");
@@ -390,7 +389,7 @@ public class VerifierClient {
         return this.oid4VPConfig.getVerifier().getPresentationUrl() + "/" + presentation_id + "?nonce=" + nonce;
     }
 
-    public JSONObject validateDeviceResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
+    public JSONObject validateMSOMDocDeviceResponse(String MSO_MDoc_Device_Response) throws OID4VPException{
         Map<String, String> headers = new HashMap<>();
         headers.put("accept", "application/json");
         headers.put("Content-Type", "application/x-www-form-urlencoded");
@@ -398,7 +397,7 @@ public class VerifierClient {
 
         HttpResponse response;
         try{
-            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getValidationUrl(), headers, body);
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getMdocValidationUrl(), headers, body);
         }
         catch (Exception e){
             log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());
@@ -448,6 +447,75 @@ public class VerifierClient {
             }
             catch (IOException e){
 				log.error("Couldn't retrieve the error message from the failed validation response: {}", e.getMessage());
+                throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
+            }
+        }
+    }
+
+    public String getNonce(String user) throws OID4VPException {
+        VerifierCreatedVariable variables = retrieveVerifierVariables(user);
+        return variables.getNonce();
+    }
+
+    public JSONObject validateSDJWTResponse(String SD_JWT_Device_Response, String nonce) throws OID4VPException{
+        Map<String, String> headers = new HashMap<>();
+        headers.put("accept", "application/json");
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+        String body = "sd_jwt_vc="+ URLEncoder.encode(SD_JWT_Device_Response, StandardCharsets.UTF_8)
+              +"&nonce="+URLEncoder.encode(nonce, StandardCharsets.UTF_8);
+
+        HttpResponse response;
+        try{
+            response = WebUtils.httpPostRequest(this.oid4VPConfig.getVerifier().getSdjwtValidationUrl(), headers, body);
+        }
+        catch (Exception e){
+            log.error("An error occurred when trying to make a request to the Verifier. {}", e.getMessage());
+            throw new OID4VPException(OID4VPEnumError.FAILED_CONNECTION_TO_VERIFIER, "It wasn't possible to validate the Verifier Response.");
+        }
+
+        if(response.getStatusLine().getStatusCode() == 200){
+            log.info("Successfully validated verifier response (Status Code: 200).");
+
+            JSONObject responseVerifier;
+            try {
+                String result = WebUtils.convertStreamToString(response.getEntity().getContent());
+                responseVerifier = new JSONObject(result);
+                log.info("Parsed the validation response.");
+            }
+            catch (IOException e){
+                log.error("It was impossible to retrieve the content from the validation request to the OID4VP Verifier.");
+                throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
+            }
+            catch (JSONException e){
+                log.error("It was impossible to parse validation response as a JSON Object.");
+                throw new OID4VPException(OID4VPEnumError.RESPONSE_VERIFIER_WITH_INVALID_FORMAT, "The Verifier's validation response is not a valid JSON Array.");
+            }
+
+            // Validate 'vct'
+            if(!responseVerifier.has("vct") || !responseVerifier.getString("vct").equals("urn:eudi:pid:1")) {
+                throw new OID4VPException(OID4VPEnumError.FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER, "It was impossible to validate the VP Token. An error message was received from the OID4VP Verifier.");
+            }
+
+            log.info(String.valueOf(responseVerifier));
+
+            // Retrieve 'attributes'
+            JSONObject attributes = new JSONObject();
+            attributes.put("family_name", responseVerifier.get("family_name"));
+            attributes.put("given_name", responseVerifier.get("given_name"));
+            attributes.put("birth_date", responseVerifier.get("birthdate"));
+            attributes.put("issuing_country", responseVerifier.get("issuing_country"));
+            attributes.put("issuing_authority", responseVerifier.get("issuing_authority"));
+            return attributes;
+        }
+        else{
+            try {
+                HttpEntity entity = response.getEntity();
+                String result = WebUtils.convertStreamToString(entity.getContent());
+                log.error("Failed to validate the Verifier Response with error message: {}", result);
+                throw new OID4VPException(OID4VPEnumError.FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER, "It was impossible to validate the VP Token. An error message was received from the OID4VP Verifier.");
+            }
+            catch (IOException e){
+                log.error("Couldn't retrieve the error message from the failed validation response: {}", e.getMessage());
                 throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "It was impossible to retrieve the validation response from the Verifier.");
             }
         }

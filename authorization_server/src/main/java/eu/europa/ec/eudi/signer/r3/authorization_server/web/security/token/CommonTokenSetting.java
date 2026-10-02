@@ -121,5 +121,4 @@ public class CommonTokenSetting {
 	private String getAuthorizationDetailsFromOAuth2Request(Map<String, String> queryPairs){
 		return queryPairs.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS);
 	}
-
 }

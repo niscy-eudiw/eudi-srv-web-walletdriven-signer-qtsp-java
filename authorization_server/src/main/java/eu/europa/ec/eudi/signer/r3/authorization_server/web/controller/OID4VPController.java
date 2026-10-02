@@ -5,7 +5,7 @@ import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
@@ -26,13 +26,13 @@ import java.util.Map;
 @Controller
 public class OID4VPController {
 	private final Logger logger = LoggerFactory.getLogger(OID4VPController.class);
-	private final VerifierClient verifierClient;
+	private final OpenIdForVPService openIdForVPService;
 	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting tokenSetting;
 
-	public OID4VPController(@Autowired VerifierClient verifierClient, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
-		this.verifierClient = verifierClient;
+	public OID4VPController(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
+		this.openIdForVPService = openIdForVPService;
 		this.issuerConfig = issuerConfig;
 		this.sessionUrlRelationList = sessionUrlRelationList;
 		this.tokenSetting = tokenSetting;
@@ -42,11 +42,22 @@ public class OID4VPController {
 	public String getOID4VPCrossDevicePage(Model model, @RequestParam String sessionId){
 		try {
 			String serviceUrl = this.issuerConfig.getServiceURL();
-			String sanitizeCookieString = WebUtils.getSanitizedCookieString(sessionId);
-			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookieString);
+			String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
+			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookie);
 
-			String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookieString, serviceUrl);
-			logger.info("Retrieved the redirect link for cross device authentication.");
+			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
+
+			//System.out.println("URL REQUEST: "+urlToReturnTo);
+			//logger.info("URL REQUEST: {}", urlToReturnTo);
+
+			//JSONArray transaction_data = getTransactionData(urlToReturnTo);
+			//System.out.println("TRANSACTION_DATA_CONTROLLER: "+ transaction_data);
+			//logger.info("TRANSACTION_DATA_CONTROLLER: {}", transaction_data);
+
+			//String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transaction_data);
+			//logger.info("Retrieved the redirect link for cross device authentication.");
+
+			String redirectLink = this.openIdForVPService.getCrossDeviceRedirectLink(urlToReturnTo, sanitizeCookie, serviceUrl);
 
 			QRCodeWriter barcodeWriter = new QRCodeWriter();
 			BitMatrix bitMatrix = barcodeWriter.encode(redirectLink, BarcodeFormat.QR_CODE, 200, 200);
@@ -61,7 +72,6 @@ public class OID4VPController {
 			model.addAttribute("url", urlCrossDeviceCallback);
 			logger.info("Define the Callback Url.");
 
-			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookieString).getUrlToReturnTo();
 			URI url = new URI(urlToReturnTo);
 			Map<String, String> queryValues = this.tokenSetting.getQueryValues(url);
 			String scope = this.tokenSetting.getScopeFromOAuth2Request(queryValues);

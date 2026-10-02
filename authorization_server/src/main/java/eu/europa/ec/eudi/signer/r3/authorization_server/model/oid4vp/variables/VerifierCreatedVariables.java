@@ -33,13 +33,17 @@ public class VerifierCreatedVariables {
         this.allVariables = new ConcurrentHashMap<>();
     }
 
-    public synchronized VerifierCreatedVariable getUsersVerifierCreatedVariable(String sessionId) {
+    public synchronized VerifierCreatedVariable getAndRemoveUsersVerifierCreatedVariable(String sessionId) {
         VerifierCreatedVariable vcv = allVariables.get(sessionId);
         if (vcv != null) {
             removeVerifierCreatedVariable(sessionId);
             return vcv;
         }
         else return null;
+    }
+
+    public synchronized VerifierCreatedVariable getUsersVerifierCreatedVariable(String sessionId) {
+       return allVariables.get(sessionId);
     }
 
     public synchronized void addUsersVerifierCreatedVariable(String sessionId, String nonce, String presentation_id) {

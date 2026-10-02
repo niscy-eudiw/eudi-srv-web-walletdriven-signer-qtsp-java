@@ -17,7 +17,6 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.VerifierClient;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.SuccessfulLoginAuthentication;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.*;
@@ -160,10 +159,10 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 	@Bean
 	public OID4VPSameDeviceAuthenticationFilter authenticationFilter(
 		AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
-		OID4VPAuthenticationFailureHandler authenticationFailureHandler, VerifierClient verifierClient,
+		OID4VPAuthenticationFailureHandler authenticationFailureHandler,
 		OpenIdForVPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
 
-		OID4VPSameDeviceAuthenticationFilter filter = new OID4VPSameDeviceAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
+		OID4VPSameDeviceAuthenticationFilter filter = new OID4VPSameDeviceAuthenticationFilter(authenticationManager, oid4vpService, sessionUrlRelationList);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
@@ -174,10 +173,10 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 	@Bean
 	public OID4VPCrossDeviceAuthenticationFilter crossDeviceAuthenticationFilter(
 		  AuthenticationManager authenticationManager, OID4VPAuthenticationSuccessHandler authenticationSuccessHandler,
-		  OID4VPAuthenticationFailureHandler authenticationFailureHandler, VerifierClient verifierClient,
+		  OID4VPAuthenticationFailureHandler authenticationFailureHandler,
 		  OpenIdForVPService oid4vpService, SessionUrlRelationList sessionUrlRelationList){
 
-		OID4VPCrossDeviceAuthenticationFilter filter = new OID4VPCrossDeviceAuthenticationFilter(authenticationManager, verifierClient, oid4vpService, sessionUrlRelationList);
+		OID4VPCrossDeviceAuthenticationFilter filter = new OID4VPCrossDeviceAuthenticationFilter(authenticationManager, oid4vpService, sessionUrlRelationList);
 		filter.setSessionAuthenticationStrategy(new ChangeSessionIdAuthenticationStrategy());
 		filter.setAuthenticationSuccessHandler(authenticationSuccessHandler);
 		filter.setAuthenticationFailureHandler(authenticationFailureHandler);
