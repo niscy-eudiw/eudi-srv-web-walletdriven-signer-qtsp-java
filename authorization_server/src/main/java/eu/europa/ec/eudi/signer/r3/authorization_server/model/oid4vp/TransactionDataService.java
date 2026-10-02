@@ -60,7 +60,11 @@ public class TransactionDataService {
 
 		JSONArray transactionData = new JSONArray();
 		for (AuthorizationDetails a: authorizationDetailsObject){
-			JSONObject qesApprovalRequest = new QesApprovalRequest(a).toJSONObject();
+			QesApprovalRequest qar = new QesApprovalRequest(a);
+			for (DocumentInfo di: qar.signatureCreationApproval.documentDigests){
+				di.setHashType("dtbsr");
+			}
+			JSONObject qesApprovalRequest = qar.toJSONObject();
 			transactionData.put(qesApprovalRequest);
 		}
 		return transactionData;

@@ -26,9 +26,6 @@ public class DocumentInfo {
 	@JsonProperty("circumstantialData")
 	private String circumstantialData;
 
-	@JsonProperty("href")
-	private String href = "default-value";
-
 	private static final ObjectMapper MAPPER = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
 	public DocumentInfo() {	}
@@ -36,7 +33,6 @@ public class DocumentInfo {
 	public DocumentInfo(String label, String hash){
 		this.label = label;
 		this.hash = hash;
-		this.href = "something";
 	}
 
 	public String getHash() {
@@ -77,14 +73,6 @@ public class DocumentInfo {
 
 	public void setCircumstantialData(String circumstantialData) {
 		this.circumstantialData = circumstantialData;
-	}
-
-	public String getHref() {
-		return href;
-	}
-
-	public void setHref(String href) {
-		this.href = href;
 	}
 
 	public JSONObject toJSON() throws JsonProcessingException {
