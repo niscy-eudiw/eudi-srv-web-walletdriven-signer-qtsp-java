@@ -16,18 +16,13 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
-
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.util.OAuth2ValidationUtils;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.Nullable;
@@ -55,6 +50,12 @@ import org.springframework.security.oauth2.server.authorization.token.DefaultOAu
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.util.CollectionUtils;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.util.OAuth2ValidationUtils;
 
 public class AuthorizationRequestProvider implements AuthenticationProvider {
     private final RegisteredClientRepository registeredClientRepository;
@@ -145,7 +146,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
         // Update additional parameters with credential id if signature qualifier is
         // used
-        Map<String, Object> additionalParameters = oAuth2AuthorizeRequestToken.getAdditionalParameters();
+        Map<String, Object> additionalParameters = new HashMap<>(oAuth2AuthorizeRequestToken.getAdditionalParameters());
         if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL))
             OAuth2ValidationUtils.addCredentialIdFromSignatureQualifier(logger, credentialsService, principal,
                     additionalParameters);
