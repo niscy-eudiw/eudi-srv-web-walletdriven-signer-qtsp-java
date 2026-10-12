@@ -19,6 +19,7 @@
 
     <!-- Console appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <immediateFlush>true</immediateFlush>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %p %C{1}.%method:%line %logger{36}: - %msg%n%throwable</pattern>
         </encoder>
@@ -26,6 +27,7 @@
 
     <!-- File appender -->
     <appender name="ROLLINGFILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <immediateFlush>true</immediateFlush>
         <file>${LOGS}/resource_server_logger.log</file>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss} %p %C{1}.%method:%line %logger{36}: - %msg%n%throwable</pattern>

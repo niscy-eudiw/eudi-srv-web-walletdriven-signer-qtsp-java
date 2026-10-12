@@ -1,18 +1,38 @@
 # Changelog
 
+## [0.7.0]
+_12 Oct 2026_
+
+### Changed
+- Made the use of EJBCA and HSM optional.
+
+## [0.6.0]
+_2 Oct 2026_
+
+### Changed
+- Updated OID4VP requests to request the PID as an SD-JWT.
+- Updated OID4VP requests to include the `transaction_data` parameter in accordance with ETSI TS 119 432 v1.3.1
+
 ## [0.5.0]
-_5 Jan 2026_
+_1 Aug 2026_
 
 ### Added
 - Additional logging and debug messages to aid troubleshooting.
 
 ### Changed
+- Upgraded Cloud Signature Consortium (CSC) API from v2.0 to v2.2.
 - Minor improvements to the deployment bash script.
 - Updated OID4VP-related code to support OpenID4VP v1.
-- Made the use of EJBCA and HSM optional.
+- Updated OID4VP configuration: the wallet scheme and verifier domain are now configurable via environment variables.
+- Improved handling and validation of certificate SubjectDN values containing special characters.
+- Updated Docker Java and Maven base images version.
+- Extracted OAuth2 constants into dedicated constants classes for improved maintainability.
+- Extracted OAuth2 flow logic into `OAuth2ValidationUtils`, centralizing reusable validation helpers. 
+- Updated OID4VP requests to specify either a registration certificate or intended use on Verifier requests.
 
 ### Fixed
 - Resolved issues flagged by SonarCloud, improving code quality.
+- Issue #27 - `signatures/signHash`: hashes parameter now correctly expects Base64-encoded strings instead of URL-encoded strings, in compliance with the CSC API specification.
 
 ## [0.4.0]
 _29 May 2025_

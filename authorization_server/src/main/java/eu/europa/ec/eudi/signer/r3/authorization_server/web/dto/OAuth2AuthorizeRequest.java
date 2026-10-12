@@ -16,9 +16,25 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
+
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 
@@ -208,78 +224,197 @@ public class OAuth2AuthorizeRequest {
                 '}';
     }
 
-    public static OAuth2AuthorizeRequest from(HttpServletRequest request) throws IllegalArgumentException{
+    public static OAuth2AuthorizeRequest from(URI uri) throws IllegalArgumentException {
+        String query = uri.getRawQuery();
+        Map<String, String[]> queryPairs = new HashMap<>();
+
+        if (query == null || query.isEmpty()) {
+            return from(queryPairs);
+        }
+
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            if (idx != -1) {
+                String key = URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8);
+                String value = URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8);
+
+                queryPairs.merge(key, new String[]{value}, (existing, incoming) -> {
+                    String[] merged = new String[existing.length + incoming.length];
+                    System.arraycopy(existing, 0, merged, 0, existing.length);
+                    System.arraycopy(incoming, 0, merged, existing.length, incoming.length);
+                    return merged;
+                });
+            }
+        }
+        return from(queryPairs);
+    }
+
+    public static OAuth2AuthorizeRequest from(HttpServletRequest request) throws IllegalArgumentException {
+        Map<String, String[]> parameters = request.getParameterMap();
+        if (parameters == null)
+            throw new IllegalArgumentException("No parameters were received for the OAuth2 /authorize request.");
+
+        return from(parameters);
+    }
+
+    private static OAuth2AuthorizeRequest from(Map<String, String[]> parameters) throws IllegalArgumentException {
         OAuth2AuthorizeRequest authRequest = new OAuth2AuthorizeRequest();
 
-        authRequest.setResponse_type(getRequiredParameter(request, "response_type"));
-        authRequest.setClient_id(getRequiredParameter(request, "client_id"));
-        authRequest.setRedirect_uri(request.getParameter("redirect_uri"));
-        authRequest.setScope(request.getParameter("scope"));
-        authRequest.setAuthorization_details(request.getParameter("authorization_details"));
+        authRequest.setResponse_type(getRequiredParameter(parameters, OAuth2ParameterNames.RESPONSE_TYPE));
+        authRequest.setClient_id(getRequiredParameter(parameters, OAuth2ParameterNames.CLIENT_ID));
+        authRequest.setRedirect_uri(getFirst(parameters, OAuth2ParameterNames.REDIRECT_URI));
+        authRequest.setState(getFirst(parameters, OAuth2ParameterNames.STATE));
+        authRequest.setScope(getFirst(parameters, OAuth2ParameterNames.SCOPE));
+        authRequest.setAuthorization_details(getFirst(parameters, OAuth2CustomParameterNames.AUTHORIZATION_DETAILS));
 
-        // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
-        if(authRequest.getScope() == null && authRequest.getAuthorization_details() == null )
-            authRequest.setScope("service");
+        // Resolve scope from authorization_details type when no explicit scope
+        // provided.
+        // Per spec: lang SHALL NOT be used if authorization_details is present.
+        if (authRequest.getAuthorization_details() != null) {
+            authRequest.setScope(resolveScopeFromAuthorizationDetails(authRequest.getAuthorization_details()));
+            // lang is ignored when authorization_details is present
+        } else if (authRequest.getScope() == null) {
+            // Neither scope nor authorization_details present — default to service
+            authRequest.setScope(OAuth2ScopesNames.SERVICE);
+            authRequest.setLang(getFirst(parameters, OAuth2CustomParameterNames.LANG));
+        } else {
+            authRequest.setLang(getFirst(parameters, OAuth2CustomParameterNames.LANG));
+        }
 
-        authRequest.setCode_challenge(getRequiredParameter(request, "code_challenge"));
-        authRequest.setCode_challenge_method(request.getParameter("code_challenge_method"));
-        authRequest.setState(request.getParameter("state"));
-        authRequest.setRequest_uri(request.getParameter("request_uri"));
-
-        authRequest.setLang(request.getParameter("lang"));
-        authRequest.setCredentialID(request.getParameter("credentialID"));
-        authRequest.setSignatureQualifier(request.getParameter("signatureQualifier"));
-        authRequest.setNumSignatures(request.getParameter("numSignatures"));
-        authRequest.setHashes(request.getParameter("hashes"));
-        authRequest.setHashAlgorithmOID(request.getParameter("hashAlgorithmOID"));
-        authRequest.setDescription(request.getParameter("description"));
-        authRequest.setAccount_token(request.getParameter("account_token"));
-        authRequest.setClientData(request.getParameter("clientData"));
+        authRequest.setCode_challenge(getRequiredParameter(parameters, PkceParameterNames.CODE_CHALLENGE));
+        authRequest.setCode_challenge_method(getFirst(parameters, PkceParameterNames.CODE_CHALLENGE_METHOD));
+        authRequest.setRequest_uri(getFirst(parameters, OAuth2CustomParameterNames.REQUEST_URI));
+        authRequest.setCredentialID(getFirst(parameters, OAuth2CustomParameterNames.CREDENTIAL_ID));
+        authRequest.setSignatureQualifier(getFirst(parameters, OAuth2CustomParameterNames.SIGNATURE_QUALIFIER));
+        authRequest.setNumSignatures(getFirst(parameters, OAuth2CustomParameterNames.NUM_SIGNATURES));
+        authRequest.setHashes(getFirst(parameters, OAuth2CustomParameterNames.HASHES));
+        authRequest.setHashAlgorithmOID(getFirst(parameters, OAuth2CustomParameterNames.HASH_ALGORITHM_OID));
+        authRequest.setDescription(getFirst(parameters, OAuth2CustomParameterNames.DESCRIPTION));
+        authRequest.setAccount_token(getFirst(parameters, OAuth2CustomParameterNames.ACCOUNT_TOKEN));
+        authRequest.setClientData(getFirst(parameters, OAuth2CustomParameterNames.CLIENT_DATA));
         return authRequest;
     }
 
-    private static String getRequiredParameter(HttpServletRequest request, String name) throws IllegalArgumentException {
-        String value = request.getParameter(name);
-        if (value == null || value.isBlank() || !StringUtils.hasText(value)) {
-            throw new IllegalArgumentException("Missing required parameter: " + name);
+    /**
+     * Derives the OAuth2 scope from the 'type' field inside authorization_details.
+     * Falls back to CREDENTIAL scope if the type is unrecognised.
+     */
+    private static String resolveScopeFromAuthorizationDetails(String authorizationDetails) {
+        try {
+            JSONArray arr = new JSONArray(authorizationDetails);
+            if (!arr.isEmpty()) {
+                JSONObject first = arr.getJSONObject(0);
+                if (first.has(OAuth2AuthorizationDetailsNames.TYPE)) {
+                    String type = first.getString(OAuth2AuthorizationDetailsNames.TYPE);
+                    if(OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_CREATION.contains(type)){
+                        return OAuth2ScopesNames.CREDENTIAL_CREATION;
+                    }
+                    else if (OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_DELETE.contains(type)){
+                        return OAuth2ScopesNames.CREDENTIAL_DELETION;
+                    }
+                    else {
+                        return OAuth2ScopesNames.CREDENTIAL;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // malformed authorization_details — let validation catch it downstream
         }
-        if(request.getParameterValues(name).length != 1){
+        return OAuth2ScopesNames.CREDENTIAL;
+    }
+
+    private static String getFirst(Map<String, String[]> params, String key) {
+        if (params == null)
+            return null;
+        String[] values = params.get(key);
+        if (values == null || values.length == 0)
+            return null;
+        return values[0];
+    }
+
+    private static String getRequiredParameter(Map<String, String[]> parameters, String name)
+            throws IllegalArgumentException {
+        String[] value = parameters.get(name);
+        if (value.length != 1) {
             throw new IllegalArgumentException("Too many values for the parameter: " + name);
         }
-        return value;
+        if (value[0] == null || value[0].isBlank() || !StringUtils.hasText(value[0])) {
+            throw new IllegalArgumentException("Missing required parameter: " + name);
+        }
+        return value[0];
     }
 
-    public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails(){
-        return request ->
-              request.getParameter("client_id") != null
-                    && Objects.equals(request.getParameter("response_type"), "code")
-                    && request.getParameter("scope") == null
-                    && request.getParameter("authorization_details") == null
-                    && request.getParameter("code_challenge") != null;
+    public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails() {
+        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
+                        OAuth2AuthorizationResponseType.CODE.getValue())
+                && request.getParameter(OAuth2ParameterNames.SCOPE) == null
+                && request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) == null
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
     }
 
-    public static RequestMatcher requestMatcherForService(){
-        return request ->
-              request.getParameter("client_id") != null
-              && Objects.equals(request.getParameter("response_type"), "code")
-              && Objects.equals(request.getParameter("scope"), "service")
-              && request.getParameter("code_challenge") != null;
+    public static RequestMatcher requestMatcherForService() {
+        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
+                        OAuth2AuthorizationResponseType.CODE.getValue())
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.SERVICE)
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
     }
 
-    public static RequestMatcher requestMatcherForCredential(){
-        return request ->
-              request.getParameter("client_id") != null &&
-                    Objects.equals(request.getParameter("response_type"), "code") &&
-                    (
-                          (
-                                Objects.equals(request.getParameter("scope"), "credential")
-                                && (request.getParameter("credentialID") != null || request.getParameter("signatureQualifier") != null)
-                                && request.getParameter("hashes") != null
-                                && request.getParameter("hashAlgorithmOID") != null
-                                && request.getParameter("numSignatures") != null
-                          )
-                          || request.getParameter("authorization_details") != null
-                    )
-                    && request.getParameter("code_challenge") != null;
+    public static RequestMatcher requestMatcherForCredential() {
+        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null &&
+                Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
+                        OAuth2AuthorizationResponseType.CODE.getValue())
+                &&
+                ((Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.CREDENTIAL)
+                        && (request.getParameter(OAuth2CustomParameterNames.CREDENTIAL_ID) != null
+                                || request.getParameter(OAuth2CustomParameterNames.SIGNATURE_QUALIFIER) != null)
+                        && request.getParameter(OAuth2CustomParameterNames.HASHES) != null
+                        && request.getParameter(OAuth2CustomParameterNames.HASH_ALGORITHM_OID) != null
+                        && request.getParameter(OAuth2CustomParameterNames.NUM_SIGNATURES) != null)
+                        || (request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null
+                                && isAuthorizationDetailsOfType(
+                                        request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS),
+                                        OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL)))
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
+    }
+
+    // New: matcher for credential-creation scope (1.1.2)
+    public static RequestMatcher requestMatcherForCredentialCreation() {
+        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
+                        OAuth2AuthorizationResponseType.CODE.getValue())
+                && request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null
+                && isAuthorizationDetailsOfType(request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS),
+                        OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_CREATION)
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
+    }
+
+    // New: matcher for credential-delete scope (1.1.3)
+    public static RequestMatcher requestMatcherForCredentialDelete() {
+        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
+                        OAuth2AuthorizationResponseType.CODE.getValue())
+                && request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null
+                && isAuthorizationDetailsOfType(request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS),
+                        OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_DELETE)
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
+    }
+
+    /**
+     * Returns true if the first element of the authorization_details JSON array has
+     * the given type value.
+     */
+    private static boolean isAuthorizationDetailsOfType(String authorizationDetails, List<String> expectedType) {
+        try {
+            JSONArray arr = new JSONArray(authorizationDetails);
+            if (!arr.isEmpty()) {
+                JSONObject first = arr.getJSONObject(0);
+                return expectedType.contains(first.optString(OAuth2AuthorizationDetailsNames.TYPE));
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 }

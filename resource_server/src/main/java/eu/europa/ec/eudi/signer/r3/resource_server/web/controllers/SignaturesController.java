@@ -16,13 +16,10 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.controllers;
 
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoProperties;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.CryptoUtils;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.JWTCustomClaimNames;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.SignaturesService;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashRequest;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.SignaturesSignHashResponse;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -42,14 +39,11 @@ import org.springframework.web.server.ResponseStatusException;
 @RestController
 @RequestMapping(value = "/csc/v2/signatures")
 public class SignaturesController {
-
     private final SignaturesService signaturesService;
-    private final CryptoUtils cryptoUtils;
     private static final Logger logger = LoggerFactory.getLogger(SignaturesController.class);
 
-    public SignaturesController(@Autowired SignaturesService signaturesService, @Autowired CryptoProperties cryptoProperties) {
+    public SignaturesController(@Autowired SignaturesService signaturesService) {
         this.signaturesService = signaturesService;
-        this.cryptoUtils = new CryptoUtils(cryptoProperties);
     }
 
     private void auxDebugLogs(Map<String, Object> claims){
@@ -72,7 +66,6 @@ public class SignaturesController {
         Map<String, Object> claims = ((Jwt) principal).getClaims();
         if(logger.isDebugEnabled()) auxDebugLogs(claims);
 
-
         String userHash = claims.get("sub").toString();
         logger.info("Request received at /csc/v2/signatures/signHash with the body {} from the user {}", signHashRequest.toString(), userHash);
         if(userHash == null){
@@ -80,33 +73,33 @@ public class SignaturesController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: Invalid or missing user identifier.");
         }
 
-        if(!claims.containsKey("credentialID") || !claims.containsKey("numSignatures") || !claims.containsKey("hashAlgorithmOID") || !claims.containsKey("hashes")){
-            logger.error("Missing required claims from Authentication Header. Present CredentialID? {}; NumSignatures? {}; HashAlgorithmOID? {}; Hashes? {}", claims.containsKey("credentialID"), claims.containsKey("numSignatures"), claims.containsKey("hashAlgorithmOID"), claims.containsKey("hashes"));
+        if(!claims.containsKey(JWTCustomClaimNames.CREDENTIAL_ID) ||
+              !claims.containsKey(JWTCustomClaimNames.NUM_SIGNATURES) ||
+              !claims.containsKey(JWTCustomClaimNames.HASH_ALGORITHM_OID) ||
+              !claims.containsKey(JWTCustomClaimNames.HASHES)){
+            logger.error("Missing required claims from Authentication Header. Present CredentialID? {}; NumSignatures? {}; HashAlgorithmOID? {}; Hashes? {}",
+                  claims.containsKey(JWTCustomClaimNames.CREDENTIAL_ID), claims.containsKey(JWTCustomClaimNames.NUM_SIGNATURES),
+                  claims.containsKey(JWTCustomClaimNames.HASH_ALGORITHM_OID), claims.containsKey(JWTCustomClaimNames.HASHES));
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing required claims from Authentication Header.");
         }
 
-        String credentialIDAuthorized = claims.get("credentialID").toString();
+        String credentialIDAuthorized = claims.get(JWTCustomClaimNames.CREDENTIAL_ID).toString();
         logger.debug("credentialIDAuthorized: {}", credentialIDAuthorized);
-        int numSignaturesAuthorized = Integer.parseInt(claims.get("numSignatures").toString());
+        int numSignaturesAuthorized = Integer.parseInt(claims.get(JWTCustomClaimNames.NUM_SIGNATURES).toString());
         logger.debug("numSignaturesAuthorized: {}", numSignaturesAuthorized);
-        String hashAlgorithmOIDAuthorized = claims.get("hashAlgorithmOID").toString();
+        String hashAlgorithmOIDAuthorized = claims.get(JWTCustomClaimNames.HASH_ALGORITHM_OID).toString();
         logger.debug("hashAlgorithmOIDAuthorized: {}", hashAlgorithmOIDAuthorized);
-        String hashesString = claims.get("hashes").toString();
+        String hashesString = claims.get(JWTCustomClaimNames.HASHES).toString();
         logger.debug("hashesString: {}", hashesString);
         String[] hashesAuthorizedArray = hashesString.split(",");
         Arrays.sort(hashesAuthorizedArray);
         List<String> hashesAuthorized = new ArrayList<>(Arrays.asList(hashesAuthorizedArray));
 
         try {
-            List<String> hashesRequestedEncoded = signHashRequest.getHashes();
+            List<String> hashesRequestedEncoded = new ArrayList<>(signHashRequest.getHashes());
             Collections.sort(hashesRequestedEncoded);
-            List<String> hashesRequested = new ArrayList<>();
-            for(String s: hashesRequestedEncoded){
-                String urlDecodedHash = URLDecoder.decode(s, StandardCharsets.UTF_8);
-                hashesRequested.add(urlDecodedHash);
-            }
 
-            if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(), credentialIDAuthorized, signHashRequest.getHashes().size(), numSignaturesAuthorized, signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized, hashesRequested, hashesAuthorized)){
+            if(!signaturesService.validateSignatureRequest(userHash, signHashRequest.getCredentialID(), credentialIDAuthorized, signHashRequest.getHashes().size(), numSignaturesAuthorized, signHashRequest.getHashAlgorithmOID(), hashAlgorithmOIDAuthorized, hashesRequestedEncoded, hashesAuthorized)){
                 logger.error("The Authorization Header doesn't authorize the current Signature Request.");
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid_request: the authorization header doesn't authorize the signature request.");
             }

@@ -81,7 +81,7 @@ _2025-05-09 13:10:00 CET_
 > -   **POM Project URL**: [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
-**16** **Group:** `org.springframework.security` **Name:** `spring-security-oauth2-authorization-server` **Version:** `1.3.0`
+**16** **Group:** `org.springframework.security` **Name:** `spring-security-oauth2-authorization-server` **Version:** `1.4.0`
 
 > -   **POM Project URL**: [https://spring.io/projects/spring-authorization-server](https://spring.io/projects/spring-authorization-server)
 > -   **POM License**: Apache License, Version 2.0 - [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)

@@ -18,7 +18,10 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.con
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.ICommonTokenStructure;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.*;
 
@@ -31,6 +34,9 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationConverter;
@@ -39,53 +45,72 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
- * A Pre-processor used when attempting to extract an OAuth2 Authorization Request
- * from a HttpServletRequest to an instance of OAuth2AuthorizationCodeRequestAuthenticationToken.
+ * Attempts to extract an Authorization Request from HttpServletRequest for the
+ * OAuth 2.0 Authorization Code Grant and then converts it to an
+ * OAuth2AuthorizationCodeRequestAuthenticationToken used for authenticating
+ * the request.
  */
 public class AuthorizationCodeRequestConverter implements AuthenticationConverter {
     private final RequestMatcher authenticationServiceRequestMatcher;
     private final RequestMatcher authorizationCredentialRequestMatcher;
+    private final RequestMatcher authorizationCredentialCreationRequestMatcher;
+    private final RequestMatcher authorizationCredentialDeleteRequestMatcher;
     private final RequestMatcher withoutScopeOrAuthorizationDetailsRequestMatcher;
     private static final Authentication ANONYMOUS_AUTHENTICATION = new AnonymousAuthenticationToken("anonymous",
-          "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
+            "anonymousUser", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
     private final Logger logger = LoggerFactory.getLogger(AuthorizationCodeRequestConverter.class);
 
-    public AuthorizationCodeRequestConverter(){
+    public AuthorizationCodeRequestConverter() {
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();
         this.authenticationServiceRequestMatcher = new AndRequestMatcher(
-            new AntPathRequestMatcher(
-                "/oauth2/authorize", HttpMethod.GET.name()
-            ), serviceRequestMatcher
-        );
+                new AntPathRequestMatcher(
+                        "/oauth2/authorize", HttpMethod.GET.name()),
+                serviceRequestMatcher);
 
         RequestMatcher credentialsRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredential();
         this.authorizationCredentialRequestMatcher = new AndRequestMatcher(
-            new AntPathRequestMatcher(
-                "/oauth2/authorize", HttpMethod.GET.name()
-            ), credentialsRequestMatcher
-        );
+                new AntPathRequestMatcher(
+                        "/oauth2/authorize", HttpMethod.GET.name()),
+                credentialsRequestMatcher);
 
-        // neither the scope nor the authorization_details are required, if neither is present the scope defaults to "service"
-        RequestMatcher withoutScopeOrAuthorizationDetails = OAuth2AuthorizeRequest.requestMatcherWithoutScopeOrAuthorizationDetails();
+        // New: credential-creation scope matcher (1.1.2)
+        RequestMatcher credentialCreationRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredentialCreation();
+        this.authorizationCredentialCreationRequestMatcher = new AndRequestMatcher(
+                new AntPathRequestMatcher(
+                        "/oauth2/authorize", HttpMethod.GET.name()),
+                credentialCreationRequestMatcher);
+
+        // New: credential-delete scope matcher (1.1.3)
+        RequestMatcher credentialDeleteRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredentialDelete();
+        this.authorizationCredentialDeleteRequestMatcher = new AndRequestMatcher(
+                new AntPathRequestMatcher(
+                        "/oauth2/authorize", HttpMethod.GET.name()),
+                credentialDeleteRequestMatcher);
+
+        // neither the scope nor the authorization_details are required, if neither is
+        // present the scope defaults to "service"
+        RequestMatcher withoutScopeOrAuthorizationDetails = OAuth2AuthorizeRequest
+                .requestMatcherWithoutScopeOrAuthorizationDetails();
         this.withoutScopeOrAuthorizationDetailsRequestMatcher = new AndRequestMatcher(
-              new AntPathRequestMatcher(
-                    "/oauth2/authorize", HttpMethod.GET.name()
-              ), withoutScopeOrAuthorizationDetails
-        );
+                new AntPathRequestMatcher(
+                        "/oauth2/authorize", HttpMethod.GET.name()),
+                withoutScopeOrAuthorizationDetails);
     }
 
     @Override
-    public Authentication convert(HttpServletRequest request){
+    public Authentication convert(HttpServletRequest request) {
         logger.info("Request received at {}", request.getRequestURL().toString());
         logger.info(request.getQueryString());
-
         if (!this.authenticationServiceRequestMatcher.matches(request) &&
-              !this.authorizationCredentialRequestMatcher.matches(request) &&
-              !this.withoutScopeOrAuthorizationDetailsRequestMatcher.matches(request))
-        {
-            if (!request.getParameter("response_type").equals("code")) {
+                !this.authorizationCredentialRequestMatcher.matches(request) &&
+                !this.authorizationCredentialCreationRequestMatcher.matches(request) &&
+                !this.authorizationCredentialDeleteRequestMatcher.matches(request) &&
+                !this.withoutScopeOrAuthorizationDetailsRequestMatcher.matches(request)) {
+            if (!request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE)
+                    .equals(OAuth2AuthorizationResponseType.CODE.getValue())) {
                 String error_description = "The response type in the request is not supported.";
-                OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE, error_description, null);
+                OAuth2Error error = new OAuth2Error(OAuth2ErrorCodes.UNSUPPORTED_RESPONSE_TYPE, error_description,
+                        null);
                 logger.error(error.toString());
                 throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, null);
             } else {
@@ -101,154 +126,123 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         logger.info("Request received: {}", authorizeRequest);
 
         Map<String, Object> additionalParameters = getAdditionalParameters(authorizeRequest);
-        Set<String> scopes = new HashSet<>();
-        if(authorizeRequest.getScope() == null && authorizeRequest.getAuthorization_details() != null)
-            scopes.add("credential");
-        else scopes.add(authorizeRequest.getScope());
 
         Authentication principal = SecurityContextHolder.getContext().getAuthentication();
         if (principal == null) {
             logger.warn("Authentication is not present. The user is not authenticated.");
             principal = ANONYMOUS_AUTHENTICATION;
-        }
-        else if (!isSupportedAuthentication(principal)) {
+        } else if (!isSupportedAuthentication(principal)) {
             logger.warn("Authentication present is not valid. The authentication mechanism is not the supported.");
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
+        } else if (principal instanceof OID4VPAuthenticationToken) {
+            logger.info("Authentication Principal is a AuthenticationManagerToken.");
+            principal = validateSupportedAuthentication("AuthenticationManagerToken", principal,
+                    Collections.singleton(authorizeRequest.getScope()), authorizeRequest);
+        } else if (principal instanceof UsernamePasswordAuthenticationTokenExtended) {
+            logger.info("Authentication Principal is a UsernamePasswordAuthenticationTokenExtended.");
+            principal = validateSupportedAuthentication("UsernamePasswordAuthenticationTokenExtended", principal,
+                    Collections.singleton(authorizeRequest.getScope()), authorizeRequest);
         }
-        else if(principal instanceof OID4VPAuthenticationToken){
-            principal = validateAuthenticationManagerToken(principal, scopes, authorizeRequest);
-        }
-        else if(principal instanceof UsernamePasswordAuthenticationTokenExtended){
-            principal = validateUsernamePasswordAuthenticationTokenExtended(principal, scopes, authorizeRequest);
-        }
+        logger.info("Resource Owner Authentication: {}", principal);
 
-        logger.info("Principal present: {}", principal);
-
-        OAuth2AuthorizationCodeRequestAuthenticationToken authorizationCodeRequestAuthenticationToken =
-              new OAuth2AuthorizationCodeRequestAuthenticationToken(request.getRequestURL().toString(),
-                    authorizeRequest.getClient_id(), principal, authorizeRequest.getRedirect_uri(),
-                    authorizeRequest.getState(), scopes, additionalParameters);
-
+        OAuth2AuthorizationCodeRequestAuthenticationToken authorizationCodeRequestAuthenticationToken = new OAuth2AuthorizationCodeRequestAuthenticationToken(
+                request.getRequestURL().toString(),
+                authorizeRequest.getClient_id(),
+                principal,
+                authorizeRequest.getRedirect_uri(),
+                authorizeRequest.getState(),
+                Collections.singleton(authorizeRequest.getScope()),
+                additionalParameters);
         logger.info("OAuth2AuthorizationCodeRequestAuthenticationToken is generated.");
         return authorizationCodeRequestAuthenticationToken;
     }
 
     private boolean isSupportedAuthentication(Object principal) {
         return principal.getClass().equals(OID4VPAuthenticationToken.class) ||
-              principal.getClass().equals(UsernamePasswordAuthenticationTokenExtended.class);
+                principal.getClass().equals(UsernamePasswordAuthenticationTokenExtended.class);
     }
 
-    private Authentication validateAuthenticationManagerToken(Authentication principal, Set<String> scopes, OAuth2AuthorizeRequest authorizeRequest){
-        logger.info("Authentication Principal is a AuthenticationManagerToken.");
-        OID4VPAuthenticationToken token = (OID4VPAuthenticationToken) principal;
+    private Authentication validateSupportedAuthentication(String type, Authentication principal, Set<String> scopes,
+            OAuth2AuthorizeRequest authorizeRequest) {
+        ICommonTokenStructure token = (ICommonTokenStructure) principal;
 
-        boolean isInvalidBasic =
-              !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
-                    !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
+        boolean isInvalidBasic = !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
+                !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
 
-        boolean isInvalidCredential =
-              !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
-                    !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
-                    !Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) ||
-                    !Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()) ||
-                    !Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures());
+        boolean isInvalidCredential = !Objects.equals(authorizeRequest.getAuthorization_details(),
+                token.getAuthorization_details()) ||
+                !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
+                !Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) ||
+                !Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()) ||
+                !Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures());
 
-        // if the request is of the scope "service" and the session does not contain the scope "service", the authentication is invalid...
-        if(scopes.contains("service") && !Objects.equals(token.getScope(), "service")){
+        // if the request is of the scope "service" and the session does not contain the
+        // scope "service", the authentication is invalid...
+        if (scopes.contains(OAuth2ScopesNames.SERVICE) && !Objects.equals(token.getScope(), OAuth2ScopesNames.SERVICE)) {
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("AuthenticationManagerToken: Request Scope = 'service' && Token Request Scope != 'service'");
+            logger.warn("{}: Request Scope = 'service' && Token Request Scope != 'service'", type);
         }
-        // if the clientId in the request doesn't match the clientId in the authentication, it is invalid...
-        else if(isInvalidBasic){
+        // if the clientId in the request doesn't match the clientId in the
+        // authentication, it is invalid...
+        else if (isInvalidBasic) {
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
-            logger.warn("AuthenticationManagerToken: Basic Validation Failed.");
+            logger.warn("{}: Basic Validation Failed.", type);
         }
-        // if the request is of the scope "credential" and the session does not contain the scope "credential", the authentication is invalid...
-        else if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")) {
-            logger.warn("AuthenticationManagerToken: Request Scope = 'credential' && Token Request Scope != 'credential'");
-            principal = ANONYMOUS_AUTHENTICATION;
-            SecurityContextHolder.clearContext();
-        }
-        // if the request is of the scope "credential", but the requested information doesn't match the "authorized information", the authentication is invalid...
-        else if(scopes.contains("credential") && isInvalidCredential){
-            logger.warn("AuthenticationManagerToken: Credential Validation Failed.");
-			logger.warn("Authorization Details? {}", Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
-            logger.warn("Hashes? {}", Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()));
-            logger.warn("CredentialID? {}", Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) );
-            logger.warn("HashAlgorithmOID? {}", Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()));
-            logger.warn("NumSignatures? {}", Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures()));
-
+        // if the request is of the scope "credential" and the session does not contain
+        // the scope "credential", the authentication is invalid...
+        else if (scopes.contains(OAuth2ScopesNames.CREDENTIAL) && !Objects.equals(token.getScope(), OAuth2ScopesNames.CREDENTIAL)) {
+            logger.warn("{}: Request Scope = 'credential' && Token Request Scope != 'credential'", type);
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
-        return principal;
-    }
-
-    private Authentication validateUsernamePasswordAuthenticationTokenExtended(Authentication principal, Set<String> scopes, OAuth2AuthorizeRequest authorizeRequest){
-        logger.info("Authentication Principal is a UsernamePasswordAuthenticationTokenExtended.");
-        UsernamePasswordAuthenticationTokenExtended token = (UsernamePasswordAuthenticationTokenExtended) principal;
-
-        boolean isInvalidBasic =
-              !Objects.equals(authorizeRequest.getClient_id(), token.getClient_id()) ||
-                    !Objects.equals(authorizeRequest.getRedirect_uri(), token.getRedirect_uri());
-
-        boolean isInvalidCredential =
-              !Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()) ||
-                    !Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()) ||
-                    !Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) ||
-                    !Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()) ||
-                    !Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures());
-
-        // if the request is of the scope "service" and the session does not contain the scope "service", the authentication is invalid...
-        if(scopes.contains("service") && !Objects.equals(token.getScope(), "service")){
-            principal = ANONYMOUS_AUTHENTICATION;
-            SecurityContextHolder.clearContext();
-            logger.warn("UsernamePasswordAuthenticationTokenExtended: Request Scope = 'service' && Token Request Scope != 'service'");
-        }
-        // if the clientId in the request doesn't match the clientId in the authentication, it is invalid...
-        else if(isInvalidBasic){
-            principal = ANONYMOUS_AUTHENTICATION;
-            SecurityContextHolder.clearContext();
-            logger.warn("UsernamePasswordAuthenticationTokenExtended: Basic Validation Failed.");
-        }
-        // if the request is of the scope "credential" and the session does not contain the scope "credential", the authentication is invalid...
-        else if(scopes.contains("credential") && !Objects.equals(token.getScope(), "credential")) {
-            logger.warn("UsernamePasswordAuthenticationTokenExtended: Request Scope = 'credential' && Token Request Scope != 'credential'");
-            principal = ANONYMOUS_AUTHENTICATION;
-            SecurityContextHolder.clearContext();
-        }
-        // if the request is of the scope "credential", but the requested information doesn't match the "authorized information", the authentication is invalid...
-        else if(scopes.contains("credential") && isInvalidCredential){
-            logger.warn("UsernamePasswordAuthenticationTokenExtended: Credential Validation Failed.");
+        // if the request is of the scope "credential", but the requested information
+        // doesn't match the "authorized information", the authentication is invalid...
+        else if (scopes.contains(OAuth2ScopesNames.CREDENTIAL) && isInvalidCredential) {
+            logger.warn("{}: Credential Validation Failed.", type);
             logger.warn("Authorization Details? {}", Objects.equals(authorizeRequest.getAuthorization_details(), token.getAuthorization_details()));
             logger.warn("Hashes? {}", Objects.equals(authorizeRequest.getHashes(), token.getHashDocument()));
-            logger.warn("CredentialID? {}", Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()) );
+            logger.warn("CredentialID? {}", Objects.equals(authorizeRequest.getCredentialID(), token.getCredentialID()));
             logger.warn("HashAlgorithmOID? {}", Objects.equals(authorizeRequest.getHashAlgorithmOID(), token.getHashAlgorithmOID()));
             logger.warn("NumSignatures? {}", Objects.equals(authorizeRequest.getNumSignatures(), token.getNumSignatures()));
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         }
-
+        // if the request is of the scope "credential_creation" and the session does not
+        // contain that scope, the authentication is invalid...
+        else if (scopes.contains(OAuth2ScopesNames.CREDENTIAL_CREATION) && !Objects.equals(token.getScope(), OAuth2ScopesNames.CREDENTIAL_CREATION)) {
+            logger.warn("{}: Request Scope = 'credential_creation' && Token Request Scope != 'credential_creation'", type);
+            principal = ANONYMOUS_AUTHENTICATION;
+            SecurityContextHolder.clearContext();
+        }
+        // if the request is of the scope "credential_delete" and the session does not
+        // contain that scope, the authentication is invalid...
+        else if (scopes.contains(OAuth2ScopesNames.CREDENTIAL_DELETION) && !Objects.equals(token.getScope(), OAuth2ScopesNames.CREDENTIAL_DELETION)) {
+            logger.warn("{}: Request Scope = 'credential_delete' && Token Request Scope != 'credential_delete'", type);
+            principal = ANONYMOUS_AUTHENTICATION;
+            SecurityContextHolder.clearContext();
+        }
         return principal;
     }
 
     private static Map<String, Object> getAdditionalParameters(OAuth2AuthorizeRequest authorizeRequest) {
         Map<String, Object> additionalParameters = new HashMap<>();
-        additionalParameters.put("authorization_details", authorizeRequest.getAuthorization_details());
-        additionalParameters.put("code_challenge", authorizeRequest.getCode_challenge());
-        additionalParameters.put("code_challenge_method", authorizeRequest.getCode_challenge_method());
-        additionalParameters.put("lang", authorizeRequest.getLang());
-        additionalParameters.put("credentialID", authorizeRequest.getCredentialID());
-        additionalParameters.put("signatureQualifier", authorizeRequest.getSignatureQualifier());
-        additionalParameters.put("numSignatures", authorizeRequest.getNumSignatures());
-        additionalParameters.put("hashes", authorizeRequest.getHashes());
-        additionalParameters.put("hashAlgorithmOID", authorizeRequest.getHashAlgorithmOID());
-        additionalParameters.put("description", authorizeRequest.getDescription());
-        additionalParameters.put("account_token", authorizeRequest.getAccount_token());
-        additionalParameters.put("clientData", authorizeRequest.getClientData());
+        additionalParameters.put(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS,
+                authorizeRequest.getAuthorization_details());
+        additionalParameters.put(PkceParameterNames.CODE_CHALLENGE, authorizeRequest.getCode_challenge());
+        additionalParameters.put(PkceParameterNames.CODE_CHALLENGE_METHOD, authorizeRequest.getCode_challenge_method());
+        additionalParameters.put(OAuth2CustomParameterNames.LANG, authorizeRequest.getLang());
+        additionalParameters.put(OAuth2CustomParameterNames.CREDENTIAL_ID, authorizeRequest.getCredentialID());
+        additionalParameters.put(OAuth2CustomParameterNames.SIGNATURE_QUALIFIER,
+                authorizeRequest.getSignatureQualifier());
+        additionalParameters.put(OAuth2CustomParameterNames.NUM_SIGNATURES, authorizeRequest.getNumSignatures());
+        additionalParameters.put(OAuth2CustomParameterNames.HASHES, authorizeRequest.getHashes());
+        additionalParameters.put(OAuth2CustomParameterNames.HASH_ALGORITHM_OID, authorizeRequest.getHashAlgorithmOID());
+        additionalParameters.put(OAuth2CustomParameterNames.DESCRIPTION, authorizeRequest.getDescription());
+        additionalParameters.put(OAuth2CustomParameterNames.ACCOUNT_TOKEN, authorizeRequest.getAccount_token());
+        additionalParameters.put(OAuth2CustomParameterNames.CLIENT_DATA, authorizeRequest.getClientData());
         return additionalParameters;
     }
 }

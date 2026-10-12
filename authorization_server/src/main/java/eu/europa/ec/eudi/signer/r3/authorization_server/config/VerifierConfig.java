@@ -16,21 +16,28 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import jakarta.validation.constraints.AssertTrue;
 
-@ConfigurationProperties(prefix = "verifier")
 public class VerifierConfig {
-    private String address;
+    private String domain;
     private String presentationUrl;
-    private String validationUrl;
-    private String clientId;
+    private String mdocValidationUrl;
+    private String sdjwtValidationUrl;
+    private String intendedUseId;
+    private String registrationCertificateJwt;
 
-    public String getAddress() {
-        return address;
+    @AssertTrue(message = "Either 'intendedUseId' or 'registrationCertificateId' must be defined")
+    private boolean isIntendedUseOrRegistrationCertificateValid() {
+        return (intendedUseId != null && !intendedUseId.isBlank())
+              || (registrationCertificateJwt != null && !registrationCertificateJwt.isBlank());
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public String getPresentationUrl() {
@@ -41,19 +48,35 @@ public class VerifierConfig {
         this.presentationUrl = presentationUrl;
     }
 
-    public String getValidationUrl() {
-        return validationUrl;
+    public String getMdocValidationUrl() {
+        return mdocValidationUrl;
     }
 
-    public void setValidationUrl(String validationUrl) {
-        this.validationUrl = validationUrl;
+    public void setMdocValidationUrl(String mdocValidationUrl) {
+        this.mdocValidationUrl = mdocValidationUrl;
     }
 
-    public String getClientId() {
-        return clientId;
+    public String getSdjwtValidationUrl() {
+        return sdjwtValidationUrl;
     }
 
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
+    public void setSdjwtValidationUrl(String sdjwtValidationUrl) {
+        this.sdjwtValidationUrl = sdjwtValidationUrl;
+    }
+
+    public String getIntendedUseId() {
+        return intendedUseId;
+    }
+
+    public void setIntendedUseId(String intendedUseId) {
+        this.intendedUseId = intendedUseId;
+    }
+
+    public String getRegistrationCertificateJwt() {
+        return registrationCertificateJwt;
+    }
+
+    public void setRegistrationCertificateJwt(String registrationCertificateId) {
+        this.registrationCertificateJwt = registrationCertificateId;
     }
 }

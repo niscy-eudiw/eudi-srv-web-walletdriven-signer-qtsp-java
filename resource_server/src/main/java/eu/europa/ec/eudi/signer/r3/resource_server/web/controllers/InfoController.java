@@ -37,46 +37,56 @@ public class InfoController {
     private final InfoConfig infoProperties;
     private final Logger log = LoggerFactory.getLogger(InfoController.class);
 
-    public InfoController(@Autowired InfoConfig infoProperties){
+    public InfoController(@Autowired InfoConfig infoProperties) {
         this.infoProperties = infoProperties;
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
     public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
         String lang;
-        if(requestMessage.containsKey("lang"))
+        if (requestMessage.containsKey("lang"))
             lang = validateLangValue(requestMessage.get("lang").toString());
-        else lang = this.infoProperties.getLang();
+        else
+            lang = this.infoProperties.getLang();
 
         log.trace("Receive request @/csc/v2/info with lang value: {}.", lang);
 
-        List<String> keySet = this.infoProperties.getSignature_formats().keySet().stream().toList();;
+        List<String> keySet = this.infoProperties.getSignature_formats().keySet().stream().toList();
 
         List<List<String>> envelope_properties = new ArrayList<>();
         for (String o : keySet) {
-			log.info("signature_format: {}", o);
+            log.info("signature_format: {}", o);
             List<String> env_properties = this.infoProperties.getSignature_formats().get(o);
             envelope_properties.add(env_properties);
         }
 
         log.info("Returning info information @/csc/v2/info.");
-        return new InfoResponse(
-             this.infoProperties.getSpecs(), this.infoProperties.getName(), this.infoProperties.getLogo(),
-             this.infoProperties.getRegion(), this.infoProperties.getLang(), this.infoProperties.getDescription(),
-             this.infoProperties.getAuthType(), this.infoProperties.getOauth2(), this.infoProperties.getAsynchronousOperationMode(),
-             this.infoProperties.getMethods(), this.infoProperties.getValidationInfo(), this.infoProperties.getSignAlgorithms(),
-             keySet, envelope_properties, this.infoProperties.getConformance_levels());
+        InfoResponse response = new InfoResponse(
+                this.infoProperties.getSpecs(), this.infoProperties.getName(), this.infoProperties.getLogo(),
+                this.infoProperties.getRegion(), this.infoProperties.getLang(), this.infoProperties.getDescription(),
+                this.infoProperties.getAuthType(), this.infoProperties.getOauth2(),
+                this.infoProperties.getAsynchronousOperationMode(),
+                this.infoProperties.getMethods(), this.infoProperties.getValidationInfo(),
+                this.infoProperties.getSignAlgorithms(),
+                keySet, envelope_properties, this.infoProperties.getConformance_levels());
+
+        // response.setOauth2Servers(this.infoProperties.getOauth2Servers());
+        response.setSupportsRar(this.infoProperties.getSupportsRar());
+        response.setSupportedHashTypes(this.infoProperties.getSupportedHashTypes());
+        response.setDocumentTypes(this.infoProperties.getDocumentTypes());
+
+        return response;
     }
 
-    private String validateLangValue(String langRequest){
+    private String validateLangValue(String langRequest) {
         String lang;
-        try{
+        try {
             Locale locale = Locale.forLanguageTag(langRequest);
-            if(locale.getLanguage().isEmpty())
+            if (locale.getLanguage().isEmpty())
                 lang = this.infoProperties.getLang();
-            else lang = locale.getLanguage();
-        }
-        catch (Exception e){
+            else
+                lang = locale.getLanguage();
+        } catch (Exception e) {
             log.error("'lang' request parameter is invalid. {}", e.getMessage());
             lang = this.infoProperties.getLang();
         }

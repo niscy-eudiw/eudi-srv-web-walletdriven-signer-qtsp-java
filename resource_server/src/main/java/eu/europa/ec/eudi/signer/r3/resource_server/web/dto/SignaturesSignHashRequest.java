@@ -34,7 +34,7 @@ public class SignaturesSignHashRequest {
     // one or more hash values to be signed. This parameter SHALL contain the Base64-encoded raw message digests
     @NotEmpty(message = "Empty hash array")
     //@NotBlank(message = "Missing (or invalid type) array parameter hash")
-    private List<@Pattern(regexp = "([a-zA-Z0-9-_.=]|%[0-9A-Fa-f]{2}){1,100}", message = "Each hash must be URL-encoded") String> hashes;
+    private List<String> hashes;
 
     // the OID of the algorithm used to calculate the hash value.
     @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Invalid parameter hashAlgorithmOID")

@@ -16,23 +16,32 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
-import eu.europa.esig.dss.enumerations.*;
 import java.io.IOException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.security.DigestException;
-import java.util.*;
-import org.bouncycastle.asn1.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DERNull;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.operator.DefaultAlgorithmNameFinder;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
+import eu.europa.esig.dss.enumerations.DigestAlgorithm;
+import eu.europa.esig.dss.enumerations.EncryptionAlgorithm;
+import eu.europa.esig.dss.enumerations.SignatureAlgorithm;
 
 @Service
 public class SignaturesService {
@@ -140,8 +149,7 @@ public class SignaturesService {
         if(signatureAlgorithm.contains("RSA")){
             logger.info("Signing {} hashes with the credential id {} the signature algorithm {} and a RSA key.", hashes.size(), credentialID, signatureAlgorithm);
             for (String dtbs : hashes) {
-                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
-                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
+                byte[] dtbsBytes = Base64.getDecoder().decode(dtbs);
                 byte[] dtbsr = wrapForRsaSign(dtbsBytes, hashAlgorithmOID);
                 byte[] signatureBytes = this.iKeysService.signDTBSWithRSAAndGivenAlgorithm(privateKeyBytes, dtbsr, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
@@ -151,8 +159,7 @@ public class SignaturesService {
         else if(signatureAlgorithm.contains("ECDSA")){
             logger.info("Signing {} hashes with the credential id {} the signature algorithm {} and a P-256 key.", hashes.size(), credentialID, signatureAlgorithm);
             for (String dtbs : hashes) {
-                String dtbsDecoded = URLDecoder.decode(dtbs, StandardCharsets.UTF_8);
-                byte[] dtbsBytes = Base64.getDecoder().decode(dtbsDecoded);
+                byte[] dtbsBytes = Base64.getDecoder().decode(dtbs);
                 byte[] signatureBytes = this.iKeysService.signDTBSWithECDSAAndGivenAlgorithm(privateKeyBytes, dtbsBytes, signatureAlgorithm);
                 String signature = Base64.getEncoder().encodeToString(signatureBytes);
                 signatures.add(signature);

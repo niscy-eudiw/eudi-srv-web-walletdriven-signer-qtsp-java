@@ -47,6 +47,7 @@
         <logger name="com.example" level="DEBUG"/>
         <root level="DEBUG">
             <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="ROLLINGFILE"/>
         </root>
     </springProfile>
 </configuration>

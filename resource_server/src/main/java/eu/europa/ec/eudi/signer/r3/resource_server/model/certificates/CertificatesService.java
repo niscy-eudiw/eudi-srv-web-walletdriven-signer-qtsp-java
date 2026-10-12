@@ -74,7 +74,7 @@ public class CertificatesService {
 
     private List<X509Certificate> generateCertificates(PublicKey publicKey, String givenName, String surname, String subjectCN, String countryCode, byte[] privateKeyValues, String keyAlgorithm) throws Exception{
 
-        byte[] csrInfo = generateCertificateRequestInfo(publicKey, givenName, surname, subjectCN, countryCode);
+        byte[] csrInfo = generateCertificateRequestInfo(publicKey, removeSemicolon(givenName), removeSemicolon(surname), removeSemicolon(subjectCN), countryCode);
         logger.info("Retrieved Certificate Signing Request Information.");
 
         PKCS10CertificationRequest certificateHSM = generateCertificateRequest(privateKeyValues, csrInfo, keyAlgorithm);
@@ -86,7 +86,7 @@ public class CertificatesService {
         List<X509Certificate> certificateAndCertificateChain = this.certificateIssuer.issueCertificate(certificateString, countryCode);
 
         logger.info("Retrieved the certificate and certificate chain from the CA.");
-        if(!validateCertificateFromCA(certificateAndCertificateChain, givenName, surname, subjectCN, countryCode)){
+        if(!validateCertificateFromCA(certificateAndCertificateChain, escapeString(givenName), escapeString(surname), escapeString(subjectCN), countryCode)){
             throw new Exception("Certificates received from CA are not valid");
         }
         logger.info("Validated the certificate and certificate chain received from the CA.");
@@ -129,7 +129,7 @@ public class CertificatesService {
 
     private boolean validateCertificateFromCA(List<X509Certificate> certificatesAndCertificateChain, String expectedGivenName, String expectedSurname, String expectedSubjectCN, String expectedCountryCode){
         if(certificatesAndCertificateChain.isEmpty()) {
-            logger.info("No certificate or certificate chain was received from the CA. The list of certificates is empty.");
+            logger.error("No certificate or certificate chain was received from the CA. The list of certificates is empty.");
             return false;
         }
 
@@ -144,7 +144,7 @@ public class CertificatesService {
                 String value = IETFUtils.valueToString(it.getFirst().getValue());
                 sb.append(value).append(", ");
             });
-            logger.info("The expected GivenName ({}) was not found in the certificate received ({}).", expectedGivenName, sb);
+            logger.error("The expected GivenName ({}) was not found in the certificate received ({}).", expectedGivenName, sb);
             return false;
         }
 
@@ -155,7 +155,7 @@ public class CertificatesService {
                 String value = IETFUtils.valueToString(it.getFirst().getValue());
                 sb.append(value).append(", ");
             });
-            logger.info("The expected Surname ({}) was not found in the certificate received ({}).", expectedSurname, sb);
+            logger.error("The expected Surname ({}) was not found in the certificate received ({}).", expectedSurname, sb);
             return false;
         }
 
@@ -166,7 +166,7 @@ public class CertificatesService {
                 String value = IETFUtils.valueToString(it.getFirst().getValue());
                 sb.append(value).append(", ");
             });
-            logger.info("The expected CommonName ({}) was not found in the certificate received ({}).", expectedSubjectCN, sb);
+            logger.error("The expected CommonName ({}) was not found in the certificate received ({}).", expectedSubjectCN, sb);
             return false;
         }
 
@@ -177,7 +177,7 @@ public class CertificatesService {
                 String value = IETFUtils.valueToString(it.getFirst().getValue());
                 sb.append(value).append(", ");
             });
-            logger.info("The expected Country ({}) was not found in the certificate received ({}).", expectedCountryCode, sb);
+            logger.error("The expected Country ({}) was not found in the certificate received ({}).", expectedCountryCode, sb);
             return false;
         }
 
@@ -193,7 +193,7 @@ public class CertificatesService {
                 String value = IETFUtils.valueToString(it.getFirst().getValue());
                 sb.append(value).append(", ");
             });
-            logger.info("The expected Issuer ({}) was not found in the certificate received ({}).", expectedIssuerSubjectCN, sb);
+            logger.error("The expected Issuer ({}) was not found in the certificate received ({}).", expectedIssuerSubjectCN, sb);
             return false;
         }
         return true;
@@ -208,5 +208,34 @@ public class CertificatesService {
                 return false;
         }
         return true;
+    }
+
+    protected static String removeSemicolon(String input) {
+        return input.replace(";", "-");
+    }
+
+    protected static String escapeString(String input) {
+        String result = input.replace("\\", "\\\\")
+              .replace(",", "\\,")
+              .replace("+", "\\+")
+              .replace("=", "\\=")
+              .replace("<", "\\<")
+              .replace(">", "\\>")
+              .replace(";", "-")
+              .replace("\"", "\\\"");
+
+        // Escape trailing spaces (one or more)
+        if (result.endsWith(" ")) {
+            int i = result.length();
+            while (i > 0 && result.charAt(i - 1) == ' ') {
+                i--;
+            }
+            // keep the part before spaces and escape each trailing space
+            String prefix = result.substring(0, i);
+            String escapedSpaces = "\\ ".repeat(result.length() - i);
+            result = prefix + escapedSpaces;
+        }
+
+        return result;
     }
 }

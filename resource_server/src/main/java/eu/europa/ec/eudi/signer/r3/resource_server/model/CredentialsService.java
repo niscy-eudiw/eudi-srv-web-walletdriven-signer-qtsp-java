@@ -16,6 +16,26 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import org.bouncycastle.asn1.ASN1GeneralizedTime;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.x509.CertificatePolicies;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.PolicyInformation;
+import org.bouncycastle.asn1.x509.qualified.QCStatement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.CertificateChain;
@@ -23,18 +43,11 @@ import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Crede
 import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeyPairRegister;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
-import java.util.*;
-import java.security.cert.X509Certificate;
-import org.bouncycastle.asn1.ASN1GeneralizedTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 @Service
 public class CredentialsService {
@@ -51,48 +64,63 @@ public class CredentialsService {
 
     /**
      * Function that returns the list of the credentials id available to the user
-     * @param userID the user that made the request and that owns the credentials (userHash)
-     * @param onlyValid a parameter that defines if the credentials returned are valid and can be used to sign
+     * 
+     * @param userID    the user that made the request and that owns the credentials
+     *                  (userHash)
+     * @param onlyValid a parameter that defines if the credentials returned are
+     *                  valid and can be used to sign
      * @return the list of the credentials id
      */
-    public List<String> getAvailableCredentialsID(String userID, boolean onlyValid){
+    public List<String> getAvailableCredentialsID(String userID, boolean onlyValid) {
         List<Credentials> credentials = this.credentialsRepository.findByUserID(userID);
         List<String> listAvailableCredentials;
-        if(!onlyValid)
-            listAvailableCredentials = credentials.stream().map(Credentials :: getId).toList();
+        if (!onlyValid)
+            listAvailableCredentials = credentials.stream().map(Credentials::getId).toList();
         else
-            listAvailableCredentials = credentials.stream().filter(Credentials::isValid).map(Credentials::getId).toList();
+            listAvailableCredentials = credentials.stream().filter(Credentials::isValid).map(Credentials::getId)
+                    .toList();
         return listAvailableCredentials;
     }
 
-    public boolean existsActiveCertificate(List<String> listAvailableCredentials){
-        for (String credentialId: listAvailableCredentials){
+    public boolean existsActiveCertificate(List<String> listAvailableCredentials) {
+        for (String credentialId : listAvailableCredentials) {
             Optional<Credentials> optionalCredential = this.credentialsRepository.findById(credentialId);
-            if (optionalCredential.isEmpty()) continue;
+            if (optionalCredential.isEmpty())
+                continue;
             Credentials credential = optionalCredential.get();
             try {
                 this.certificatesService.base64DecodeCertificate(credential.getCertificate()).checkValidity();
                 return true;
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return false;
     }
 
     /**
      * Function that returns the list of credential info
-     * @param listAvailableCredentials the list of the available credentials to a user, retrieved previously
-     * @param certificates the value used to determine if the response should contain the end-entity certificate, the certificate chain or none
-     * @param certInfo the parameter used to determine if the response contains additional information about the end-entity certificate
-     * @param authInfo the parameter used to determine if the response contains authorization information
-     * @return a list with information of the credentials in the available credentials list
+     * 
+     * @param listAvailableCredentials the list of the available credentials to a
+     *                                 user, retrieved previously
+     * @param certificates             the value used to determine if the response
+     *                                 should contain the end-entity certificate,
+     *                                 the certificate chain or none
+     * @param certInfo                 the parameter used to determine if the
+     *                                 response contains additional information
+     *                                 about the end-entity certificate
+     * @param authInfo                 the parameter used to determine if the
+     *                                 response contains authorization information
+     * @return a list with information of the credentials in the available
+     *         credentials list
      */
     public List<CredentialsListResponse.CredentialInfo> getCredentialInfo(List<String> listAvailableCredentials,
-                                                                          String certificates, boolean certInfo,
-                                                                          boolean authInfo) throws Exception{
+            String certificates, boolean certInfo,
+            boolean authInfo) throws Exception {
         List<CredentialsListResponse.CredentialInfo> listOfCredentialInfo = new ArrayList<>();
-        for (String credentialId: listAvailableCredentials){
-            Optional<Credentials> optionalCredential =  this.credentialsRepository.findById(credentialId);
-            if(optionalCredential.isEmpty()) continue;
+        for (String credentialId : listAvailableCredentials) {
+            Optional<Credentials> optionalCredential = this.credentialsRepository.findById(credentialId);
+            if (optionalCredential.isEmpty())
+                continue;
 
             Credentials credential = optionalCredential.get();
             CredentialsListResponse.CredentialInfo ci = new CredentialsListResponse.CredentialInfo();
@@ -104,25 +132,51 @@ public class CredentialsService {
             ci.setLang(credential.getLang());
             ci.setKey(getCredentialsKeyInfo(credential));
             ci.setCert(getCredentialsCertInfo(credential, certificates, certInfo));
-            if(authInfo) ci.setAuth(getCredentialsAuthInfo(credential));
+            if (authInfo)
+                ci.setAuth(getCredentialsAuthInfo(credential));
 
             listOfCredentialInfo.add(ci);
         }
         return listOfCredentialInfo;
     }
 
+    public CredentialsListResponse.CredentialInfo getSingleCredentialInfo(String credentialId, String certificates, boolean certInfo) throws Exception {
+            Optional<Credentials> optionalCredential = this.credentialsRepository.findById(credentialId);
+            if (optionalCredential.isEmpty())
+                throw new Exception("Couldn't retrieve Credential");
+
+            Credentials credential = optionalCredential.get();
+            CredentialsListResponse.CredentialInfo ci = new CredentialsListResponse.CredentialInfo();
+            ci.setCredentialID(credentialId);
+            ci.setDescription(credential.getDescription());
+            ci.setSignatureQualifier(credential.getSignatureQualifier());
+            ci.setSCAL(credential.getSCAL());
+            ci.setMultisign(credential.getMultisign());
+            ci.setLang(credential.getLang());
+            ci.setKey(getCredentialsKeyInfo(credential));
+            ci.setCert(getCredentialsCertInfo(credential, certificates, certInfo));
+
+            return ci;
+    }
+
     /**
      * Function that allows to get information about the Credential
+     * 
      * @param credentialId the id of the credential
-     * @param certificates the value used to determine if the response should contain the end-entity certificate, the certificate chain or none
-     * @param certInfo the parameter used to determine if the response contains additional information about the end-entity certificate
-     * @param authInfo the parameter used to determine if the response contains authorization information
+     * @param certificates the value used to determine if the response should
+     *                     contain the end-entity certificate, the certificate chain
+     *                     or none
+     * @param certInfo     the parameter used to determine if the response contains
+     *                     additional information about the end-entity certificate
+     * @param authInfo     the parameter used to determine if the response contains
+     *                     authorization information
      * @return the information about the Credential
      */
     public CredentialsInfoResponse getCredentialInfoFromSingleCredential(String credentialId, String certificates,
             boolean certInfo, boolean authInfo) throws Exception {
         Optional<Credentials> credentialOptional = this.credentialsRepository.findById(credentialId);
-        if(credentialOptional.isEmpty()) return null;
+        if (credentialOptional.isEmpty())
+            return null;
 
         Credentials credential = credentialOptional.get();
         CredentialsInfoResponse credentialsInfoResponse = new CredentialsInfoResponse();
@@ -133,11 +187,12 @@ public class CredentialsService {
         credentialsInfoResponse.setLang(credential.getLang());
         credentialsInfoResponse.setKey(getCredentialsKeyInfo(credential));
         credentialsInfoResponse.setCert(getCredentialsCertInfo(credential, certificates, certInfo));
-        if(authInfo) credentialsInfoResponse.setAuth(getCredentialsAuthInfo(credential));
+        if (authInfo)
+            credentialsInfoResponse.setAuth(getCredentialsAuthInfo(credential));
         return credentialsInfoResponse;
     }
 
-    private CredentialsInfoKey getCredentialsKeyInfo(Credentials credential){
+    private CredentialsInfoKey getCredentialsKeyInfo(Credentials credential) {
         CredentialsInfoKey credentialsInfoKey = new CredentialsInfoKey();
         credentialsInfoKey.setAlgo(credential.getKeyAlgo());
         credentialsInfoKey.setStatus(credential.getKeyStatus());
@@ -146,23 +201,23 @@ public class CredentialsService {
         return credentialsInfoKey;
     }
 
-    private CredentialsInfoCert getCredentialsCertInfo(Credentials credential, String certificates, boolean certInfo) throws Exception{
+    private CredentialsInfoCert getCredentialsCertInfo(Credentials credential, String certificates, boolean certInfo)
+            throws Exception {
         CredentialsInfoCert credentialsInfoCert = new CredentialsInfoCert();
         credentialsInfoCert.setStatus(credential.getCertStatus());
 
-        if(certificates.equals("single")){
+        if (certificates.equals("single")) {
             List<String> certificatesList = new ArrayList<>();
             certificatesList.add(credential.getCertificate());
             credentialsInfoCert.setCertificates(certificatesList);
-        }
-        else if(certificates.equals("chain")){
+        } else if (certificates.equals("chain")) {
             List<String> certificatesList = new ArrayList<>();
             certificatesList.add(credential.getCertificate());
             certificatesList.addAll(credential.getCertificateChain());
             credentialsInfoCert.setCertificates(certificatesList);
         }
 
-        if(certInfo){
+        if (certInfo) {
             String certificateEncoded = credential.getCertificate();
             X509Certificate x509Certificate = certificatesService.base64DecodeCertificate(certificateEncoded);
             credentialsInfoCert.setIssuerDN(x509Certificate.getIssuerDN().getName());
@@ -173,14 +228,51 @@ public class CredentialsService {
             Date validFrom = x509Certificate.getNotBefore();
             credentialsInfoCert.setValidTo(new ASN1GeneralizedTime(validTo).getTimeString());
             credentialsInfoCert.setValidFrom(new ASN1GeneralizedTime(validFrom).getTimeString());
+
+            // Extract QC Statements (OID 1.3.6.1.5.5.7.1.3) — required per CSC spec, always
+            // set (empty list if absent)
+            List<String> qcStatementOids = new ArrayList<>();
+            byte[] qcStatementsBytes = x509Certificate.getExtensionValue(Extension.qCStatements.getId());
+            if (qcStatementsBytes != null) {
+                try {
+                    // getExtensionValue returns a DER OCTET STRING wrapping the extension value —
+                    // unwrap it first
+                    byte[] unwrapped = ASN1OctetString.getInstance(qcStatementsBytes).getOctets();
+                    ASN1Sequence seq = ASN1Sequence.getInstance(ASN1Primitive.fromByteArray(unwrapped));
+                    for (int i = 0; i < seq.size(); i++) {
+                        QCStatement stmt = QCStatement.getInstance(seq.getObjectAt(i));
+                        qcStatementOids.add(stmt.getStatementId().getId());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Could not parse QC Statements extension: {}", e.getMessage());
+                }
+            }
+            credentialsInfoCert.setQcStatements(qcStatementOids);
+
+            // Extract Certificate Policies (OID 2.5.29.32) — optional, only set if present
+            byte[] certPoliciesBytes = x509Certificate.getExtensionValue(Extension.certificatePolicies.getId());
+            if (certPoliciesBytes != null) {
+                List<String> policyOids = new ArrayList<>();
+                try {
+                    byte[] unwrapped = ASN1OctetString.getInstance(certPoliciesBytes).getOctets();
+                    CertificatePolicies policies = CertificatePolicies
+                            .getInstance(ASN1Primitive.fromByteArray(unwrapped));
+                    for (PolicyInformation pi : policies.getPolicyInformation()) {
+                        policyOids.add(pi.getPolicyIdentifier().getId());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Could not parse Certificate Policies extension: {}", e.getMessage());
+                }
+                credentialsInfoCert.setPolicy(policyOids);
+            }
         }
         return credentialsInfoCert;
     }
 
-    private CredentialsInfoAuth getCredentialsAuthInfo(Credentials credential){
+    private CredentialsInfoAuth getCredentialsAuthInfo(Credentials credential) {
         CredentialsInfoAuth infoAuth = new CredentialsInfoAuth();
         infoAuth.setMode(credential.getAuthMode());
-        if (credential.getAuthMode().equals("explicit")){
+        if (credential.getAuthMode().equals("explicit")) {
             infoAuth.setExpression(credential.getAuthExpression());
             infoAuth.setObjects(credential.getAuthObjects());
         }
@@ -188,30 +280,36 @@ public class CredentialsService {
     }
 
     /**
-     * Function that allows to create a credential (key pair and certificate) based on the RSA algorithm
-     * @param userHash the hash of the user to whom the credential is created
-     * @param givenName the given name of the user to be present in the certificate
-     * @param surname the surname of the user to be present in the certificate
-     * @param name the full name of the user to be used as CN
+     * Function that allows to create a credential (key pair and certificate) based
+     * on the RSA algorithm
+     * 
+     * @param userHash       the hash of the user to whom the credential is created
+     * @param givenName      the given name of the user to be present in the
+     *                       certificate
+     * @param surname        the surname of the user to be present in the
+     *                       certificate
+     * @param name           the full name of the user to be used as CN
      * @param issuingCountry the country to be used in the certificate
      */
-    public void createRSACredential(String userHash, String givenName, String surname, String name, String issuingCountry)
-        throws Exception{
+    public void createRSACredential(String userHash, String givenName, String surname, String name,
+            String issuingCountry)
+            throws Exception {
         int keySizeInBits = 2048;
         Credentials credential = new Credentials();
         KeyPairRegister keysValues = this.keysService.generateRSAKeyPair(keySizeInBits);
 
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateRSACertificates(keysValues.getPublicKeyValue(),
-              givenName, surname, name, issuingCountry, keysValues.getPrivateKeyBytes());
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateRSACertificates(
+                keysValues.getPublicKeyValue(),
+                givenName, surname, name, issuingCountry, keysValues.getPrivateKeyBytes());
         X509Certificate signingCertificate = EJBCACertificates.get(0);
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
 
         List<CertificateChain> certs = new ArrayList<>();
         for (X509Certificate x509Certificate : certificateChain) {
-                CertificateChain cert = new CertificateChain();
-                cert.setCertificate(this.certificatesService.base64EncodeCertificate(x509Certificate));
-                cert.setCredential(credential);
-                certs.add(cert);
+            CertificateChain cert = new CertificateChain();
+            cert.setCertificate(this.certificatesService.base64EncodeCertificate(x509Certificate));
+            cert.setCredential(credential);
+            certs.add(cert);
         }
         credential.setUserID(userHash);
         credential.setDescription("This is a credential for tests");
@@ -220,7 +318,7 @@ public class CredentialsService {
         credential.setMultisign(1);
         credential.setLang("en-US");
         credential.setPrivateKey(Base64.getEncoder().encodeToString(keysValues.getPrivateKeyBytes()));
-        credential.setPublicKey( Base64.getEncoder().encodeToString(keysValues.getPublicKeyValue().getEncoded()));
+        credential.setPublicKey(Base64.getEncoder().encodeToString(keysValues.getPublicKeyValue().getEncoded()));
         credential.setKeyStatus("enabled");
         List<String> keyAlgo = new ArrayList<>();
         keyAlgo.add("1.2.840.113549.1.1.1"); // rsaEncryption
@@ -237,19 +335,26 @@ public class CredentialsService {
     }
 
     /**
-     * Function that allows to create a credential (key pair and certificate) based on the EC (P-256) algorithm
-     * @param userHash the hash of the user to whom the credential is created
-     * @param givenName the given name of the user to be present in the certificate
-     * @param surname the surname of the user to be present in the certificate
-     * @param name the full name of the user to be used as CN
+     * Function that allows to create a credential (key pair and certificate) based
+     * on the EC (P-256) algorithm
+     * 
+     * @param userHash       the hash of the user to whom the credential is created
+     * @param givenName      the given name of the user to be present in the
+     *                       certificate
+     * @param surname        the surname of the user to be present in the
+     *                       certificate
+     * @param name           the full name of the user to be used as CN
      * @param issuingCountry the country to be used in the certificate
      */
-    public void createECDSAP256Credential(String userHash, String givenName, String surname, String name, String issuingCountry) throws Exception{
+    public String createECDSAP256Credential(String userHash, String givenName, String surname, String name,
+            String issuingCountry) throws Exception {
         Credentials credential = new Credentials();
         KeyPairRegister keyValues = this.keysService.generateP256KeyPair();
         logger.info("Generated P256 keypair.");
 
-        List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(keyValues.getPublicKeyValue(), givenName, surname, name, issuingCountry, keyValues.getPrivateKeyBytes());
+        List<X509Certificate> EJBCACertificates = this.certificatesService.generateP256Certificates(
+                keyValues.getPublicKeyValue(), givenName, surname, name, issuingCountry,
+                keyValues.getPrivateKeyBytes());
         logger.info("Generated certificate and retrieved the chain certificate.");
         X509Certificate signingCertificate = EJBCACertificates.get(0);
         List<X509Certificate> certificateChain = EJBCACertificates.subList(1, EJBCACertificates.size());
@@ -283,16 +388,31 @@ public class CredentialsService {
         logger.info("Create Credential Object.");
         this.credentialsRepository.save(credential);
         logger.info("Saved Credential to Database.");
+
+        return credential.getId();
     }
 
     /**
      * Function that checks if a credential ID belongs to a user
-     * @param userId the user identifier
+     * 
+     * @param userId       the user identifier
      * @param credentialId the identifier of the user
      * @return boolean
      */
-    public boolean credentialBelongsToUser(String userId, String credentialId){
+    public boolean credentialBelongsToUser(String userId, String credentialId) {
         Optional<String> credentials = this.credentialsRepository.findByUserIDAndId(userId, credentialId);
         return credentials.isPresent();
     }
+
+    /**
+     * Deletes a credential (key pair, certificate, and chain) from the database.
+     * The caller must verify ownership before calling this method.
+     * 
+     * @param credentialId the ID of the credential to delete
+     */
+    public void deleteCredential(String credentialId) {
+        this.credentialsRepository.deleteById(credentialId);
+        logger.info("Deleted credential {}.", credentialId);
+    }
+
 }

@@ -415,7 +415,14 @@ Create a .env file in the root of your project and define the following variable
    # Authorization Server Configuration
    SERVICE_URL_OAUTH2_ISSUER= # Example: http://localhost:8084 or http://host.docker.internal:8084
    SERVICE_URL=http://localhost:8084
+   
+   # OID4VP Configuration
+   VERIFIER-DOMAIN=verifier-backend.eudiw.dev
+   WALLET-SCHEME=haip-vp://
+   INTENDED-USE-ID= # The identifier of configured Wallet Relying Party Intended Uses if one is made available by the verifier
+   REGISTRATION-CERTIFICATE-JWT= # a Wallet Relying Party Registration Certificate to be used
    ```
+
 Notes:
 * Replace the placeholder values with actual values required for your environment.
 * The SYMMETRIC_SECRET_KEY and DB_ENCRYPTION_SALT must be Base64-encoded.
@@ -498,24 +505,29 @@ spring:
 2. **Set parameters value for authentication using OpenId4VP**
 
    This application requires users to authenticate and authorize the signature of documents with certificates they own through their EUDI Wallet.
-   To enable this feature (authentication using PID), communication with a backend Verifier that supports OID4VP v1 is required. Define the address and URL of the Verifier by adding the configuration in **application.yml** located in the folder **authorization_server/src/main/resources**:
-
+   To enable this feature (authentication using PID), communication with a backend Verifier that supports OID4VP v1 is required.
+   It is mandatory to configure the domain and wallet scheme for OID4VP.You must also specify the registration certificate to use,
+   either by providing an `intended_use_id` (if the Verifier has a default test certificate configured) or a `registration_certificate_jwt`.
+   This can be done in one of two ways:
+   
+   1. By updating the **application.yml** located in the folder **authorization_server/src/main/resources**:
    ```
-   verifier:
-      address:
-      presentation-url:
-      validation-url:
-      client_id:
+   oid4vp:
+     verifier:
+       domain: ${VERIFIER-DOMAIN}
+       presentation-url: https://${VERIFIER-DOMAIN}/ui/presentations
+       validation-url: https://${VERIFIER-DOMAIN}/utilities/validations/msoMdoc/deviceResponse
+       intended_use_id: ${INTENDED-USE-ID}
+       registration_certificate_Jwt: ${REGISTRATION-CERTIFICATE-JWT}
+     wallet:
+       scheme: ${WALLET-SCHEME}
    ```
-
-   By default, this configuration is set to a backend server based on the code from the GitHub 'eu-digital-identity-wallet/eudi-srv-web-verifier-endpoint-23220-4-kt'. Therefore, the default configuration is:
-
+   2. By setting environment variables in a .env file. Example:
    ```
-   verifier:
-      address: verifier-backend.eudiw.dev
-      presentation-url: https://verifier-backend.eudiw.dev/ui/presentations
-      validation-url: https://verifier-backend.eudiw.dev/utilities/validations/msoMdoc/deviceResponse
-      client_id: verifier-backend.eudiw.dev
+   VERIFIER-DOMAIN=verifier-backend.eudiw.dev
+   WALLET-SCHEME=eudi-openid4vp://
+   INTENDED-USE-ID=TEST-01
+   REGISTRATION-CERTIFICATE-JWT=
    ```
 
 3. **Update the application.yml**
