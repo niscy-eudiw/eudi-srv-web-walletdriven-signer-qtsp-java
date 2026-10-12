@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.6.1]
+_12 Oct 2026_
+
+### Added
+- HTML page for the OID4VP same-device authentication flow, which prompts the user to open their EUDI Wallet instead of redirecting them to it automatically.
+
+### Changed
+- Restyled the OID4VP cross-device page and removed unused CSS and image assets.
+
 ## [0.6.0]
 _2 Oct 2026_
 
