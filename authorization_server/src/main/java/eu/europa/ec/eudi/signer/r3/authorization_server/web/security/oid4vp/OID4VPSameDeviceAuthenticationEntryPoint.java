@@ -64,15 +64,10 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
         String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-        try{
-            String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(request, sanitizeCookieString, serviceUrl);
-            this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
-            this.redirectStrategy.sendRedirect(request, response, redirectLink);
-        }
-        catch (Exception e){
-            logger.error(e.getMessage());
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-        }
+        this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
+        
+        String linkToSameDevicePage = serviceUrl+"/oid4vp/same-device?sessionId="+sanitizeCookieString;
+        this.redirectStrategy.sendRedirect(request, response, linkToSameDevicePage);
     }
 
     private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response){

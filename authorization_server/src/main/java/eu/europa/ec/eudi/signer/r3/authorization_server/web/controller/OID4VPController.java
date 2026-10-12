@@ -47,16 +47,6 @@ public class OID4VPController {
 
 			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
 
-			//System.out.println("URL REQUEST: "+urlToReturnTo);
-			//logger.info("URL REQUEST: {}", urlToReturnTo);
-
-			//JSONArray transaction_data = getTransactionData(urlToReturnTo);
-			//System.out.println("TRANSACTION_DATA_CONTROLLER: "+ transaction_data);
-			//logger.info("TRANSACTION_DATA_CONTROLLER: {}", transaction_data);
-
-			//String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transaction_data);
-			//logger.info("Retrieved the redirect link for cross device authentication.");
-
 			String redirectLink = this.openIdForVPService.getCrossDeviceRedirectLink(urlToReturnTo, sanitizeCookie, serviceUrl);
 
 			QRCodeWriter barcodeWriter = new QRCodeWriter();
@@ -95,6 +85,27 @@ public class OID4VPController {
 			}
 
 			return "cross-device-page";
+		}catch (Exception e){
+			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
+			model.addAttribute("errormessage", "Failed to generate QR Code: " + e.getMessage());
+			return "error";
+		}
+	}
+
+
+	@GetMapping("/oid4vp/same-device")
+	public String getOID4VPSameDevicePage(Model model, @RequestParam String sessionId){
+		try {
+			String serviceUrl = this.issuerConfig.getServiceURL();
+			String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
+			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookie);
+
+			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
+			
+			String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(urlToReturnTo, sessionId, serviceUrl);
+			model.addAttribute("url", redirectLink);
+			return "same-device-page";
 		}catch (Exception e){
 			logger.error(e.getLocalizedMessage());
 			logger.error(e.getMessage());
