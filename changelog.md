@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.1]
+_12 Oct 2026_
+
+### Changed
+- Updated Maven dependencies versions.
+
 ## [0.6.0]
 _2 Oct 2026_
 

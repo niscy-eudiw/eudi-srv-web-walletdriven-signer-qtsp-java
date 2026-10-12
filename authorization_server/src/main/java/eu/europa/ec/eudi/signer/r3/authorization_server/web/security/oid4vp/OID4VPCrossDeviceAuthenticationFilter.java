@@ -9,6 +9,7 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,10 +22,13 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
+import org.springframework.http.HttpMethod;
+
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
-	private static final AntPathRequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/cross-device/callback", "GET");
+	private static final RequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/cross-device/callback", HttpMethod.GET.name());
 	private final OpenIdForVPService openIdForVPService;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();

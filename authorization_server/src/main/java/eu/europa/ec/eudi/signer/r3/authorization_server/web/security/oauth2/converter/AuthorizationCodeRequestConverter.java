@@ -23,6 +23,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.cons
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.ICommonTokenStructure;
 import jakarta.servlet.http.HttpServletRequest;
+
 import java.util.*;
 
 import org.slf4j.Logger;
@@ -61,30 +62,27 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
     private final Logger logger = LoggerFactory.getLogger(AuthorizationCodeRequestConverter.class);
 
     public AuthorizationCodeRequestConverter() {
+        RequestMatcher authorizeEndpointMatcher = new AntPathRequestMatcher("/oauth2/authorize", HttpMethod.GET.name());
         RequestMatcher serviceRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForService();
         this.authenticationServiceRequestMatcher = new AndRequestMatcher(
-                new AntPathRequestMatcher(
-                        "/oauth2/authorize", HttpMethod.GET.name()),
+                authorizeEndpointMatcher,
                 serviceRequestMatcher);
 
         RequestMatcher credentialsRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredential();
         this.authorizationCredentialRequestMatcher = new AndRequestMatcher(
-                new AntPathRequestMatcher(
-                        "/oauth2/authorize", HttpMethod.GET.name()),
+                authorizeEndpointMatcher,
                 credentialsRequestMatcher);
 
         // New: credential-creation scope matcher (1.1.2)
         RequestMatcher credentialCreationRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredentialCreation();
         this.authorizationCredentialCreationRequestMatcher = new AndRequestMatcher(
-                new AntPathRequestMatcher(
-                        "/oauth2/authorize", HttpMethod.GET.name()),
+                authorizeEndpointMatcher,
                 credentialCreationRequestMatcher);
 
         // New: credential-delete scope matcher (1.1.3)
         RequestMatcher credentialDeleteRequestMatcher = OAuth2AuthorizeRequest.requestMatcherForCredentialDelete();
         this.authorizationCredentialDeleteRequestMatcher = new AndRequestMatcher(
-                new AntPathRequestMatcher(
-                        "/oauth2/authorize", HttpMethod.GET.name()),
+                authorizeEndpointMatcher,
                 credentialDeleteRequestMatcher);
 
         // neither the scope nor the authorization_details are required, if neither is
@@ -92,8 +90,7 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         RequestMatcher withoutScopeOrAuthorizationDetails = OAuth2AuthorizeRequest
                 .requestMatcherWithoutScopeOrAuthorizationDetails();
         this.withoutScopeOrAuthorizationDetailsRequestMatcher = new AndRequestMatcher(
-                new AntPathRequestMatcher(
-                        "/oauth2/authorize", HttpMethod.GET.name()),
+                authorizeEndpointMatcher,
                 withoutScopeOrAuthorizationDetails);
     }
 
