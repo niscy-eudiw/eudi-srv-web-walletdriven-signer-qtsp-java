@@ -266,8 +266,8 @@ public class VerifierClient {
 
     private String getSameDeviceMessage(String userId, String serviceUrl, String nonce, JSONArray transaction_data) {
         JSONObject jsonBodyToInitPresentation = getCommonStructureMessage(nonce, transaction_data);
-        // String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
-        // jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
+        String redirectUri = serviceUrl+"/oid4vp/callback?session_id="+userId+"&response_code={RESPONSE_CODE}";
+        jsonBodyToInitPresentation.put("wallet_response_redirect_uri_template", redirectUri);
         return jsonBodyToInitPresentation.toString();
     }
 
