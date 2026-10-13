@@ -16,15 +16,9 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
 import java.net.URI;
 import java.util.Optional;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,6 +26,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class OpenIdForVPService {
@@ -86,12 +87,9 @@ public class OpenIdForVPService {
             messageFromVerifier = this.verifierClient.getVPTokenFromVerifierRecursive(sessionId);
         else
             messageFromVerifier = this.verifierClient.getVPTokenFromVerifier(sessionId, code);
-        log.info("VP Token received: {}", messageFromVerifier);
+        log.info("VP Token received from the Verifier");
 
         JSONObject vpToken = loadVerifierResponseAsJSONObject(messageFromVerifier);
-
-        transactionDataService.validateTransactionData(vpToken, url);
-        log.info("Validated Transaction Data.");
 
         return loadUserFromVerifierResponseWithVerifierValidation(vpToken, nonce);
     }
@@ -117,8 +115,8 @@ public class OpenIdForVPService {
      * @return an unauthenticated token with information about the user to authenticate
      */
     private OID4VPAuthenticationToken loadUserFromVerifierResponseWithVerifierValidation(JSONObject vpToken, String nonce) throws OID4VPException {
-        String MSOMDocDeviceResponse = vpToken.getJSONObject("vp_token").getJSONArray("query_0").getString(0);
-        JSONObject pidAttributes = verifierClient.validateSDJWTResponse(MSOMDocDeviceResponse, nonce);
+        String deviceResponse = vpToken.getJSONObject("vp_token").getJSONArray("query_0").getString(0);
+        JSONObject pidAttributes = verifierClient.validateSDJWTResponse(deviceResponse, nonce);
         log.info("Validated and loaded the VP Token from the Verifier response.");
 
 		assert pidAttributes != null;

@@ -16,19 +16,15 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.OID4VPConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables.VerifierCreatedVariable;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.text.StringEscapeUtils;
@@ -40,6 +36,13 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OID4VPConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEnumError;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.VerifierCreatedVariables.VerifierCreatedVariable;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 
 /**
  * Component responsible to make requests to an OpenID4VP Verifier
@@ -287,7 +290,6 @@ public class VerifierClient {
             throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "Something went wrong on our end during sign-in. Please try again in a few moments.");
         }
         log.info("Retrieved the required local variables to complete the authentication.");
-        log.info("Current Verifier Variables State: {}", verifierVariables);
         return variables;
     }
 
@@ -298,7 +300,6 @@ public class VerifierClient {
             throw new OID4VPException(OID4VPEnumError.UNEXPECTED_ERROR, "Something went wrong on our end during sign-in. Please try again in a few moments.");
         }
         log.info("Retrieved the required local variables to complete the authentication.");
-        log.info("Current Verifier Variables State: {}", verifierVariables);
         return variables;
     }
 
@@ -495,8 +496,6 @@ public class VerifierClient {
             if(!responseVerifier.has("vct") || !responseVerifier.getString("vct").equals("urn:eudi:pid:1")) {
                 throw new OID4VPException(OID4VPEnumError.FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER, "It was impossible to validate the VP Token. An error message was received from the OID4VP Verifier.");
             }
-
-            log.info(String.valueOf(responseVerifier));
 
             // Retrieve 'attributes'
             JSONObject attributes = new JSONObject();

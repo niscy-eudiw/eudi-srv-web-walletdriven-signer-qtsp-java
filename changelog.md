@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1]
+_13 Oct 2026_
+
+### Changed
+- Refactor authorization_details into typed model with parser and validator.
+
+
 ## [0.6.0]
 _2 Oct 2026_
 
