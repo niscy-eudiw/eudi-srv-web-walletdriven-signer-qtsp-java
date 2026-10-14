@@ -22,6 +22,16 @@ public class KeyPairRegister {
     private byte[] privateKeyBytes;
     private PublicKey publicKeyValue;
 
+    public KeyPairRegister(){
+        this.privateKeyBytes = null;
+        this.publicKeyValue = null;
+    }
+
+    public KeyPairRegister(byte[] privateKeyBytes, PublicKey publicKey){
+        this.privateKeyBytes = privateKeyBytes;
+        this.publicKeyValue = publicKey;
+    }
+
     public byte[] getPrivateKeyBytes() {
         return privateKeyBytes;
     }

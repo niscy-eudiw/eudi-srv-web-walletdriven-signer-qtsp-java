@@ -16,21 +16,13 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.CertificateChain;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeyPairRegister;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeysService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
-import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
-import java.util.*;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
 import org.bouncycastle.asn1.ASN1GeneralizedTime;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -44,19 +36,30 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.CertificatesService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.CertificateChain;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.Credentials;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.CredentialsRepository;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeyPairRegister;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfoResponse;
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsListResponse;
+
 @Service
 public class CredentialsService {
-
     private final CertificatesService certificatesService;
     private final CredentialsRepository credentialsRepository;
-    private final KeysService keysService;
+    private final IKeysService keysService;
     private static final Logger logger = LoggerFactory.getLogger(CredentialsService.class);
 
-    public CredentialsService(@Autowired HsmService hsmService, @Autowired EjbcaService ejbcaService,
-            @Autowired CredentialsRepository credentialsRepository) {
+    public CredentialsService(@Autowired IKeysService keysService, @Autowired ICertificateIssuer certificateIssuer, @Autowired CredentialsRepository credentialsRepository){
         this.credentialsRepository = credentialsRepository;
-        this.keysService = new KeysService(hsmService);
-        this.certificatesService = new CertificatesService(hsmService, ejbcaService);
+        this.keysService = keysService;
+        this.certificatesService = new CertificatesService(keysService, certificateIssuer);
     }
 
     /**

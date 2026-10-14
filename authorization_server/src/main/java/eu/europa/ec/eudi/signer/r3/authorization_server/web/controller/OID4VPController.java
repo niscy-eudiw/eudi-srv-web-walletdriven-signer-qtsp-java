@@ -1,15 +1,10 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.controller;
 
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
+import java.io.ByteArrayOutputStream;
+import java.net.URI;
+import java.util.Base64;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +13,17 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.io.ByteArrayOutputStream;
-import java.net.URI;
-import java.util.Base64;
-import java.util.Map;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 
 @Controller
 public class OID4VPController {
@@ -46,16 +48,6 @@ public class OID4VPController {
 			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookie);
 
 			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
-
-			//System.out.println("URL REQUEST: "+urlToReturnTo);
-			//logger.info("URL REQUEST: {}", urlToReturnTo);
-
-			//JSONArray transaction_data = getTransactionData(urlToReturnTo);
-			//System.out.println("TRANSACTION_DATA_CONTROLLER: "+ transaction_data);
-			//logger.info("TRANSACTION_DATA_CONTROLLER: {}", transaction_data);
-
-			//String redirectLink = this.verifierClient.initCrossDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transaction_data);
-			//logger.info("Retrieved the redirect link for cross device authentication.");
 
 			String redirectLink = this.openIdForVPService.getCrossDeviceRedirectLink(urlToReturnTo, sanitizeCookie, serviceUrl);
 
@@ -93,7 +85,6 @@ public class OID4VPController {
 				model.addAttribute("reason", "delete a certificate.");
 				model.addAttribute("resources", "delete a certificate from your list of certificates.");
 			}
-
 			return "cross-device-page";
 		}catch (Exception e){
 			logger.error(e.getLocalizedMessage());

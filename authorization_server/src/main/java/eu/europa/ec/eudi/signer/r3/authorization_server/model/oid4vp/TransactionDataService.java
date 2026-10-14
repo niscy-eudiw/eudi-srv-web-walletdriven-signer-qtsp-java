@@ -1,26 +1,26 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetails;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetailsProcessing;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.DocumentInfo;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
-import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetailsProcessing;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.DocumentInfo;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.OAuth2AuthorizeRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Component
 public class TransactionDataService {
@@ -54,9 +54,7 @@ public class TransactionDataService {
 	}
 
 	private JSONArray getTransactionDataFromAuthorizationDetails(String authorizationDetails) throws JsonProcessingException {
-		String authDetailsAuthorization = URLDecoder.decode(authorizationDetails, StandardCharsets.UTF_8);
-
-		List<AuthorizationDetails> authorizationDetailsObject= AuthorizationDetailsProcessing.parse(authDetailsAuthorization);
+		List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsProcessing.parse(authorizationDetails);
 
 		JSONArray transactionData = new JSONArray();
 		for (AuthorizationDetails a: authorizationDetailsObject){
