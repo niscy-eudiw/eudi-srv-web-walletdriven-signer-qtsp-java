@@ -15,6 +15,7 @@ import java.security.spec.KeySpec;
 import java.util.Base64;
 
 public class EncryptionHelper {
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private final Key encryptionKey;
 
 	public EncryptionHelper(AuthConfig authProperties) throws Exception {
@@ -28,8 +29,7 @@ public class EncryptionHelper {
 
 	public byte[] genInitializationVector(int iv_length){
 		byte[] iv = new byte[iv_length];
-		SecureRandom secureRandom = new SecureRandom();
-		secureRandom.nextBytes(iv);
+		SECURE_RANDOM.nextBytes(iv);
 		return iv;
 	}
 
