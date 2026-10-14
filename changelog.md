@@ -10,6 +10,7 @@ _14 Oct 2026_
 - Made the use of EJBCA and HSM optional.
 - Updated Maven dependencies versions.
 - Restyled the OID4VP cross-device page and removed unused CSS and image assets.
+- Refactor authorization_details into typed model with parser and validator.
 
 ### Fixed
 - Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.

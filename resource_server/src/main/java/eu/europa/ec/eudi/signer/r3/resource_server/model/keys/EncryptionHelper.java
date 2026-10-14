@@ -1,6 +1,10 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.model.keys;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.config.AuthConfig;
+import java.security.Key;
+import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.KeySpec;
+import java.util.Base64;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
@@ -8,11 +12,8 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.Key;
-import java.security.SecureRandom;
-import java.security.spec.AlgorithmParameterSpec;
-import java.security.spec.KeySpec;
-import java.util.Base64;
+
+import eu.europa.ec.eudi.signer.r3.resource_server.config.AuthConfig;
 
 public class EncryptionHelper {
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -27,8 +28,8 @@ public class EncryptionHelper {
 		this.encryptionKey = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
 	}
 
-	public byte[] genInitializationVector(int iv_length){
-		byte[] iv = new byte[iv_length];
+	public byte[] genInitializationVector(int ivLength){
+		byte[] iv = new byte[ivLength];
 		SECURE_RANDOM.nextBytes(iv);
 		return iv;
 	}

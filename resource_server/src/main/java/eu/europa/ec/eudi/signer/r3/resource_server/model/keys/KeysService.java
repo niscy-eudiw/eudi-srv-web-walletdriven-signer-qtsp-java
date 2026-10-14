@@ -16,9 +16,16 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model.keys;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.SecretKey;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.SecretKeyRepository;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECPoint;
+import java.security.spec.RSAPublicKeySpec;
+import java.util.List;
+
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEROctetString;
@@ -27,12 +34,9 @@ import org.bouncycastle.jce.ECNamedCurveTable;
 import org.bouncycastle.jce.ECPointUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.*;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.*;
-import java.util.List;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.SecretKey;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.SecretKeyRepository;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
 
 /**
  * The component responsible for managing KeyPairs
@@ -101,8 +105,8 @@ public class KeysService implements IKeysService{
         return keyFactory.generatePublic(pKeySpec);
     }
 
-    public byte[] signDTBSWithRSAAndGivenAlgorithm (byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception{
-        return hsmService.signDTBSWithRSAAndGivenAlgorithm(wrappedPrivateKey, DTBSR, signatureAlgorithm);
+    public byte[] signDTBSWithRSAAndGivenAlgorithm (byte[] wrappedPrivateKey, byte[] dtbsr, String signatureAlgorithm) throws Exception{
+        return hsmService.signDTBSWithRSAAndGivenAlgorithm(wrappedPrivateKey, dtbsr, signatureAlgorithm);
     }
 
     public KeyPairRegister generateP256KeyPair() throws Exception{
@@ -159,8 +163,8 @@ public class KeysService implements IKeysService{
         return paddedCoord;
     }
 
-    public byte[] signDTBSWithECDSAAndGivenAlgorithm(byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception{
-        return hsmService.signDTBSWithECDSAAndGivenAlgorithm(wrappedPrivateKey, DTBSR, signatureAlgorithm);
+    public byte[] signDTBSWithECDSAAndGivenAlgorithm(byte[] wrappedPrivateKey, byte[] dtbsr, String signatureAlgorithm) throws Exception{
+        return hsmService.signDTBSWithECDSAAndGivenAlgorithm(wrappedPrivateKey, dtbsr, signatureAlgorithm);
     }
 
 }

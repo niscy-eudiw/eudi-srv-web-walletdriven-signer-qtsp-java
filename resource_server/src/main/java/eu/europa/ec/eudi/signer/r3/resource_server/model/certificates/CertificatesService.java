@@ -16,9 +16,19 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model.certificates;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
-import org.bouncycastle.asn1.*;
+import java.io.ByteArrayInputStream;
+import java.security.PublicKey;
+import java.security.Security;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+
+import javax.security.auth.x500.X500Principal;
+
+import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.pkcs.CertificationRequest;
 import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
@@ -27,18 +37,16 @@ import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.asn1.x509.*;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.security.auth.x500.X500Principal;
-import java.io.*;
-import java.security.*;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.*;
+
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.ICertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.IKeysService;
 
 /***
  * The module response for managing certificates and certificate chains
@@ -82,7 +90,6 @@ public class CertificatesService {
         logger.info("Generated the Certificate Signing Request.");
 
         // Makes a request to the CA
-        // List<X509Certificate> certificateAndCertificateChain = this.ejbcaService.certificateRequest(certificateString, countryCode);
         List<X509Certificate> certificateAndCertificateChain = this.certificateIssuer.issueCertificate(certificateString, countryCode);
 
         logger.info("Retrieved the certificate and certificate chain from the CA.");
@@ -181,7 +188,6 @@ public class CertificatesService {
             return false;
         }
 
-        // String expectedIssuerSubjectCN = this.ejbcaService.getCertificateAuthorityNameByCountry(expectedCountryCode);
         String expectedIssuerSubjectCN = this.certificateIssuer.getExpectedIssuerSubjectCN(expectedCountryCode);
 
         X500Principal issuerX500Principal = certificate.getIssuerX500Principal();

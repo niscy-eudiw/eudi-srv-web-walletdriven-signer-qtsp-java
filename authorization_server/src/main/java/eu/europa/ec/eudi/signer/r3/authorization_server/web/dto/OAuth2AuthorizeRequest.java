@@ -13,14 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
-
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.constraints.NotBlank;
 
 import java.net.URI;
 import java.net.URLDecoder;
@@ -30,15 +23,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponseType;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.AuthorizationDetailsParser;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.OAuth2AuthorizationDetailsNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotBlank;
+
 public class OAuth2AuthorizeRequest {
+
     @NotBlank
     private String response_type = "code";
     @NotBlank
@@ -202,26 +201,26 @@ public class OAuth2AuthorizeRequest {
 
     @java.lang.Override
     public java.lang.String toString() {
-        return "OAuth2AuthorizeRequestDTO{" +
-                "response_type='" + response_type + '\'' +
-                ", client_id='" + client_id + '\'' +
-                ", redirect_uri='" + redirect_uri + '\'' +
-                ", scope='" + scope + '\'' +
-                ", authorization_details='" + authorization_details + '\'' +
-                ", code_challenge='" + code_challenge + '\'' +
-                ", code_challenge_method='" + code_challenge_method + '\'' +
-                ", state='" + state + '\'' +
-                ", request_uri='" + request_uri + '\'' +
-                ", lang='" + lang + '\'' +
-                ", credentialID='" + credentialID + '\'' +
-                ", signatureQualifier='" + signatureQualifier + '\'' +
-                ", numSignatures='" + numSignatures + '\'' +
-                ", hashes='" + hashes + '\'' +
-                ", hashAlgorithmOID='" + hashAlgorithmOID + '\'' +
-                ", description='" + description + '\'' +
-                ", account_token='" + account_token + '\'' +
-                ", clientData='" + clientData + '\'' +
-                '}';
+        return "OAuth2AuthorizeRequestDTO{"
+                + "response_type='" + response_type + '\''
+                + ", client_id='" + client_id + '\''
+                + ", redirect_uri='" + redirect_uri + '\''
+                + ", scope='" + scope + '\''
+                + ", authorization_details='" + authorization_details + '\''
+                + ", code_challenge='" + code_challenge + '\''
+                + ", code_challenge_method='" + code_challenge_method + '\''
+                + ", state='" + state + '\''
+                + ", request_uri='" + request_uri + '\''
+                + ", lang='" + lang + '\''
+                + ", credentialID='" + credentialID + '\''
+                + ", signatureQualifier='" + signatureQualifier + '\''
+                + ", numSignatures='" + numSignatures + '\''
+                + ", hashes='" + hashes + '\''
+                + ", hashAlgorithmOID='" + hashAlgorithmOID + '\''
+                + ", description='" + description + '\''
+                + ", account_token='" + account_token + '\''
+                + ", clientData='" + clientData + '\''
+                + '}';
     }
 
     public static OAuth2AuthorizeRequest from(URI uri) throws IllegalArgumentException {
@@ -252,8 +251,9 @@ public class OAuth2AuthorizeRequest {
 
     public static OAuth2AuthorizeRequest from(HttpServletRequest request) throws IllegalArgumentException {
         Map<String, String[]> parameters = request.getParameterMap();
-        if (parameters == null)
+        if (parameters == null) {
             throw new IllegalArgumentException("No parameters were received for the OAuth2 /authorize request.");
+        }
 
         return from(parameters);
     }
@@ -268,14 +268,9 @@ public class OAuth2AuthorizeRequest {
         authRequest.setScope(getFirst(parameters, OAuth2ParameterNames.SCOPE));
         authRequest.setAuthorization_details(getFirst(parameters, OAuth2CustomParameterNames.AUTHORIZATION_DETAILS));
 
-        // Resolve scope from authorization_details type when no explicit scope
-        // provided.
-        // Per spec: lang SHALL NOT be used if authorization_details is present.
         if (authRequest.getAuthorization_details() != null) {
-            authRequest.setScope(resolveScopeFromAuthorizationDetails(authRequest.getAuthorization_details()));
-            // lang is ignored when authorization_details is present
+            authRequest.setScope(AuthorizationDetailsParser.peekType(authRequest.getAuthorization_details()));
         } else if (authRequest.getScope() == null) {
-            // Neither scope nor authorization_details present — default to service
             authRequest.setScope(OAuth2ScopesNames.SERVICE);
             authRequest.setLang(getFirst(parameters, OAuth2CustomParameterNames.LANG));
         } else {
@@ -296,40 +291,14 @@ public class OAuth2AuthorizeRequest {
         return authRequest;
     }
 
-    /**
-     * Derives the OAuth2 scope from the 'type' field inside authorization_details.
-     * Falls back to CREDENTIAL scope if the type is unrecognised.
-     */
-    private static String resolveScopeFromAuthorizationDetails(String authorizationDetails) {
-        try {
-            JSONArray arr = new JSONArray(authorizationDetails);
-            if (!arr.isEmpty()) {
-                JSONObject first = arr.getJSONObject(0);
-                if (first.has(OAuth2AuthorizationDetailsNames.TYPE)) {
-                    String type = first.getString(OAuth2AuthorizationDetailsNames.TYPE);
-                    if(OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_CREATION.contains(type)){
-                        return OAuth2ScopesNames.CREDENTIAL_CREATION;
-                    }
-                    else if (OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_DELETE.contains(type)){
-                        return OAuth2ScopesNames.CREDENTIAL_DELETION;
-                    }
-                    else {
-                        return OAuth2ScopesNames.CREDENTIAL;
-                    }
-                }
-            }
-        } catch (Exception ignored) {
-            // malformed authorization_details — let validation catch it downstream
-        }
-        return OAuth2ScopesNames.CREDENTIAL;
-    }
-
     private static String getFirst(Map<String, String[]> params, String key) {
-        if (params == null)
+        if (params == null) {
             return null;
+        }
         String[] values = params.get(key);
-        if (values == null || values.length == 0)
+        if (values == null || values.length == 0) {
             return null;
+        }
         return values[0];
     }
 
@@ -346,38 +315,37 @@ public class OAuth2AuthorizeRequest {
     }
 
     public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails() {
-        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
-                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
-                        OAuth2AuthorizationResponseType.CODE.getValue())
+        return request
+                -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
                 && request.getParameter(OAuth2ParameterNames.SCOPE) == null
                 && request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) == null
                 && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
     }
 
     public static RequestMatcher requestMatcherForService() {
-        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
-                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
-                        OAuth2AuthorizationResponseType.CODE.getValue())
-                && Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.SERVICE)
-                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
+        return request
+                -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null
+                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
+                && request.getParameter(OAuth2ParameterNames.SCOPE).equals(OAuth2ScopesNames.SERVICE);
+
     }
 
     public static RequestMatcher requestMatcherForCredential() {
-        return request -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null &&
-                Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE),
-                        OAuth2AuthorizationResponseType.CODE.getValue())
-                &&
-                ((Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.CREDENTIAL)
-                        && (request.getParameter(OAuth2CustomParameterNames.CREDENTIAL_ID) != null
-                                || request.getParameter(OAuth2CustomParameterNames.SIGNATURE_QUALIFIER) != null)
-                        && request.getParameter(OAuth2CustomParameterNames.HASHES) != null
-                        && request.getParameter(OAuth2CustomParameterNames.HASH_ALGORITHM_OID) != null
-                        && request.getParameter(OAuth2CustomParameterNames.NUM_SIGNATURES) != null)
-                        || (request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null
-                                && isAuthorizationDetailsOfType(
-                                        request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS),
-                                        OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL)))
-                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
+        return request
+                -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
+                && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null
+                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
+                && ((Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.CREDENTIAL)
+                && (request.getParameter(OAuth2CustomParameterNames.CREDENTIAL_ID) != null || request.getParameter(OAuth2CustomParameterNames.SIGNATURE_QUALIFIER) != null)
+                && request.getParameter(OAuth2CustomParameterNames.HASHES) != null
+                && request.getParameter(OAuth2CustomParameterNames.HASH_ALGORITHM_OID) != null
+                && request.getParameter(OAuth2CustomParameterNames.NUM_SIGNATURES) != null)
+                || (request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null
+                && isAuthorizationDetailsOfType(
+                        request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS),
+                        OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL)));
     }
 
     // New: matcher for credential-creation scope (1.1.2)
@@ -402,19 +370,7 @@ public class OAuth2AuthorizeRequest {
                 && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
     }
 
-    /**
-     * Returns true if the first element of the authorization_details JSON array has
-     * the given type value.
-     */
     private static boolean isAuthorizationDetailsOfType(String authorizationDetails, List<String> expectedType) {
-        try {
-            JSONArray arr = new JSONArray(authorizationDetails);
-            if (!arr.isEmpty()) {
-                JSONObject first = arr.getJSONObject(0);
-                return expectedType.contains(first.optString(OAuth2AuthorizationDetailsNames.TYPE));
-            }
-        } catch (Exception ignored) {
-        }
-        return false;
+        return expectedType.contains(AuthorizationDetailsParser.peekType(authorizationDetails));
     }
 }

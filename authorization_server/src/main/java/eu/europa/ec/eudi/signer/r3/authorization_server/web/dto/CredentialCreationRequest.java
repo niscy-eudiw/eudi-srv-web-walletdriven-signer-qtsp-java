@@ -2,7 +2,8 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
+
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.OAuth2AuthorizationDetailsNames;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CredentialCreationRequest {

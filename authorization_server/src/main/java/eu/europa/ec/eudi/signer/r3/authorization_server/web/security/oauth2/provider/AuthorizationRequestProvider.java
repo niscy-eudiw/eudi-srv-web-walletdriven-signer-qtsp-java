@@ -13,7 +13,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider;
 
 import java.security.Principal;
@@ -58,6 +57,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.cons
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.util.OAuth2ValidationUtils;
 
 public class AuthorizationRequestProvider implements AuthenticationProvider {
+
     private final RegisteredClientRepository registeredClientRepository;
     private final OAuth2TokenGenerator<OAuth2AuthorizationCode> authorizationCodeGenerator = new OAuth2AuthorizationCodeGenerator();
     private final OAuth2AuthorizationService authorizationService;
@@ -130,11 +130,10 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
         // Verifies if the Authorization Details in the oauth2/authorize request is
         // valid
-        String authorizationDetails = (String) oAuth2AuthorizeRequestToken.getAdditionalParameters()
-                .get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS);
-        if (authorizationDetails != null)
-            OAuth2ValidationUtils.isAuthorizationDetailsValid(logger, authorizationDetails,
-                    oAuth2AuthorizeRequestToken);
+        String authorizationDetails = (String) oAuth2AuthorizeRequestToken.getAdditionalParameters().get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS);
+        if (authorizationDetails != null) {
+            OAuth2ValidationUtils.isAuthorizationDetailsValid(logger, authorizationDetails, oAuth2AuthorizeRequestToken);
+        }
 
         // After verifying the request is valid, ensures the resource owner is
         // authenticated
@@ -147,9 +146,10 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         // Update additional parameters with credential id if signature qualifier is
         // used
         Map<String, Object> additionalParameters = new HashMap<>(oAuth2AuthorizeRequestToken.getAdditionalParameters());
-        if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL))
+        if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL)) {
             OAuth2ValidationUtils.addCredentialIdFromSignatureQualifier(logger, credentialsService, principal,
                     additionalParameters);
+        }
 
         // For credential_creation and credential_delete, no credential-id resolution
         // needed —
@@ -187,11 +187,12 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
                 .authorizationGrant(oAuth2AuthorizeRequestToken);
         OAuth2TokenContext tokenContext = tokenContextBuilder.build();
         OAuth2AuthorizationCode authorizationCode = this.authorizationCodeGenerator.generate(tokenContext);
-        if (authorizationCode == null)
+        if (authorizationCode == null) {
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(
                     OAuth2ValidationUtils.getOAuth2Error(logger, OAuth2ErrorCodes.SERVER_ERROR,
                             "The token generator failed to generate the authorization code."),
                     null);
+        }
         logger.info("Generated OAuth2AuthorizationCode.");
 
         OAuth2Authorization authorization = OAuth2Authorization.withRegisteredClient(registeredClient)
@@ -230,11 +231,12 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
     private Set<String> resolveAndValidateScopes(RegisteredClient registeredClient,
             OAuth2AuthorizationCodeRequestAuthenticationToken authenticationToken) {
         Set<String> requestedScopes = authenticationToken.getScopes();
-        if (CollectionUtils.isEmpty(requestedScopes))
+        if (CollectionUtils.isEmpty(requestedScopes)) {
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(
                     OAuth2ValidationUtils.getOAuth2Error(logger, OAuth2ErrorCodes.INVALID_REQUEST,
                             "The 'scope' parameter is missing."),
                     authenticationToken);
+        }
 
         if (!registeredClient.getScopes().containsAll(requestedScopes)) {
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(
