@@ -1,494 +1,252 @@
-/*Copyright 2025 European Commission
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     https://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.*/
-
-/* General Styles */
 * {
-  font-family: "Poppins", serif;
+  font-family: "Helvetica", sans-serif;
 }
 
 .main {
   padding: 0;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  min-width: 350px;
+  overflow-wrap: break-word;
 }
 
 h1 {
-  font-size: 24px;
   font-weight: bold;
   color: #0043b3;
 }
 
-h2 {
-  font-size: 20px;
-  color: #333;
-}
-
-/*Header CSS*/
+/* -- Header -- */
 #header-container {
-  padding-left: 10%;
-  padding-right: 10%;
+  padding-left: 15%;
+  padding-right: 15%;
 }
 
-.nav-item .nav-link {
-  color: #0048d2;
-  border: 1px solid #0048d2;
-  border-radius: 5px;
-  margin: 2px;
-  font-size: 16px;
-}
-
-.nav-item .nav-link:hover {
-  background-color: #0048d2;
-  color: #fff;
-  text-decoration: none;
-  opacity: 0.8;
-}
-
-/*Footer CSS*/
-#main-footer {
-  margin-top: 20px;
-  padding-top: 10px;
-  padding-bottom: 20px;
-  border-top: 1px solid #b3b3b3;
-}
-
-.footer-column {
-  align-items: center;
+/* -- Main -- */
+.main-container {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 1%;
-  text-align: center;
-}
-
-.footer-column-a {
-  text-decoration: none;
-  font-size: 15px;
-  color: rgba(33, 37, 41);
-}
-
-.footer-column-a:hover {
-  text-decoration: underline;
-  color: #0048d2;
-}
-
-/*Content Box*/
-.container {
   flex: 1;
-}
-
-.content-box {
-  background: #dce5f2;
-  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
-  float: none;
-  min-height: 100%;
-  min-width: 300px;
-  padding: 20px;
-  display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.main-page-box {
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  margin-top: 50px;
-}
-
-/*Login Page*/
-.error-message {
-  color: red;
-  margin-bottom: 15px;
-}
-
-.login-content {
-  padding: 20px;
-  width: 60%;
-  min-width: 270px;
-}
-
-.login-content h1 {
-  text-align: left;
-}
-
-.login-content h2 {
-  text-align: left;
-}
-
-/* Input Group */
-.input-group {
-  text-align: left;
-  margin-bottom: 15px;
-}
-
-.input-group label {
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-  display: block;
-  margin-bottom: 5px;
-  text-align: left;
-}
-
-.input-field {
-  display: flex;
-  align-items: center;
-  background: #f5f5f5;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 100%;
-}
-
-.input-field input {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  padding-left: 10px;
-  font-size: 16px;
-}
-
-/* Forgot Password */
-.user-for-testing {
-  text-align: right !important;
-  margin-bottom: 15px !important;
-}
-
-.user-for-testing a {
-  font-size: 14px !important;
-  color: #0043b3 !important;
-  text-decoration: none;
-}
-
-.user-for-testing a:hover {
-  text-decoration: underline !important;
-}
-
-.login-custom-btn {
-  background: #0048d2;
-  border: none;
-  border-radius: 6px;
-  box-sizing: border-box;
-  color: #fff;
-  display: inline-flex;
-  font-size: 16px;
-  justify-content: center;
-  line-height: 18px;
-  min-width: 100px !important;
-  width: 100%;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.login-custom-btn:hover {
-  background: #002b80;
-  color: white;
-  text-decoration: underline;
-}
-
-/* Password Toggle */
-.toggle-password {
-  cursor: pointer;
-}
-
-/* Styling for the pop-up */
-.popup {
-  display: none;
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background-color: white;
-  padding: 10px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  border-radius: 10px;
-  width: 300px;
-}
-
-.popup table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.popup table th,
-.popup table td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: left;
-}
-
-.popup table th {
-  background-color: #f4f4f4;
-}
-
-.popup-close {
-  text-align: right;
-}
-
-.popup-close button {
-  background-color: #ff4444;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.popup-close button:hover {
-  background-color: #ff0000;
-}
-
-.custom-btn {
-  align-items: center;
-  background: #0048d2;
-  border-radius: 6px;
-  box-sizing: border-box;
-  color: #fff;
-  display: inline-flex;
-  font-size: 16px;
-  justify-content: center;
-  min-width: 200px !important;
-  padding: 10px;
-  text-align: center;
-  text-decoration: none;
-  width: 50%;
-}
-
-.custom-btn:hover {
-  background-color: #002b80;
-  color: white;
-  text-decoration: underline;
-}
-
-.custom-btn[disabled] {
-  background-color: gray;
-  color: white;
-}
-
-.select-document{
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.select-document-column{
-    flex: 1 1 45%;
-    max-width: 50%;
-    min-width: 250px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  max-width: 100%;
+  padding: 5% 15%;
+  gap: 30px;
 }
 
 @media (max-width: 768px) {
-    .select-document-column {
-        flex-basis: 100%; /* Full width on smaller screens */
-        max-width: 100%;
-    }
-}
-
-/*Sign Document Buttons*/
-.docs-button-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 5px;
-}
-
-.list-chosen-docs  {
-    margin-top: 15px;
-    border: 1px solid #333;
-    min-height: 55px;
-    padding: 5px;
-    width: 90%;
-}
-
-#item-list {
-    list-style-type: none;
-    padding: 0;
-}
-
-.item-list-elem {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 8px 12px;
-    margin: 5px;
-    background-color: #f9f9f9;
-}
-
-.remove-btn{
-  margin-left: 10px;
-  background: #fff;
-  border: 1px solid #0048d2;
-  border-radius: 3px;
-  box-sizing: border-box;
-  color: #0048d2;
-  padding: 1px 3px;
-  text-align: center;
-  text-decoration: none;
-}
-
-.remove-btn:hover {
-  background-color: #002b80;
-  color: white;
-  text-decoration: underline;
-}
-
-.sign-custom-btn {
-  background: #fff;
-  border: 1px solid #0048d2;
-  border-radius: 3px;
-  box-sizing: border-box;
-  color: #0048d2;
-  font-size: 12px;
-  padding: 4px;
-  text-align: center;
-  text-decoration: none;
-  width: 120px !important;
-  margin-top: 5px;
-}
-
-.sign-custom-btn:hover {
-  background-color: #002b80;
-  color: white;
-  text-decoration: underline;
-}
-
-/* Ensure buttons stay vertically aligned if they wrap */
-@media (max-width: 520px) {
-  /* Adjust breakpoint as needed */
-  .docs-button-container {
-    flex-direction: column;
-    align-items: center; /* Center buttons in vertical layout */
+  .main-container {
+    padding: 5% 10%;
   }
 }
 
-.preview-area {
-  padding: 5px;
-  height: fit-content;
-  width: 90%;
-  min-width: 300px;
+.page-centered {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    height: 100%;
 }
 
-.preview-document {
-  position: relative;
-  overflow: hidden;
-  margin-top: 5px;
-  background-color: #f9f9f9;
-  height: 100%;
-  width: 100%;
+.blue-box {
+    background-color: #DCE5F2;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.16), 0 2px 10px 0 rgba(0, 0, 0, 0.12);
+  	padding: 20px;
+  	width: 100%;
 }
 
-.preview-document iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
+/* -- Buttons -- */
+.common-btn {
+  align-items: center;
+  border-radius: 5px;
+  box-sizing: border-box;
+  display: inline-flex;
+  justify-content: center;
+  padding: 4px 8px;
+  text-align: center;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.primary-btn {
+  background: #0048D2;
+  color: white;
+  padding: 8px 16px;
+}
+.primary-btn:hover {
+  background-color: #0039a8;
+  border-color: #0039a8;
+  color: white;
+}
+
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #0043b3;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* -- Wallet Authentication Pages -- */
+.wallet-card {
+  background: white;
+  border: 1px solid #DCE5F2;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.08), 0 8px 24px 0 rgba(0, 0, 0, 0.08);
+  max-width: 460px;
   width: 100%;
-  height: 500px;
+  padding: 40px 32px;
+}
+
+.wallet-card-wide {
+  max-width: 760px;
+}
+
+.wallet-card h1 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+  margin: 0 0 8px;
+}
+
+.wallet-card-centered {
+  text-align: center;
+}
+
+.wallet-card-logo {
+  display: block;
+  height: 56px;
+  margin: 0 auto 28px;
+  max-width: 100%;
+}
+
+.wallet-subtitle {
+  color: #4a5160;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 28px;
+}
+
+.wallet-hint {
+  color: #6c7380;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 16px 0 0;
+}
+
+.wallet-icon {
+  align-items: center;
+  background: #DCE5F2;
+  border-radius: 50%;
+  color: #0043b3;
+  display: inline-flex;
+  height: 64px;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 64px;
+}
+
+.wallet-btn {
   border: none;
+  display: flex;
+  font-size: 1.05rem;
+  font-weight: 600;
+  gap: 8px;
+  min-height: 48px;
+  text-decoration: none;
+  width: 100%;
+}
+.wallet-btn:hover,
+.wallet-btn:focus {
+  text-decoration: none;
+}
+.wallet-btn:focus-visible {
+  outline: 3px solid #9bb8ef;
+  outline-offset: 2px;
 }
 
-.options-form {
-  font-size: 12px;
-  width: 90%;
-  min-width: 300px;
+.wallet-qr-layout {
+  align-items: center;
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+}
+
+.wallet-request {
+  margin-top: 28px;
   text-align: left;
 }
-
-.options-form-group {
-  margin-top: 10px;
+.wallet-request p {
+  margin: 0;
+}
+.wallet-request p + p {
+  margin-top: 4px;
 }
 
-.legend {
-  font-size: 14px;
-  font-weight: bold;
-  color: #0048d2;
+.qr-frame {
+  flex-shrink: 0;
+  background: white;
+  border: 1px solid #DCE5F2;
+  border-radius: 12px;
+  display: inline-block;
+  padding: 12px;
 }
 
-.options-form-group label {
+.qr-frame img {
   display: block;
-  margin-bottom: 5px; /* Adds space between radio buttons */
+  max-width: 100%;
+  height: auto;
 }
 
-.button-container {
+.wallet-steps {
+  text-align: left;
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wallet-steps li {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.step-number {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #0043b3;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.wallet-waiting {
+  align-items: center;
+  display: flex;
+  gap: 8px;
   justify-content: center;
-  margin-top: 10px;
 }
 
-.download-container {
-  display: flex;
-  justify-content: space-between; /* Space out the buttons */
-  align-items: auto;
-  margin-top: 10px;
-  width: 100%;
-}
+@media (max-width: 768px) {
+  .wallet-card {
+    padding: 28px 20px;
+  }
 
-.toast {
-  visibility: hidden;
-  min-width: 250px;
-  background-color: #333;
-  color: white;
-  text-align: center;
-  padding: 10px;
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 5px;
-  z-index: 1000;
-  opacity: 0;
-  transition: opacity 0.5s, visibility 0.5s;
-}
-
-.toast.show {
-  visibility: visible;
-  opacity: 1;
-}
-
-.toast.hide {
-  opacity: 0;
-  visibility: hidden;
-}
-
-
-.tester-button{
-    background: none;
-    border: none;
-    color: #0048d2;
-    text-decoration: underline;
-    cursor: pointer;
-    font-size: inherit;
-    padding: 0;
-    margin-top: 10px;
-}
-
-.tester-button:hover {
-    color: #002b80;
-    text-decoration: none;
+  .wallet-qr-layout {
+    flex-direction: column;
+    gap: 24px;
+  }
 }

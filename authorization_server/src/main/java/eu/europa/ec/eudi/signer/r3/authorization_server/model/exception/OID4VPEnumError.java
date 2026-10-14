@@ -58,10 +58,7 @@ public enum OID4VPEnumError {
 
     // Errors while validating the VP Token:
     FAILED_TO_VALIDATE_VP_TOKEN_THROUGH_VERIFIER("failed_validate_vp_token_through_verifier",
-          "It was impossible to validate the VP Token using the OID4VP Verifier."),
-
-    FAILED_TO_VALIDATE_TRANSACTION_DATA("failed_to_validade_transaction_data",
-          OID4VPEnumError.generalMessage);
+          "It was impossible to validate the VP Token using the OID4VP Verifier.");
 
     private final String code;
     private final String desc;

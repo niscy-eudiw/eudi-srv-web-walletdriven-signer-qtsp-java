@@ -16,14 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,19 +26,24 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 /**
  * Used by the Exception Translation Filter to commence a login authentication with OID4VP via the OID4VPAuthenticationTokenFilter.
  * Generates a link to the Wallet, where the user will authorize sharing the PID required data.
  */
 public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final Logger logger = LoggerFactory.getLogger(OID4VPSameDeviceAuthenticationEntryPoint.class);
-    private final OpenIdForVPService openIdForVPService;
     private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
     private final ServiceURLConfig issuerConfig;
     private final SessionUrlRelationList sessionUrlRelationList;
 
-    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
-        this.openIdForVPService = openIdForVPService;
+    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
         this.issuerConfig = issuerConfig;
         this.sessionUrlRelationList = sessionUrlRelationList;
     }
@@ -64,15 +63,10 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
         String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-        try{
-            String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(request, sanitizeCookieString, serviceUrl);
-            this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
-            this.redirectStrategy.sendRedirect(request, response, redirectLink);
-        }
-        catch (Exception e){
-            logger.error(e.getMessage());
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-        }
+        this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
+        
+        String linkToSameDevicePage = serviceUrl+"/oid4vp/same-device?sessionId="+sanitizeCookieString;
+        this.redirectStrategy.sendRedirect(request, response, linkToSameDevicePage);
     }
 
     private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response){
