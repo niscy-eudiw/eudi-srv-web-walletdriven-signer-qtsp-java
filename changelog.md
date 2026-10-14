@@ -6,6 +6,9 @@ _12 Oct 2026_
 ### Changed
 - Made the use of EJBCA and HSM optional.
 
+### Fixed
+- Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.
+
 ## [0.6.0]
 _2 Oct 2026_
 
