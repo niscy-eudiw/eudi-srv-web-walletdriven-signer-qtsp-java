@@ -29,8 +29,7 @@ oid4vp:
     scheme: ${WALLET-SCHEME}
 
 service-url-config:
-  oauth2-issuer-url: ${SERVICE_URL_OAUTH2_ISSUER} # Example: http://localhost:8084
-  service-url: ${SERVICE_URL} # Example: http://localhost:8084
+  service-url: ${AUTHORIZATION_SERVER} 
 
 trusted-issuers:
   folder: certificate_of_issuers
@@ -42,7 +41,7 @@ springdoc:
       - name: Authorization Server
         url: /v3/api-docs/public-apis
       - name: Resource Server
-        url: ${RESOURCE_SERVER_URL}/v3/api-docs/public-apis
+        url: ${RESOURCE_SERVER}/v3/api-docs/public-apis
 
 spring:
   #config:

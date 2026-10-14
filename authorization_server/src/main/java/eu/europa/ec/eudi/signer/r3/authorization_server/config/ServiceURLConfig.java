@@ -13,23 +13,14 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "service-url-config")
 public class ServiceURLConfig {
-    private String oauth2IssuerURL;
+
     private String serviceURL;
-
-    public String getOauth2IssuerURL() {
-        return oauth2IssuerURL;
-    }
-
-    public void setOauth2IssuerURL(String oauth2IssuerURL) {
-        this.oauth2IssuerURL = oauth2IssuerURL;
-    }
 
     public String getServiceURL() {
         return serviceURL;

@@ -92,7 +92,7 @@ public class SwaggerConfig {
                         .description("OAuth 2.0 Authorization Server issuing the access tokens used to call the "
                                 + "Resource Server (CSC API v2). Users are authenticated with OpenID4VP or a login form.")
                         .version("v1"))
-                .servers(List.of(new Server().url(serviceURLConfig.getOauth2IssuerURL())))
+                .servers(List.of(new Server().url(serviceURLConfig.getServiceURL())))
                 .tags(List.of(
                         new Tag().name(OAUTH2_TAG).description("Authorization Code flow with PKCE"),
                         new Tag().name(DISCOVERY_TAG).description("Authorization Server metadata and keys")))

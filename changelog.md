@@ -5,6 +5,7 @@ _14 Oct 2026_
 
 ### Added
 - HTML page for the OID4VP same-device authentication flow, which prompts the user to open their EUDI Wallet instead of redirecting them to it automatically.
+- `.env.sample` listing all the environment variables needed to run the authorization and resource servers.
 
 ### Changed
 - Made the use of EJBCA and HSM optional.
@@ -12,6 +13,7 @@ _14 Oct 2026_
 - Restyled the OID4VP cross-device page and removed unused CSS and image assets.
 - Refactored authorization_details into typed model with parser and validator.
 - Updated Swagger UI / OpenAPI documentation for the authorization server and resource server endpoints.
+- **Breaking** Simplified the server URL environment variables. `AUTHORIZATION_SERVER` replaces `SERVICE_URL`, `SERVICE_URL_OAUTH2_ISSUER`, `AUTHORIZATION_SERVER_ISSUER_URI` and `AUTHORIZATION_SERVER_JWT_SET_URI`, and `RESOURCE_SERVER` was added.
 
 ### Fixed
 - Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.

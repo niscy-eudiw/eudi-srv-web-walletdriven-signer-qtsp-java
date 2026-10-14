@@ -49,8 +49,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${AUTHORIZATION_SERVER_JWT_SET_URI}/oauth2/jwks
-          issuer-uri: ${AUTHORIZATION_SERVER_ISSUER_URI}
+          jwk-set-uri: ${AUTHORIZATION_SERVER}/oauth2/jwks
+          issuer-uri: ${AUTHORIZATION_SERVER}
 
 auth:
   dbEncryptionPassphrase: ${DB_ENCRYPTION_PASSPHRASE}
@@ -65,7 +65,7 @@ info:
   description: "This is a test Qualified Trust Service Provider"
   authType:
     - "oauth2code"
-  oauth2: ${AUTHORIZATION_SERVER_ISSUER_URI}
+  oauth2: ${AUTHORIZATION_SERVER}
   asynchronousOperationMode: false
   methods:
     - "oauth2/authorize"
@@ -81,8 +81,8 @@ info:
     - "dtbsr"
   #oauth2Servers:
   #  - label: "QTSP Authorization Server"
-  #    baseUri: ${AUTHORIZATION_SERVER_ISSUER_URI}
-  #    issuerIdentifier: ${AUTHORIZATION_SERVER_ISSUER_URI}
+  #    baseUri: ${AUTHORIZATION_SERVER}
+  #    issuerIdentifier: ${AUTHORIZATION_SERVER}
   #    authType:
   #      - "oauth2code"
   #    supportsRar: false

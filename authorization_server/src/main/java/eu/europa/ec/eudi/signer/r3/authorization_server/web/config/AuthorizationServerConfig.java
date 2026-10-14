@@ -209,9 +209,9 @@ public class AuthorizationServerConfig {
 
     @Bean
     public AuthorizationServerSettings authorizationServerSettings(ServiceURLConfig issuerConfig) {
-        logger.info("Setting up AuthorizationServerSettings with Issuer URL {}", issuerConfig.getOauth2IssuerURL());
+        logger.info("Setting up AuthorizationServerSettings with Issuer URL {}", issuerConfig.getServiceURL());
         return AuthorizationServerSettings.builder()
-                .issuer(issuerConfig.getOauth2IssuerURL())
+                .issuer(issuerConfig.getServiceURL())
                 .build();
     }
 
