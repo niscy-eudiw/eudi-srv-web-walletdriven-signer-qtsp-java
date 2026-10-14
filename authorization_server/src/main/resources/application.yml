@@ -35,6 +35,15 @@ service-url-config:
 trusted-issuers:
   folder: certificate_of_issuers
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: Authorization Server
+        url: /v3/api-docs/public-apis
+      - name: Resource Server
+        url: ${RESOURCE_SERVER_URL}/v3/api-docs/public-apis
+
 spring:
   #config:
   # import: file:.env[.properties]
