@@ -29,7 +29,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_deta
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
@@ -76,6 +75,7 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2Token;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -115,7 +115,7 @@ public class AuthorizationServerConfig {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, OpenIdForVPService openIdForVPService,
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
             JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
             ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
             RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
@@ -156,25 +156,25 @@ public class AuthorizationServerConfig {
 
         http
                 .exceptionHandling((exceptions) -> {
-                    OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
+                    OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherDefault = request -> {
-                        String client_id = request.getParameter("client_id");
-                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
                     };
                     exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
                     OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherCrossDevice = request -> {
-                        String client_id = request.getParameter("client_id");
-                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
                     };
                     exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
                     RequestMatcher requestMatcher = request -> {
-                        String client_id = request.getParameter("client_id");
-                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
                     };
                     exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getServiceURL() + "/login"), requestMatcher);

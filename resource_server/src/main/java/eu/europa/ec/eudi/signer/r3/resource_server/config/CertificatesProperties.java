@@ -1,13 +1,14 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.config;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaProperties;
 
 @ConfigurationProperties(prefix = "certificates")
 public class CertificatesProperties {
 	private boolean useEjbca;
 	private CASubject caSubject;
-	private EjbcaProperties Ejbca;
+	private EjbcaProperties ejbca;
 
 	public static class CASubject{
 		private String certificateFile;
@@ -74,10 +75,10 @@ public class CertificatesProperties {
 	}
 
 	public EjbcaProperties getEjbca() {
-		return Ejbca;
+		return ejbca;
 	}
 
 	public void setEjbca(EjbcaProperties ejbca) {
-		Ejbca = ejbca;
+		this.ejbca = ejbca;
 	}
 }

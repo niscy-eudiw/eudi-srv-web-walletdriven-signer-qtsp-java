@@ -27,6 +27,9 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.Authoriz
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.util.OAuth2ValidationUtils;
 
 public final class AuthorizationDetailsValidator {
+    private AuthorizationDetailsValidator() {
+    }
+    
     public static void validate(String authorizationDetails, Logger logger, OAuth2AuthorizationCodeRequestAuthenticationToken token) throws OAuth2AuthorizationCodeRequestAuthenticationException {
         try {
 			List<AuthorizationDetails> entries = AuthorizationDetailsParser.parse(authorizationDetails);

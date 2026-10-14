@@ -27,6 +27,9 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.Authoriz
 
 public final class AuthorizationDetailsParser {
 
+    private AuthorizationDetailsParser() {
+    }
+
     public static List<AuthorizationDetails> parse(String authorizationDetails) throws AuthorizationDetailsException {
         JSONArray array = toJsonArray(authorizationDetails);
         List<AuthorizationDetails> result = new ArrayList<>();

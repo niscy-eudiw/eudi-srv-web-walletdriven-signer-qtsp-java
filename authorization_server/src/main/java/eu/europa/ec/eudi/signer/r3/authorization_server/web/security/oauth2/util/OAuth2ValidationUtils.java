@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -24,7 +22,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.AuthorizationDetailsParser;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.AuthorizationDetailsValidator;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.OAuth2AuthorizationDetailsNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.AuthorizationDetails;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialAuthorizationDetails;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
@@ -35,6 +32,8 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 
 public class OAuth2ValidationUtils {
+
+    private static final String CODE_CHALLENGE_METHOD_PLAIN = "plain";
 
     public static OAuth2Error getOAuth2Error(Logger logger, String errorCode, String errorDescription) {
         logger.error(errorDescription);
@@ -54,7 +53,7 @@ public class OAuth2ValidationUtils {
         String codeChallengeMethod = (String) authenticationToken.getAdditionalParameters()
                 .get(PkceParameterNames.CODE_CHALLENGE_METHOD);
         if (!StringUtils.hasText(codeChallengeMethod)
-                || (!codeChallengeMethod.equals("S256") && !codeChallengeMethod.equals("plain"))) {
+                || (!codeChallengeMethod.equals("S256") && !codeChallengeMethod.equals(CODE_CHALLENGE_METHOD_PLAIN))) {
             OAuth2Error error = getOAuth2Error(logger, OAuth2ErrorCodes.INVALID_REQUEST,
                     "Error validating the code_challenge_method");
             throw new OAuth2AuthorizationCodeRequestAuthenticationException(error, authenticationToken);
@@ -74,7 +73,7 @@ public class OAuth2ValidationUtils {
         String codeChallengeMethod = (String) authorizeRequestAdditionalParameters
                 .get(PkceParameterNames.CODE_CHALLENGE_METHOD);
         if (!StringUtils.hasText(codeChallengeMethod)
-                || (!codeChallengeMethod.equals("S256") && !codeChallengeMethod.equals("plain"))) {
+                || (!codeChallengeMethod.equals("S256") && !codeChallengeMethod.equals(CODE_CHALLENGE_METHOD_PLAIN))) {
             throw new OAuth2AuthenticationException(
                     getOAuth2Error(logger, OAuth2ErrorCodes.INVALID_GRANT,
                             "Error validating the 'code_challenge_method'"));
@@ -106,7 +105,7 @@ public class OAuth2ValidationUtils {
                                 "The code verifier doesn't validate the previous code challenge."));
             }
         }
-        if (codeChallengeMethod.equals("plain") && !Objects.equals(codeVerifier, codeChallenge)) {
+        if (codeChallengeMethod.equals(CODE_CHALLENGE_METHOD_PLAIN) && !Objects.equals(codeVerifier, codeChallenge)) {
             throw new OAuth2AuthenticationException(
                     getOAuth2Error(logger, OAuth2ErrorCodes.INVALID_GRANT,
                             "The code verifier doesn't validate the previous code challenge."));

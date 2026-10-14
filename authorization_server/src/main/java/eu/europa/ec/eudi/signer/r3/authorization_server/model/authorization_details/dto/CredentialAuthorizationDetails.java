@@ -48,7 +48,7 @@ public class CredentialAuthorizationDetails extends AuthorizationDetails {
 
 	private static List<DocumentDigest> readDocumentDigests(JSONObject json) throws AuthorizationDetailsException {
 		JSONArray array = json.optJSONArray(OAuth2AuthorizationDetailsNames.DOCUMENT_DIGESTS);
-		if (array == null) return null;
+		if (array == null) return List.of();
 		List<DocumentDigest> digests = new ArrayList<>();
 		for (int i = 0; i < array.length(); i++) {
 			digests.add(new DocumentDigest(array.getJSONObject(i)));
@@ -62,7 +62,7 @@ public class CredentialAuthorizationDetails extends AuthorizationDetails {
 				"The 'credentialID' and 'signatureQualifier' in the 'authorization_details' parameter are both missing.");
 		require(hashAlgorithmOid != null,
 				"The 'hashAlgorithmOID' in the 'authorization_details' parameter is missing.");
-		require(documentDigests != null && !documentDigests.isEmpty(),
+		require(!documentDigests.isEmpty(),
 				"The 'documentDigests' in the 'authorization_details' parameter is missing.");
 		for (DocumentDigest documentDigest : documentDigests) {
 			require(documentDigest.getHash() != null,
@@ -91,7 +91,7 @@ public class CredentialAuthorizationDetails extends AuthorizationDetails {
 		json.putOpt(OAuth2AuthorizationDetailsNames.SIGNATURE_QUALIFIER, signatureQualifier);
 		json.putOpt(OAuth2AuthorizationDetailsNames.NUM_SIGNATURES, numSignatures);
 		json.putOpt(OAuth2AuthorizationDetailsNames.HASH_ALGORITHM_OID, hashAlgorithmOid);
-		if (documentDigests != null) {
+		if (!documentDigests.isEmpty()) {
 			JSONArray digests = new JSONArray();
 			for (DocumentDigest documentDigest : documentDigests) {
 				digests.put(documentDigest.toJSONObject());

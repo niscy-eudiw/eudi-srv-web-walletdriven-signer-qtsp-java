@@ -32,7 +32,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.OID4VPEx
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4VPAuthenticationToken;
-import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class OpenIdForVPService {
@@ -68,11 +67,11 @@ public class OpenIdForVPService {
     }
 
     public OID4VPAuthenticationToken pollVPTokenAndCreateOID4VPAuthToken(String sessionId, URI url) throws OID4VPException, InterruptedException {
-        return retrieveVPToken(true, sessionId, null, url);
+        return retrieveVPToken(true, sessionId, null);
     }
 
     public OID4VPAuthenticationToken getVPTokenAndCreateOID4VPAuthToken(String sessionId, String code, URI url) throws OID4VPException, InterruptedException {
-        return retrieveVPToken(false, sessionId, code, url);
+        return retrieveVPToken(false, sessionId, code);
     }
 
     /**
@@ -80,7 +79,7 @@ public class OpenIdForVPService {
      * and returns an 'OID4VPAuthenticationToken'
      * @return an unauthenticated 'OID4VPAuthenticationToken'
      */
-    private OID4VPAuthenticationToken retrieveVPToken(boolean recursive, String sessionId, String code, URI url) throws OID4VPException, InterruptedException {
+    private OID4VPAuthenticationToken retrieveVPToken(boolean recursive, String sessionId, String code) throws OID4VPException, InterruptedException {
         String nonce = this.verifierClient.getNonce(sessionId);
         String messageFromVerifier;
         if (recursive)
