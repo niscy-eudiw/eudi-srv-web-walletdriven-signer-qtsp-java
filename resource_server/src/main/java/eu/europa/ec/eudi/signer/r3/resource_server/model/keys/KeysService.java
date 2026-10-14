@@ -16,6 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.model.keys;
 
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.entities.SecretKey;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.database.repositories.SecretKeyRepository;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
@@ -26,19 +28,56 @@ import org.bouncycastle.jce.ECPointUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.*;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.*;
+import java.util.List;
 
 /**
  * The component responsible for managing KeyPairs
  */
-public class KeysService {
-
+public class KeysService implements IKeysService{
     private final HsmService hsmService;
+    private static final int IVLENGTH = 12;
 
-    public KeysService(HsmService hsmService){
+    public KeysService(HsmService hsmService, SecretKeyRepository secretKeyRepositoryLoaded, EncryptionHelper encryptionHelper) throws Exception {
         this.hsmService = hsmService;
+
+        List<SecretKey> secretKeys = secretKeyRepositoryLoaded.findAll();
+        if (secretKeys.isEmpty()) {
+            // generates a secret key to wrap the private keys from the HSM
+            byte[] secretKeyBytes = this.hsmService.initSecretKey();
+            byte[] iv = encryptionHelper.genInitializationVector(IVLENGTH);
+
+            // encrypts the secret key before saving it in the db
+            byte[] encryptedSecretKeyBytes = encryptionHelper.encrypt("AES/GCM/NoPadding", iv, secretKeyBytes);
+
+            ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedSecretKeyBytes.length);
+            byteBuffer.put(iv);
+            byteBuffer.put(encryptedSecretKeyBytes);
+
+            // saves in the db
+            SecretKey sk = new SecretKey(byteBuffer.array());
+            secretKeyRepositoryLoaded.save(sk);
+        } else {
+            // loads the encrypted key from the database
+            SecretKey sk = secretKeys.get(0);
+            byte[] encryptedSecretKeyBytes = sk.getSecretKey();
+
+            ByteBuffer byteBuffer = ByteBuffer.wrap(encryptedSecretKeyBytes);
+            byte[] iv = new byte[IVLENGTH];
+            byteBuffer.get(iv);
+            byte[] encryptedSecretKey = new byte[byteBuffer.remaining()];
+            byteBuffer.get(encryptedSecretKey);
+
+            // decrypts the secret key
+            byte[] secretKeyBytes = encryptionHelper.decrypt("AES/GCM/NoPadding", iv, encryptedSecretKey);
+
+            // loads the decrypted key to the HSM
+            this.hsmService.setSecretKey(secretKeyBytes);
+        }
+
     }
 
     public KeyPairRegister generateRSAKeyPair(int keySizeInBits) throws Exception{
@@ -60,6 +99,10 @@ public class KeysService {
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         RSAPublicKeySpec pKeySpec = new RSAPublicKeySpec(modulus, public_exponent);
         return keyFactory.generatePublic(pKeySpec);
+    }
+
+    public byte[] signDTBSWithRSAAndGivenAlgorithm (byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception{
+        return hsmService.signDTBSWithRSAAndGivenAlgorithm(wrappedPrivateKey, DTBSR, signatureAlgorithm);
     }
 
     public KeyPairRegister generateP256KeyPair() throws Exception{
@@ -115,4 +158,9 @@ public class KeysService {
         System.arraycopy(coord, Math.max(0, coord.length - fieldSize), paddedCoord, Math.max(0, fieldSize - coord.length), Math.min(coord.length, fieldSize));
         return paddedCoord;
     }
+
+    public byte[] signDTBSWithECDSAAndGivenAlgorithm(byte[] wrappedPrivateKey, byte[] DTBSR, String signatureAlgorithm) throws Exception{
+        return hsmService.signDTBSWithECDSAAndGivenAlgorithm(wrappedPrivateKey, DTBSR, signatureAlgorithm);
+    }
+
 }
