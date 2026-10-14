@@ -1,10 +1,11 @@
 # Changelog
 
 ## [0.7.0]
-_12 Oct 2026_
+_14 Oct 2026_
 
 ### Changed
 - Made the use of EJBCA and HSM optional.
+- Updated Maven dependencies versions.
 
 ### Fixed
 - Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.

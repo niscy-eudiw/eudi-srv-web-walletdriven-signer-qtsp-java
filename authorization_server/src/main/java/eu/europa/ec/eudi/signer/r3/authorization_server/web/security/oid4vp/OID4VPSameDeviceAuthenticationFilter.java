@@ -37,13 +37,15 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 /**
  * Processes an authentication via OId4VP.
  */
 public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
-    private static final AntPathRequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/callback", "GET");
+    private static final RequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/callback", HttpMethod.GET.name());
     private final OpenIdForVPService openIdForVPService;
     private final SessionUrlRelationList sessionUrlRelationList;
     private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();

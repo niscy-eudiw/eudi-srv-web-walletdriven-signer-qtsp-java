@@ -23,6 +23,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFlowEnum;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
@@ -54,6 +55,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.conv
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
+
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
@@ -92,7 +94,6 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
@@ -121,40 +122,46 @@ public class AuthorizationServerConfig {
 																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
 																	  CredentialsService credentialDatabase) throws Exception
 	{
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
-		authorizationServerConfigurer.oidc(Customizer.withDefaults());
-
 		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
 		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
 		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
 		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
-		authorizationServerConfigurer
-			  .registeredClientRepository(registeredClientRepository)
-			  .authorizationService(authorizationService)
-			  .authorizationServerSettings(authorizationServerSettings)
-			  .tokenGenerator(tokenGenerator)
-			  .authorizationEndpoint(authorizationEndpoint ->
-					authorizationEndpoint
-						  .authorizationRequestConverter(authorizationRequestConverter)
-						  .authenticationProvider(authorizationRequestProvider)
-						  .authenticationProviders(removeDefaultAuthorizationCodeProvider())
-						  .authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
-			  .tokenEndpoint(tokenEndpoint ->
-					tokenEndpoint
-						  .accessTokenRequestConverter(tokenRequestConverter)
-						  .authenticationProviders(removeDefaultTokenProvider())
-						  .authenticationProvider(tokenRequestProvider));
+		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
+		http
+			.securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+			.with(authorizationServerConfigurer, authorizationServer -> authorizationServer
+				.oidc(Customizer.withDefaults())
+				.registeredClientRepository(registeredClientRepository)
+				.authorizationService(authorizationService)
+				.authorizationServerSettings(authorizationServerSettings)
+				.tokenGenerator(tokenGenerator)
+				.authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
+					.authorizationRequestConverter(authorizationRequestConverter)
+					.authenticationProviders(providers -> {
+						providers.removeIf(provider ->
+							provider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
+						providers.add(authorizationRequestProvider);
+					})
+					.authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
+				.tokenEndpoint(tokenEndpoint -> tokenEndpoint
+					.accessTokenRequestConverter(tokenRequestConverter)
+					.authenticationProviders(providers -> {
+						providers.removeIf(provider ->
+							provider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
+						providers.add(tokenRequestProvider);
+					})
+				)
+			)
+			.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
 		logger.info("Set up authorizationServerConfig.");
 
-		String clientId = "client_id";
 
 		http
 			.exceptionHandling((exceptions) -> {
 				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherDefault = request -> {
-					String client_id = request.getParameter(clientId);
+					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
 				};
@@ -162,14 +169,14 @@ public class AuthorizationServerConfig {
 
 				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
 				RequestMatcher requestMatcherCrossDevice = request -> {
-					String client_id = request.getParameter(clientId);
+					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
 				};
 				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
 				RequestMatcher requestMatcher = request -> {
-					String client_id = request.getParameter(clientId);
+					String client_id = request.getParameter("client_id");
 					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
 					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
 				};
@@ -178,14 +185,7 @@ public class AuthorizationServerConfig {
 			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
 		logger.info("Set up the http exception handling and authentication methods.");
 		return http.build();
-	}
 
-	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
-		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
-	}
-
-	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
-		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
 	}
 
 	@Bean
@@ -311,6 +311,11 @@ public class AuthorizationServerConfig {
 		JWKSet jwkSet = new JWKSet(rsaKey);
 		return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
 	}
+
+	/*@Bean
+	public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+		return NimbusJwtDecoder.withJwkSource(jwkSource).build();
+	}*/
 
 	@Bean
 	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
