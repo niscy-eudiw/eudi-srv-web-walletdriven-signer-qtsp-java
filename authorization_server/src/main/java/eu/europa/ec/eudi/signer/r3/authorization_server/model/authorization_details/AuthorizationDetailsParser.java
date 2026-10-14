@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.AuthorizationDetails;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.AuthorizationDetailsException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 
 public final class AuthorizationDetailsParser {
 
@@ -97,10 +98,18 @@ public final class AuthorizationDetailsParser {
     }
 
     static String typeOf(JSONObject entry) throws AuthorizationDetailsException {
-        Object type = entry.opt(OAuth2AuthorizationDetailsNames.TYPE);
+        String type = (String) entry.opt(OAuth2AuthorizationDetailsNames.TYPE);
         if (!(type instanceof String)) {
             throw new AuthorizationDetailsException("The 'type' in the 'authorization_details' parameter is missing.");
         }
-        return (String) type;
+
+        if (OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL.contains(type)) {
+            return OAuth2ScopesNames.CREDENTIAL;
+        } else if (OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_CREATION.contains(type)) {
+            return OAuth2ScopesNames.CREDENTIAL_CREATION;
+        } else if (OAuth2AuthorizationDetailsNames.TYPE_CREDENTIAL_DELETE.contains(type)) {
+            return OAuth2ScopesNames.CREDENTIAL_DELETION;
+        }
+        return type;
     }
 }

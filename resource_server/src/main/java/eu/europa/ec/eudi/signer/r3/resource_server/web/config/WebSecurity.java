@@ -44,6 +44,7 @@ import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.LocalKeysService;
 import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
 
 @EnableWebSecurity
+@Configuration(proxyBeanMethods = false)
 public class WebSecurity {
     private static final Logger logger = LoggerFactory.getLogger(WebSecurity.class);
 

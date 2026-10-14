@@ -101,6 +101,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_deta
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialDeletionAuthorizationDetails;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.DocumentDigest;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.AuthorizationDetailsException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 
 @Configuration(proxyBeanMethods = false)
@@ -116,7 +117,7 @@ public class AuthorizationServerConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
-            JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
+            OpenIdForVPService openIdForVPService, JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
             ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
             RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
             CredentialsService credentialDatabase) throws Exception {
@@ -156,7 +157,7 @@ public class AuthorizationServerConfig {
 
         http
                 .exceptionHandling((exceptions) -> {
-                    OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
+                    OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherDefault = request -> {
                         String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
                         RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
@@ -191,7 +192,6 @@ public class AuthorizationServerConfig {
         filter.setIncludePayload(true);
         filter.setMaxPayloadLength(10000);
         filter.setIncludeHeaders(false);
-        filter.setAfterMessagePrefix("REQUEST DATA : ");
         return filter;
     }
 

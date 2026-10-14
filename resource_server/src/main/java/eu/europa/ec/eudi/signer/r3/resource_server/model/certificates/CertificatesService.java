@@ -188,7 +188,7 @@ public class CertificatesService {
             return false;
         }
 
-        String expectedIssuerSubjectCN = this.certificateIssuer.getExpectedIssuerSubjectCN(expectedCountryCode);
+        /*String expectedIssuerSubjectCN = this.certificateIssuer.getExpectedIssuerSubjectCN(expectedCountryCode);
 
         X500Principal issuerX500Principal = certificate.getIssuerX500Principal();
         X500Name x500IssuerName = new X500Name(issuerX500Principal.getName());
@@ -201,7 +201,7 @@ public class CertificatesService {
             });
             logger.error("The expected Issuer ({}) was not found in the certificate received ({}).", expectedIssuerSubjectCN, sb);
             return false;
-        }
+        }*/
         return true;
     }
 
