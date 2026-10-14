@@ -24,7 +24,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.OID4
 import java.net.URI;
 import java.util.Optional;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,8 +58,8 @@ public class OpenIdForVPService {
         return redirectLink;
     }
 
-    public String getSameDeviceRedirectLink(HttpServletRequest request, String sanitizeCookie, String serviceUrl) throws Exception {
-        JSONArray transactionData = transactionDataService.getTransactionData(request);
+    public String getSameDeviceRedirectLink(String urlToReturnTo, String sanitizeCookie, String serviceUrl) throws Exception {
+        JSONArray transactionData = transactionDataService.getTransactionData(urlToReturnTo);
         String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
         log.info("Retrieved the redirect link for same device authentication.");
         return redirectLink;

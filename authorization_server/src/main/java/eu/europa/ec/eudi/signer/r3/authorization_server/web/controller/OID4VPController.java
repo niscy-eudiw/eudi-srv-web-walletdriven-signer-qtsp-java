@@ -93,4 +93,25 @@ public class OID4VPController {
 			return "error";
 		}
 	}
+
+
+	@GetMapping("/oid4vp/same-device")
+	public String getOID4VPSameDevicePage(Model model, @RequestParam String sessionId){
+		try {
+			String serviceUrl = this.issuerConfig.getServiceURL();
+			String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
+			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookie);
+
+			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
+			
+			String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(urlToReturnTo, sessionId, serviceUrl);
+			model.addAttribute("url", redirectLink);
+			return "same-device-page";
+		}catch (Exception e){
+			logger.error(e.getLocalizedMessage());
+			logger.error(e.getMessage());
+			model.addAttribute("errormessage", "Failed to generate QR Code: " + e.getMessage());
+			return "error";
+		}
+	}
 }
