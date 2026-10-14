@@ -18,6 +18,7 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.pro
 import java.security.Principal;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -144,7 +145,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
 
         // Update additional parameters with credential id if signature qualifier is
         // used
-        Map<String, Object> additionalParameters = oAuth2AuthorizeRequestToken.getAdditionalParameters();
+        Map<String, Object> additionalParameters = new HashMap<>(oAuth2AuthorizeRequestToken.getAdditionalParameters());
         if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL)) {
             OAuth2ValidationUtils.addCredentialIdFromSignatureQualifier(logger, credentialsService, principal,
                     additionalParameters);

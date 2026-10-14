@@ -1,7 +1,13 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.model.certificates;
 
-import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.ejbca.EjbcaService;
-import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.hsm.HsmService;
+import java.math.BigInteger;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.SecureRandom;
+import java.security.Security;
+import java.security.cert.X509Certificate;
+import java.util.Date;
+
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
@@ -10,27 +16,25 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigInteger;
-import java.security.*;
-import java.security.cert.X509Certificate;
-import java.util.Date;
-
-import static org.junit.jupiter.api.Assertions.*;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.certificates.issuer.EjbcaCertificateIssuer;
+import eu.europa.ec.eudi.signer.r3.resource_server.model.keys.KeysService;
 
 @ExtendWith(MockitoExtension.class)
 public class CertificatesServiceTests {
 	@Mock
-	private EjbcaService ejbcaService;
+	private EjbcaCertificateIssuer ejbcaCertificateIssuer;
 	@Mock
-	private HsmService hsmService;
+	private KeysService keysService;
 	@InjectMocks
-	private CertificatesService certificatesService = new CertificatesService(hsmService, ejbcaService);;
+	private CertificatesService certificatesService = new CertificatesService(keysService, ejbcaCertificateIssuer);
 
 	@Test
 	void testBase64EncodeDecodeCertificate_shouldReturnSameCertificate() throws Exception {

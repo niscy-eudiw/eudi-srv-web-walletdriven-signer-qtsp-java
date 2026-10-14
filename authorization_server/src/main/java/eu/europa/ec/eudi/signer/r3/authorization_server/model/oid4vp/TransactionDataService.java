@@ -2,8 +2,6 @@ package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,10 +48,8 @@ public class TransactionDataService {
 		return transactionData;
 	}
 
-	private JSONArray getTransactionDataFromAuthorizationDetails(String authorizationDetails) throws Exception {
-		String authDetailsAuthorization = URLDecoder.decode(authorizationDetails, StandardCharsets.UTF_8);
-
-		List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsParser.parse(authDetailsAuthorization);
+	private JSONArray getTransactionDataFromAuthorizationDetails(String authorizationDetails)  throws Exception {
+		List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsParser.parse(authorizationDetails);
 
 		JSONArray transactionData = new JSONArray();
 		for (AuthorizationDetails a: authorizationDetailsObject){

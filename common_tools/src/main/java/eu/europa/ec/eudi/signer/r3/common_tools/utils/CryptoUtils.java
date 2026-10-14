@@ -36,6 +36,7 @@ public class CryptoUtils {
 	private static final int GCM_IV_LENGTH = 12; // 12 bytes
 	private static final int GCM_TAG_LENGTH = 16; // 128 bits
 	private static final Logger log = LoggerFactory.getLogger(CryptoUtils.class);
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
 	private final SecretKey secretKey;
 
@@ -47,8 +48,7 @@ public class CryptoUtils {
 
 	public String encryptString(String value){
 		byte[] iv = new byte[GCM_IV_LENGTH];
-		SecureRandom secureRandom = new SecureRandom();
-		secureRandom.nextBytes(iv);
+		SECURE_RANDOM.nextBytes(iv);
 
 		byte[] encryptedSecretKeyBytes;
 		try {

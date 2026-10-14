@@ -53,6 +53,7 @@ public class VerifierClient {
     public static final String PRESENTATION_DEFINITION_INPUT_DESCRIPTORS_ID = "eu.europa.ec.eudi.pid.1";
 
     private static final Logger log = LoggerFactory.getLogger(VerifierClient.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final OID4VPConfig oid4VPConfig;
     private final VerifierCreatedVariables verifierVariables;
 
@@ -119,8 +120,7 @@ public class VerifierClient {
     }
 
     private String getNonce() throws Exception {
-        SecureRandom prng = new SecureRandom();
-        String randomNum = String.valueOf(prng.nextInt());
+        String randomNum = String.valueOf(SECURE_RANDOM.nextInt());
         MessageDigest sha = MessageDigest.getInstance("SHA-256");
         byte[] result = sha.digest(randomNum.getBytes());
         return Base64.getUrlEncoder().encodeToString(result);

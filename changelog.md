@@ -1,11 +1,19 @@
 # Changelog
 
-## [0.6.1]
-_13 Oct 2026_
+## [0.7.0]
+_14 Oct 2026_
+
+### Added
+- HTML page for the OID4VP same-device authentication flow, which prompts the user to open their EUDI Wallet instead of redirecting them to it automatically.
 
 ### Changed
+- Made the use of EJBCA and HSM optional.
+- Updated Maven dependencies versions.
+- Restyled the OID4VP cross-device page and removed unused CSS and image assets.
 - Refactor authorization_details into typed model with parser and validator.
 
+### Fixed
+- Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.
 
 ## [0.6.0]
 _2 Oct 2026_
@@ -13,7 +21,6 @@ _2 Oct 2026_
 ### Changed
 - Updated OID4VP requests to request the PID as an SD-JWT.
 - Updated OID4VP requests to include the `transaction_data` parameter in accordance with ETSI TS 119 432 v1.3.1
-
 
 ## [0.5.0]
 _1 Aug 2026_

@@ -60,8 +60,8 @@ public class OpenIdForVPService {
         return redirectLink;
     }
 
-    public String getSameDeviceRedirectLink(HttpServletRequest request, String sanitizeCookie, String serviceUrl) throws Exception {
-        JSONArray transactionData = transactionDataService.getTransactionData(request);
+    public String getSameDeviceRedirectLink(String urlToReturnTo, String sanitizeCookie, String serviceUrl) throws Exception {
+        JSONArray transactionData = transactionDataService.getTransactionData(urlToReturnTo);
         String redirectLink = this.verifierClient.initSameDeviceTransactionToVerifier(sanitizeCookie, serviceUrl, transactionData);
         log.info("Retrieved the redirect link for same device authentication.");
         return redirectLink;

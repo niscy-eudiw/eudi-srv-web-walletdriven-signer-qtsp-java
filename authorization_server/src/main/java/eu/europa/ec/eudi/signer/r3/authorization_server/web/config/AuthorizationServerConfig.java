@@ -48,7 +48,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationCodeRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
 
 import java.security.KeyPair;
@@ -56,7 +55,6 @@ import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.json.JSONException;
@@ -70,7 +68,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.Authentication;
@@ -88,7 +85,6 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
@@ -105,6 +101,7 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_deta
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialDeletionAuthorizationDetails;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.DocumentDigest;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.AuthorizationDetailsException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
@@ -123,40 +120,45 @@ public class AuthorizationServerConfig {
             ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
             RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
             CredentialsService credentialDatabase) throws Exception {
-        OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
-        authorizationServerConfigurer.oidc(Customizer.withDefaults());
-
         AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
         AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
         TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
         TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
-        authorizationServerConfigurer
-                .registeredClientRepository(registeredClientRepository)
-                .authorizationService(authorizationService)
-                .authorizationServerSettings(authorizationServerSettings)
-                .tokenGenerator(tokenGenerator)
-                .authorizationEndpoint(authorizationEndpoint
-                        -> authorizationEndpoint
+        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
+        http
+                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
+                        .oidc(Customizer.withDefaults())
+                        .registeredClientRepository(registeredClientRepository)
+                        .authorizationService(authorizationService)
+                        .authorizationServerSettings(authorizationServerSettings)
+                        .tokenGenerator(tokenGenerator)
+                        .authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
                                 .authorizationRequestConverter(authorizationRequestConverter)
-                                .authenticationProvider(authorizationRequestProvider)
-                                .authenticationProviders(removeDefaultAuthorizationCodeProvider())
+                                .authenticationProviders(providers -> {
+                                    providers.removeIf(provider
+                                            -> provider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
+                                    providers.add(authorizationRequestProvider);
+                                })
                                 .authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
-                .tokenEndpoint(tokenEndpoint
-                        -> tokenEndpoint
+                        .tokenEndpoint(tokenEndpoint -> tokenEndpoint
                                 .accessTokenRequestConverter(tokenRequestConverter)
-                                .authenticationProviders(removeDefaultTokenProvider())
-                                .authenticationProvider(tokenRequestProvider));
+                                .authenticationProviders(providers -> {
+                                    providers.removeIf(provider
+                                            -> provider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
+                                    providers.add(tokenRequestProvider);
+                                })
+                        )
+                )
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
         logger.info("Set up authorizationServerConfig.");
-
-        String clientId = "client_id";
 
         http
                 .exceptionHandling((exceptions) -> {
                     OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherDefault = request -> {
-                        String client_id = request.getParameter(clientId);
+                        String client_id = request.getParameter("client_id");
                         RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
                     };
@@ -164,14 +166,14 @@ public class AuthorizationServerConfig {
 
                     OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherCrossDevice = request -> {
-                        String client_id = request.getParameter(clientId);
+                        String client_id = request.getParameter("client_id");
                         RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
                     };
                     exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
                     RequestMatcher requestMatcher = request -> {
-                        String client_id = request.getParameter(clientId);
+                        String client_id = request.getParameter("client_id");
                         RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
                         return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
                     };
@@ -180,14 +182,6 @@ public class AuthorizationServerConfig {
                 .oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
         logger.info("Set up the http exception handling and authentication methods.");
         return http.build();
-    }
-
-    private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
-        return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
-    }
-
-    private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
-        return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
     }
 
     @Bean
