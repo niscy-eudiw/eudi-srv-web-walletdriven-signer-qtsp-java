@@ -6,6 +6,6 @@ public final class OAuth2ScopesNames {
 
 	public static final String CREDENTIAL = "credential";
 	public static final String SERVICE = "service";
-	public static final String CREDENTIAL_CREATION = "credential_creation";
-	public static final String CREDENTIAL_DELETION = "credential_deletion";
+	public static final String CREDENTIAL_CREATION = "credential-creation";
+	public static final String CREDENTIAL_DELETION = "credential-deletion";
 }

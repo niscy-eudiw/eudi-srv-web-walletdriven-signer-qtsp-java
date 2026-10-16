@@ -19,6 +19,7 @@ package eu.europa.ec.eudi.signer.r3.resource_server.config;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "info")
@@ -44,10 +45,18 @@ public class InfoConfig {
     private List<String> documentTypes = new ArrayList<>();
 
     public static class OAuth2Server {
+        @Schema(description = "Name of the authorization server.", example = "QTSP Authorization Server")
         private String label;
+        @Schema(description = "Base URI of the authorization server.", example = "http://localhost:8084")
         private String baseUri;
+        @Schema(description = "Issuer identifier of the authorization server (RFC 8414).",
+                example = "http://localhost:8084")
         private String issuerIdentifier;
+        @Schema(description = "Service authorization mechanisms supported by the authorization server.",
+                example = "[\"oauth2code\"]")
         private List<String> authType;
+        @Schema(description = "Whether the authorization server supports Rich Authorization Requests (RFC 9396).",
+                example = "false")
         private Boolean supportsRar;
 
         public String getLabel() {
@@ -92,7 +101,11 @@ public class InfoConfig {
     }
 
     public static class SignAlgorithms {
+        @Schema(description = "OIDs of the supported signature algorithms.",
+                example = "[\"1.2.840.10045.2.1\", \"1.2.840.10045.4.3.2\"]")
         private List<String> algos;
+        @Schema(description = "Base64-encoded DER-encoded ASN.1 parameters of each signature algorithm, in the same "
+                + "order as `algos`, if required by the algorithm.")
         private List<String> algoParams;
 
         public SignAlgorithms() {

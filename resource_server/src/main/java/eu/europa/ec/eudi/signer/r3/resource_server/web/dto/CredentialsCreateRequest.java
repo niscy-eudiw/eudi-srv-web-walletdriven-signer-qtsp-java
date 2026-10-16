@@ -16,6 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.json.JSONObject;
@@ -30,22 +32,35 @@ public class CredentialsCreateRequest {
      */
     @NotNull(message = "Missing required parameter credentialCreationRequest")
     @Valid
+    @Schema(description = "Parameters of the credential to create.")
     private CredentialCreationRequest credentialCreationRequest;
 
+    @Schema(description = "Whether to return the information about the new credential.", defaultValue = "false")
     private boolean credentialInfo;
 
+    @Schema(description = "Certificates to return: none, only the end entity certificate, or the full certificate "
+            + "chain. Only used if `credentialInfo` is `true`.", allowableValues = {"none", "single", "chain"})
     private String certificates;
 
+    @Schema(description = "Whether to return the information from the end entity certificate. Only used if "
+            + "`credentialInfo` is `true`.", defaultValue = "false")
     private boolean certInfo;
 
+    @ArraySchema(arraySchema = @Schema(description = "Authentication data objects."),
+            schema = @Schema(type = "object"))
     private List<JSONObject> authData;
 
 
+    @Schema(name = "CredentialCreationRequest")
     public static class CredentialCreationRequest {
         // Required Conditional per CSC DM — may be empty string if not needed
+        @Schema(description = "Certificate policy in accordance with which the certificate is issued. Not supported: "
+                + "ignored.")
         private String certificatePolicy;
 
         // Optional — subject data to include in the certificate (name, country, etc.)
+        @Schema(description = "Subject data to include in the certificate. If absent, it is taken from the identity "
+                + "claims of the access token.")
         private SubjectData subjectData;
 
         public String getCertificatePolicy() { return certificatePolicy; }
@@ -55,9 +70,14 @@ public class CredentialsCreateRequest {
         public void setSubjectData(SubjectData subjectData) { this.subjectData = subjectData; }
     }
 
+    @Schema(name = "SubjectData")
     public static class SubjectData {
+        @Schema(description = "Given name of the subject.", example = "Jane")
         private String givenName;
+        @Schema(description = "Surname of the subject.", example = "Doe")
         private String surname;
+        @Schema(description = "ISO 3166-1 Alpha-2 code of the country that issued the subject's identity.",
+                example = "PT")
         private String issuingCountry;
 
         public String getGivenName() { return givenName; }

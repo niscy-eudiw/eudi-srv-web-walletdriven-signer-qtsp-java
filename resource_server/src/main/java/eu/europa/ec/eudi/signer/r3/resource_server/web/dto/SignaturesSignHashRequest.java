@@ -18,41 +18,40 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 
 public class SignaturesSignHashRequest {
     @NotBlank(message = "Missing (or invalid type) string parameter credentialID")
-    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-          message = "Invalid parameter credentialID")
+    @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", message = "Invalid parameter credentialID")
+    @Schema(description = "The unique identifier of the credential to sign with.")
     private String credentialID;
-
-    // the signature activation data returned by the Credential Authorization methods
+    @Schema(description = "Signature Activation Data returned by the credential authorization methods. Not used: the "
+            + "credential authorization is given by the access token with `credential` scope.")
     private String SAD;
-
-    // one or more hash values to be signed. This parameter SHALL contain the Base64-encoded raw message digests
     @NotEmpty(message = "Empty hash array")
-    //@NotBlank(message = "Missing (or invalid type) array parameter hash")
+    @ArraySchema(arraySchema = @Schema(description = "Base64-encoded raw message digests to sign."))
     private List<String> hashes;
-
-    // the OID of the algorithm used to calculate the hash value.
     @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Invalid parameter hashAlgorithmOID")
+    @Schema(description = "OID of the algorithm used to calculate the hashes. Required unless implied by `signAlgo` or `signAlgoParams`. Must be SHA-256 or stronger.")
     private String hashAlgorithmOID;
-
-    // the OID of the algorithm to use for signing
     @NotBlank
     @Pattern(regexp = "^\\d+\\.\\d+\\.\\d+(\\.\\d+)*+$", message = "Sign algorithm OID must be in numeric OID format")
+    @Schema(description = "OID of the signature algorithm.")
     private String signAlgo;
-
-    // the Base64-encoded DER-encoded ASN.1 signature parameters, if required by the signature algorithm
+    @Schema(description = "Base64-encoded DER-encoded ASN.1 signature parameters, if required by `signAlgo`.")
     private String signAlgoParams;
-
-    // A or S
     @Pattern(regexp = "^[AS]$", message = "Operation mode must be either 'A' or 'S'")
+    @Schema(description = "Synchronous (`S`) or asynchronous (`A`) operation mode.", allowableValues = {"S", "A"})
     private String operationMode;
+    @Schema(description = "Validity period of the asynchronous response, in miliseconds.")
     private int validity_period;
+    @Schema(description = "URI to notify when the asynchronous operation completes.")
     private String response_uri;
+    @Schema(description = "Arbitrary data from the signature application.")
     private String clientData;
 
     public String getCredentialID() {

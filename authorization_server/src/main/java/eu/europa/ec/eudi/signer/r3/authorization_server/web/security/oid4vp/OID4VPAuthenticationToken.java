@@ -39,7 +39,7 @@ public class OID4VPAuthenticationToken extends AbstractAuthenticationToken imple
     private String authorization_details;
 
     public OID4VPAuthenticationToken(String hash, String username){
-        super(null);
+        super((Collection<? extends GrantedAuthority>) null);
         this.hash = hash;
         this.username = username;
         this.principal = hash;

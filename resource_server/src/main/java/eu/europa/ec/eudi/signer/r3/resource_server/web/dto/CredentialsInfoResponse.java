@@ -20,19 +20,26 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoAuth;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 public class CredentialsInfoResponse {
+    @Schema(description = "Free form description of the credential, in the `lang` language.")
     private String description;
+    @Schema(description = "Signature qualifier of the signatures created with the credential.")
     private String signatureQualifier;
     private CredentialsInfoKey key;
     private CredentialsInfoCert cert;
     private CredentialsInfoAuth auth;
 
-    private String SCAL = "1"; // 1 | 2
+    @Schema(description = "Sole Control Assurance Level of the credential (CEN TS 119 241-1).",
+            allowableValues = {"1", "2"})
+    private String SCAL = "1";
 
     @NotBlank
-    private int multisign; // >= 1
+    @Schema(description = "Maximum number of signatures that can be authorized at once.", minimum = "1")
+    private int multisign;
+    @Schema(description = "Language of the `description` (RFC 5646).")
     private String lang;
 
     public String getDescription() {

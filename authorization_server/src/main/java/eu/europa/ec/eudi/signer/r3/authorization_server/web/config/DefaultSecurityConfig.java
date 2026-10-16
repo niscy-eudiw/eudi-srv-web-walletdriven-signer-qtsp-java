@@ -130,8 +130,7 @@ public class DefaultSecurityConfig implements WebMvcConfigurer {
 		logger.info("Setting up authentication manager.");
 		OID4VPAuthenticationProvider authenticationManagerProvider = new OID4VPAuthenticationProvider(userDetailsService);
 
-		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider();
-		daoAuthenticationProvider.setUserDetailsService(userDetailsService);
+		DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(userDetailsService);
 		daoAuthenticationProvider.setPasswordEncoder(PasswordEncoderFactories.createDelegatingPasswordEncoder());
 		daoAuthenticationProvider.setHideUserNotFoundExceptions(true);
 

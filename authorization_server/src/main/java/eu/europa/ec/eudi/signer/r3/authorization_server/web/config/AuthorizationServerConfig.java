@@ -13,34 +13,29 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.config;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.AuthenticationFlowEnum;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.AuthorizationDetailsParser;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationForm;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.client_auth_form.RegisteredClientAuthenticationFormRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.credentials.CredentialsService;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.User;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.user.UserRepository;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.ManageOAuth2Authorization;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetails;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.AuthorizationDetailsProcessing;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.CredentialCreationRequest;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.dto.DocumentInfo;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtended;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.formLogin.UsernamePasswordAuthenticationTokenExtendedMixIn;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2AuthorizationDetailsNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2CustomParameterNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.handler.OAuth2AuthorizationSuccessHandler;
@@ -52,18 +47,16 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.DataSourceConfig;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.UserPrincipal;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.AuthorizationCodeRequestConverter;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.converter.TokenRequestConverter;
-import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.TokenRequestProvider;
+
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +67,6 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.Authentication;
@@ -83,6 +75,7 @@ import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.security.oauth2.core.OAuth2Token;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -92,7 +85,6 @@ import org.springframework.security.oauth2.server.authorization.authentication.O
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
@@ -103,358 +95,361 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.CommonsRequestLoggingFilter;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.AuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialAuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialCreationAuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.CredentialDeletionAuthorizationDetails;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.authorization_details.dto.DocumentDigest;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.exception.AuthorizationDetailsException;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.provider.AuthorizationRequestProvider;
+
 @Configuration(proxyBeanMethods = false)
 public class AuthorizationServerConfig {
 
-	private final CryptoUtils cryptoUtils;
-	private final Logger logger = LoggerFactory.getLogger(AuthorizationServerConfig.class);
+    private final CryptoUtils cryptoUtils;
+    private final Logger logger = LoggerFactory.getLogger(AuthorizationServerConfig.class);
 
-	public AuthorizationServerConfig(@Autowired CryptoUtils cryptoUtils) {
-		this.cryptoUtils = cryptoUtils;
-	}
+    public AuthorizationServerConfig(@Autowired CryptoUtils cryptoUtils) {
+        this.cryptoUtils = cryptoUtils;
+    }
 
-	@Bean
-	@Order(Ordered.HIGHEST_PRECEDENCE)
-	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository, OpenIdForVPService openIdForVPService,
-																	  JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
-																	  ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
-																	  RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
-																	  CredentialsService credentialDatabase) throws Exception
-	{
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-		OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = http.getConfigurer(OAuth2AuthorizationServerConfigurer.class);
-		authorizationServerConfigurer.oidc(Customizer.withDefaults());
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http, RegisteredClientRepository registeredClientRepository,
+            OpenIdForVPService openIdForVPService, JdbcOAuth2AuthorizationService authorizationService, OAuth2TokenGenerator<? extends OAuth2Token> tokenGenerator, AuthorizationServerSettings authorizationServerSettings,
+            ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList, ManageOAuth2Authorization manageOAuth2Authorization,
+            RegisteredClientAuthenticationFormRepository registeredClientAuthenticationFormRepository,
+            CredentialsService credentialDatabase) throws Exception {
+        AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
+        AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
+        TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
+        TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
 
-		AuthorizationCodeRequestConverter authorizationRequestConverter = new AuthorizationCodeRequestConverter();
-		AuthorizationRequestProvider authorizationRequestProvider = new AuthorizationRequestProvider(registeredClientRepository, authorizationService, manageOAuth2Authorization, credentialDatabase);
-		TokenRequestConverter tokenRequestConverter = new TokenRequestConverter();
-		TokenRequestProvider tokenRequestProvider = new TokenRequestProvider(authorizationService, tokenGenerator, credentialDatabase);
+        OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer.authorizationServer();
+        http
+                .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+                .with(authorizationServerConfigurer, authorizationServer -> authorizationServer
+                        .oidc(Customizer.withDefaults())
+                        .registeredClientRepository(registeredClientRepository)
+                        .authorizationService(authorizationService)
+                        .authorizationServerSettings(authorizationServerSettings)
+                        .tokenGenerator(tokenGenerator)
+                        .authorizationEndpoint(authorizationEndpoint -> authorizationEndpoint
+                                .authorizationRequestConverter(authorizationRequestConverter)
+                                .authenticationProviders(providers -> {
+                                    providers.removeIf(provider
+                                            -> provider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
+                                    providers.add(authorizationRequestProvider);
+                                })
+                                .authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
+                        .tokenEndpoint(tokenEndpoint -> tokenEndpoint
+                                .accessTokenRequestConverter(tokenRequestConverter)
+                                .authenticationProviders(providers -> {
+                                    providers.removeIf(provider
+                                            -> provider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
+                                    providers.add(tokenRequestProvider);
+                                })
+                        )
+                )
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated());
+        logger.info("Set up authorizationServerConfig.");
 
-		authorizationServerConfigurer
-			  .registeredClientRepository(registeredClientRepository)
-			  .authorizationService(authorizationService)
-			  .authorizationServerSettings(authorizationServerSettings)
-			  .tokenGenerator(tokenGenerator)
-			  .authorizationEndpoint(authorizationEndpoint ->
-					authorizationEndpoint
-						  .authorizationRequestConverter(authorizationRequestConverter)
-						  .authenticationProvider(authorizationRequestProvider)
-						  .authenticationProviders(removeDefaultAuthorizationCodeProvider())
-						  .authorizationResponseHandler(new OAuth2AuthorizationSuccessHandler()))
-			  .tokenEndpoint(tokenEndpoint ->
-					tokenEndpoint
-						  .accessTokenRequestConverter(tokenRequestConverter)
-						  .authenticationProviders(removeDefaultTokenProvider())
-						  .authenticationProvider(tokenRequestProvider));
-		logger.info("Set up authorizationServerConfig.");
+        http
+                .exceptionHandling((exceptions) -> {
+                    OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
+                    RequestMatcher requestMatcherDefault = request -> {
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
+                        return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
+                    };
+                    exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
-		String clientId = "client_id";
+                    OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
+                    RequestMatcher requestMatcherCrossDevice = request -> {
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
+                        return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
+                    };
+                    exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
 
-		http
-			.exceptionHandling((exceptions) -> {
-				OID4VPSameDeviceAuthenticationEntryPoint entryPoint = new OID4VPSameDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
-				RequestMatcher requestMatcherDefault = request -> {
-					String client_id = request.getParameter(clientId);
-					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.SAME_DEVICE_FLOW.getId();
-				};
-				exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
+                    RequestMatcher requestMatcher = request -> {
+                        String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
+                        RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();
+                        return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
+                    };
+                    exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getServiceURL() + "/login"), requestMatcher);
+                })
+                .oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
+        logger.info("Set up the http exception handling and authentication methods.");
+        return http.build();
+    }
 
-				OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
-				RequestMatcher requestMatcherCrossDevice = request -> {
-					String client_id = request.getParameter(clientId);
-					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.CROSS_DEVICE_FLOW.getId();
-				};
-				exceptions.defaultAuthenticationEntryPointFor(crossDeviceEntryPoint, requestMatcherCrossDevice);
+    @Bean
+    public CommonsRequestLoggingFilter logFilter() {
+        CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
+        // added logs of the requests received in the AS endpoints
+        filter.setIncludePayload(true);
+        filter.setMaxPayloadLength(10000);
+        filter.setIncludeHeaders(false);
+        return filter;
+    }
 
-				RequestMatcher requestMatcher = request -> {
-					String client_id = request.getParameter(clientId);
-					RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(client_id).orElseThrow();
-					return authenticationForm.getAuthenticationFormId() == AuthenticationFlowEnum.LOGIN_FORM.getId();
-				};
-				exceptions.defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint(issuerConfig.getServiceURL()+"/login"), requestMatcher);
-			})
-			.oauth2ResourceServer(oauth2ResourceServer -> oauth2ResourceServer.jwt(Customizer.withDefaults()));
-		logger.info("Set up the http exception handling and authentication methods.");
-		return http.build();
-	}
+    @Bean
+    public FilterRegistrationBean<CommonsRequestLoggingFilter> loggingFilterRegistration() {
+        CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
+        filter.setIncludePayload(true);
+        filter.setMaxPayloadLength(10000);
+        filter.setIncludeQueryString(true);
 
-	private Consumer<List<AuthenticationProvider>> removeDefaultAuthorizationCodeProvider() {
-		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeRequestAuthenticationProvider.class));
-	}
+        FilterRegistrationBean<CommonsRequestLoggingFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
 
-	private Consumer<List<AuthenticationProvider>> removeDefaultTokenProvider() {
-		return (authenticationProviders) -> authenticationProviders.removeIf(authenticationProvider -> authenticationProvider.getClass().equals(OAuth2AuthorizationCodeAuthenticationProvider.class));
-	}
+    @Bean
+    public AuthorizationServerSettings authorizationServerSettings(ServiceURLConfig issuerConfig) {
+        logger.info("Setting up AuthorizationServerSettings with Issuer URL {}", issuerConfig.getServiceURL());
+        return AuthorizationServerSettings.builder()
+                .issuer(issuerConfig.getServiceURL())
+                .build();
+    }
 
-	@Bean
-	public CommonsRequestLoggingFilter logFilter() {
-		CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
-		// added logs of the requests received in the AS endpoints
-		filter.setIncludePayload(true);
-		filter.setMaxPayloadLength(10000);
-		filter.setIncludeHeaders(false);
-		filter.setAfterMessagePrefix("REQUEST DATA : ");
-		return filter;
-	}
+    @Bean
+    public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig) {
+        logger.info("Setting up JdbcTemplate with DataSource {}", dataSourceConfig.getDataSource());
+        return new JdbcTemplate(dataSourceConfig.getDataSource());
+    }
 
-	@Bean
-	public FilterRegistrationBean<CommonsRequestLoggingFilter> loggingFilterRegistration() {
-		CommonsRequestLoggingFilter filter = new CommonsRequestLoggingFilter();
-		filter.setIncludePayload(true);
-		filter.setMaxPayloadLength(10000);
-		filter.setIncludeQueryString(true);
+    // Defines the RegisteredClientRepository used by the OAuth2AuthorizationServerConfigurer
+    // for managing new and existing clients
+    @Bean
+    public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate,
+            RegisteredClientAuthenticationFormRepository registeredClientExtendedRepository) {
+        logger.info("Setting up JdbcRegisteredClientRepository");
 
-		FilterRegistrationBean<CommonsRequestLoggingFilter> registration = new FilterRegistrationBean<>(filter);
-		registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
-		return registration;
-	}
+        // Save registered client's in db as if in-memory
+        JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
-	@Bean
-	public AuthorizationServerSettings authorizationServerSettings(ServiceURLConfig issuerConfig) {
-		logger.info("Setting up AuthorizationServerSettings with Issuer URL {}", issuerConfig.getOauth2IssuerURL());
-		return AuthorizationServerSettings.builder()
-			  .issuer(issuerConfig.getOauth2IssuerURL())
-			  .build();
-	}
+        for (Map.Entry<String, OAuth2ClientRegistrationConfig.Client> e : config.getClient().entrySet()) {
+            OAuth2ClientRegistrationConfig.Client registration = e.getValue();
+            RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
+                    .clientId(registration.getClientId())
+                    .clientSecret(registration.getClientSecret())
+                    .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
 
-	@Bean
-	public JdbcTemplate jdbcTemplate(DataSourceConfig dataSourceConfig){
-		logger.info("Setting up JdbcTemplate with DataSource {}", dataSourceConfig.getDataSource());
-		return new JdbcTemplate(dataSourceConfig.getDataSource());
-	}
+            for (String clientAuthMethodValue : registration.getClientAuthenticationMethods()) {
+                ClientAuthenticationMethod clientAuthenticationMethod = new ClientAuthenticationMethod(clientAuthMethodValue);
+                clientBuilder.clientAuthenticationMethod(clientAuthenticationMethod);
+            }
+            for (String authGrantTypeValue : registration.getAuthorizationGrantTypes()) {
+                AuthorizationGrantType authorizationGrantType = new AuthorizationGrantType(authGrantTypeValue);
+                clientBuilder.authorizationGrantType(authorizationGrantType);
+            }
+            for (String redirectUri : registration.getRedirectUris()) {
+                clientBuilder.redirectUri(redirectUri);
+            }
+            for (String scope : registration.getScopes()) {
+                clientBuilder.scope(scope);
+            }
+            RegisteredClient client = clientBuilder.build();
+            registeredClientRepository.save(client);
 
-	// Defines the RegisteredClientRepository used by the OAuth2AuthorizationServerConfigurer
-	// for managing new and existing clients
-	@Bean
-	public JdbcRegisteredClientRepository registeredClientRepository(OAuth2ClientRegistrationConfig config, JdbcTemplate jdbcTemplate,
-																	 RegisteredClientAuthenticationFormRepository registeredClientExtendedRepository) {
-		logger.info("Setting up JdbcRegisteredClientRepository");
+            RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationFlow().getId());
+            registeredClientExtendedRepository.save(registeredClientAuthenticationForm);
+        }
 
-		// Save registered client's in db as if in-memory
-		JdbcRegisteredClientRepository registeredClientRepository = new JdbcRegisteredClientRepository(jdbcTemplate);
+        return registeredClientRepository;
+    }
 
-		for (Map.Entry<String, OAuth2ClientRegistrationConfig.Client> e : config.getClient().entrySet()) {
-			OAuth2ClientRegistrationConfig.Client registration = e.getValue();
-			RegisteredClient.Builder clientBuilder = RegisteredClient.withId(e.getKey())
-				.clientId(registration.getClientId())
-				.clientSecret(registration.getClientSecret())
-				.clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build());
+    @Bean
+    public JdbcOAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
+        JdbcOAuth2AuthorizationService authorizationService = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
+        JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
+        JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper oAuth2AuthorizationParametersMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper();
 
-			for (String clientAuthMethodValue: registration.getClientAuthenticationMethods()){
-				ClientAuthenticationMethod clientAuthenticationMethod = new ClientAuthenticationMethod(clientAuthMethodValue);
-				clientBuilder.clientAuthenticationMethod(clientAuthenticationMethod);
-			}
-			for (String authGrantTypeValue: registration.getAuthorizationGrantTypes()){
-				AuthorizationGrantType authorizationGrantType = new AuthorizationGrantType(authGrantTypeValue);
-				clientBuilder.authorizationGrantType(authorizationGrantType);
-			}
-			for (String redirectUri : registration.getRedirectUris())
-				clientBuilder.redirectUri(redirectUri);
-			for (String scope : registration.getScopes())
-				clientBuilder.scope(scope);
-			RegisteredClient client = clientBuilder.build();
-			registeredClientRepository.save(client);
+        ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
+        List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModules(securityModules);
+        objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
+        objectMapper.addMixIn(OID4VPAuthenticationToken.class, OID4VPAuthenticationTokenMixIn.class);
+        objectMapper.addMixIn(UserPrincipal.class, UserPrincipalMixIn.class);
+        objectMapper.addMixIn(UsernamePasswordAuthenticationTokenExtended.class, UsernamePasswordAuthenticationTokenExtendedMixIn.class);
 
-			RegisteredClientAuthenticationForm registeredClientAuthenticationForm = new RegisteredClientAuthenticationForm(client.getId(), client.getClientId(), registration.getAuthenticationFlow().getId());
-			registeredClientExtendedRepository.save(registeredClientAuthenticationForm);
-		}
+        rowMapper.setObjectMapper(objectMapper);
+        oAuth2AuthorizationParametersMapper.setObjectMapper(objectMapper);
+        authorizationService.setAuthorizationRowMapper(rowMapper);
+        authorizationService.setAuthorizationParametersMapper(oAuth2AuthorizationParametersMapper);
+        return authorizationService;
+    }
 
-		return registeredClientRepository;
-	}
+    @Bean
+    public ManageOAuth2Authorization manageOAuth2Authorization(JdbcTemplate jdbcTemplate) {
+        return new ManageOAuth2Authorization(jdbcTemplate);
+    }
 
-	@Bean
-	public JdbcOAuth2AuthorizationService authorizationService(JdbcTemplate jdbcTemplate, RegisteredClientRepository registeredClientRepository) {
-		JdbcOAuth2AuthorizationService authorizationService = new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
-		JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper rowMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationRowMapper(registeredClientRepository);
-		JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper oAuth2AuthorizationParametersMapper = new JdbcOAuth2AuthorizationService.OAuth2AuthorizationParametersMapper();
+    // the JWK Set endpoint is configured only if a JWKSource<SecurityContext> @Bean is registered
+    @Bean
+    public JWKSource<SecurityContext> jwkSource() {
+        KeyPair keyPair;
+        try {
+            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+            keyPairGenerator.initialize(2048);
+            keyPair = keyPairGenerator.generateKeyPair();
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
+        RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+        RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+        RSAKey rsaKey = new RSAKey.Builder(publicKey)
+                .privateKey(privateKey)
+                .keyID(UUID.randomUUID().toString())
+                .build();
+        JWKSet jwkSet = new JWKSet(rsaKey);
+        return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
+    }
 
-		ClassLoader classLoader = JdbcOAuth2AuthorizationService.class.getClassLoader();
-		List<Module> securityModules = SecurityJackson2Modules.getModules(classLoader);
-		ObjectMapper objectMapper = new ObjectMapper();
-		objectMapper.registerModules(securityModules);
-		objectMapper.registerModule(new OAuth2AuthorizationServerJackson2Module());
-		objectMapper.addMixIn(OID4VPAuthenticationToken.class, OID4VPAuthenticationTokenMixIn.class);
-		objectMapper.addMixIn(UserPrincipal.class, UserPrincipalMixIn.class);
-		objectMapper.addMixIn(UsernamePasswordAuthenticationTokenExtended.class, UsernamePasswordAuthenticationTokenExtendedMixIn.class);
+    private static final Set<Class<?>> USER_AUTHENTICATION_TYPES = Set.of(
+            OID4VPAuthenticationToken.class, UsernamePasswordAuthenticationToken.class, UsernamePasswordAuthenticationTokenExtended.class);
 
-		rowMapper.setObjectMapper(objectMapper);
-		oAuth2AuthorizationParametersMapper.setObjectMapper(objectMapper);
-		authorizationService.setAuthorizationRowMapper(rowMapper);
-		authorizationService.setAuthorizationParametersMapper(oAuth2AuthorizationParametersMapper);
-		return authorizationService;
-	}
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
+        logger.info("Setting up OAuth2TokenCustomizer");
 
-	@Bean
-	public ManageOAuth2Authorization manageOAuth2Authorization(JdbcTemplate jdbcTemplate){
-		return new ManageOAuth2Authorization(jdbcTemplate);
-	}
+        return context -> {
+            OAuth2Authorization authorization = context.getAuthorization();
+            if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType()) || authorization == null) {
+                return;
+            }
 
-	// the JWK Set endpoint is configured only if a JWKSource<SecurityContext> @Bean is registered
-	@Bean
-	public JWKSource<SecurityContext> jwkSource() {
-		KeyPair keyPair;
-		try {
-			KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-			keyPairGenerator.initialize(2048);
-			keyPair = keyPairGenerator.generateKeyPair();
-		} catch (Exception ex) {
-			throw new IllegalStateException(ex);
-		}
-		RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
-		RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
-		RSAKey rsaKey = new RSAKey.Builder(publicKey)
-			.privateKey(privateKey)
-			.keyID(UUID.randomUUID().toString())
-			.build();
-		JWKSet jwkSet = new JWKSet(rsaKey);
-		return (jwkSelector, securityContext) -> jwkSelector.select(jwkSet);
-	}
+            JwtClaimsSet.Builder claims = context.getClaims();
+            Set<String> scopes = authorization.getAuthorizedScopes();
+            Authentication principal = context.getPrincipal();
+            boolean isUserAuthentication = USER_AUTHENTICATION_TYPES.contains(principal.getClass());
 
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer(UserRepository userRepository) {
-		logger.info("Setting up OAuth2TokenCustomizer");
+            if (scopes.contains(OAuth2ScopesNames.SERVICE) && isUserAuthentication) {
+                addUserClaims(principal, claims, userRepository);
+            }
+            if (scopes.contains(OAuth2ScopesNames.CREDENTIAL)) {
+                addCredentialClaims(claims, authorization);
+            }
+            if (scopes.contains(OAuth2ScopesNames.CREDENTIAL_CREATION) && isUserAuthentication) {
+                addUserClaims(principal, claims, userRepository);
+                addCreationCredentialClaims(claims, authorization);
+            }
+            if (scopes.contains(OAuth2ScopesNames.CREDENTIAL_DELETION) && isUserAuthentication) {
+                addUserNames(principal, claims);
+                addDeletionCredentialClaims(claims, authorization);
+            }
+        };
+    }
 
-		return context -> {
-			if (!OAuth2TokenType.ACCESS_TOKEN.equals(context.getTokenType())) return;
+    private void addUserNames(Authentication token, JwtClaimsSet.Builder claims) {
+        if (token.getPrincipal() instanceof UserPrincipal up) {
+            claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
+            claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
+        }
+    }
 
-			JwtClaimsSet.Builder claims = context.getClaims();
-			OAuth2Authorization authorization = context.getAuthorization();
-			if (authorization == null) return;
+    private void addUserClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository) {
+        addUserNames(token, claims);
+        if (token.getPrincipal() instanceof UserPrincipal up) {
+            User u = userRepository.findByHash(up.getUsername()).orElseThrow();
+            claims.claim(JWTCustomClaimNames.ISSUING_COUNTRY, u.getIssuingCountry());
+        }
+    }
 
-			if(authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.SERVICE)){
-				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
-					Authentication token = context.getPrincipal();
-					addUserClaims(token, claims, userRepository);
-				}
-			}
-			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL)) {
-				addCredentialClaims(claims, authorization);
-			}
-			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_CREATION)) {
-				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
-					Authentication token = context.getPrincipal();
-					try {
-						addCreationCredentialClaims(token, claims, userRepository, authorization);
-					} catch (JsonProcessingException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-			if (authorization.getAuthorizedScopes().contains(OAuth2ScopesNames.CREDENTIAL_DELETION)) {
-				if(context.getPrincipal().getClass().equals(OID4VPAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationToken.class) || context.getPrincipal().getClass().equals(UsernamePasswordAuthenticationTokenExtended.class)){
-					Authentication token = context.getPrincipal();
-					addDeletionCredentialClaims(token, claims, authorization);
-				}
-			}
-		};
-	}
+    private void addCredentialClaims(JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
+        Map<String, Object> params = getAuthorizationRequestParameters(authorization);
+        if (params == null) {
+            return;
+        }
 
-	private void addUserClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository) {
-		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-			UserPrincipal up = (UserPrincipal) token.getPrincipal();
-			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
-			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
-			User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-			claims.claim(JWTCustomClaimNames.ISSUING_COUNTRY, u.getIssuingCountry());
-		}
-	}
+        if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
+            CredentialAuthorizationDetails details = getFirstAuthorizationDetails(params, CredentialAuthorizationDetails.class);
+            if (details == null) {
+                return;
+            }
+            claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, details.getCredentialId());
+            claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, details.getHashAlgorithmOid());
+            claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, details.getNumSignatures());
+            claims.claim(JWTCustomClaimNames.HASHES, details.getDocumentDigests().stream().map(DocumentDigest::getHash).collect(Collectors.joining(",")));
+        } else {
+            claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, params.get(OAuth2CustomParameterNames.CREDENTIAL_ID).toString());
+            claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, params.get(OAuth2CustomParameterNames.NUM_SIGNATURES).toString());
 
-	private void addCredentialClaims(JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
-		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
-		if (request == null) return;
+            String hashes = (String) params.get(OAuth2CustomParameterNames.HASHES);
+            String base64EncodedHashes = Arrays.stream(hashes.split(","))
+                    .map(h -> Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(h)))
+                    .collect(Collectors.joining(","));
 
-		Map<String, Object> params = request.getAdditionalParameters();
+            claims.claim(JWTCustomClaimNames.HASHES, base64EncodedHashes);
+            claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, params.get(OAuth2CustomParameterNames.HASH_ALGORITHM_OID).toString());
+        }
+    }
 
-		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
-			try {
-				List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsProcessing.fromAdditionalParameters(params);
-				AuthorizationDetails firstAuthorizationDetails = authorizationDetailsObject.get(0);
-				claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, firstAuthorizationDetails.getCredentialId());
-				claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, firstAuthorizationDetails.getHashAlgorithmOid());
-				claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, firstAuthorizationDetails.getNumSignatures());
-				List<String> hashes = new ArrayList<>();
-				for (DocumentInfo doc : firstAuthorizationDetails.getDocumentDigests()) {
-					hashes.add(doc.getHash());
-				}
-				claims.claim(JWTCustomClaimNames.HASHES, String.join(",", hashes));
-			}
-			catch (Exception e){
-				logger.error(e.getMessage());
-			}
-		} else {
-			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, params.get(OAuth2CustomParameterNames.CREDENTIAL_ID).toString());
-			claims.claim(JWTCustomClaimNames.NUM_SIGNATURES, params.get(OAuth2CustomParameterNames.NUM_SIGNATURES).toString());
+    private void addCreationCredentialClaims(JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
+        Map<String, Object> params = getAuthorizationRequestParameters(authorization);
+        if (params == null) {
+            return;
+        }
 
-			String hashes = (String) params.get(OAuth2CustomParameterNames.HASHES);
-			String base64EncodedHashes = Arrays.stream(hashes.split(","))
-				  .map(h -> Base64.getEncoder().encodeToString(Base64.getUrlDecoder().decode(h)))
-				  .collect(Collectors.joining(","));
+        CredentialCreationAuthorizationDetails details = getFirstAuthorizationDetails(params, CredentialCreationAuthorizationDetails.class);
+        if (details == null || details.getCredentialCreationRequest() == null) {
+            return;
+        }
+        CredentialCreationRequest credentialCreationRequest = details.getCredentialCreationRequest();
+        if (credentialCreationRequest.getCertificatePolicy() != null) {
+            claims.claim(JWTCustomClaimNames.CERTIFICATE_POLICY, credentialCreationRequest.getCertificatePolicy());
+        }
+        if (credentialCreationRequest.getSubjectData() != null) {
+            claims.claim(JWTCustomClaimNames.SUBJECT_DATA, credentialCreationRequest.getSubjectData());
+        }
+    }
 
-			claims.claim(JWTCustomClaimNames.HASHES, String.join(",", base64EncodedHashes));
-			claims.claim(JWTCustomClaimNames.HASH_ALGORITHM_OID, params.get(OAuth2CustomParameterNames.HASH_ALGORITHM_OID).toString());
-		}
-	}
+    private void addDeletionCredentialClaims(JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
+        Map<String, Object> params = getAuthorizationRequestParameters(authorization);
+        if (params == null) {
+            return;
+        }
 
-	private void addCreationCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, UserRepository userRepository, OAuth2Authorization authorization) throws JsonProcessingException {
-		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-			UserPrincipal up = (UserPrincipal) token.getPrincipal();
-			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
-			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
-			User u = userRepository.findByHash(up.getUsername()).orElseThrow();
-			claims.claim(JWTCustomClaimNames.ISSUING_COUNTRY, u.getIssuingCountry());
-		}
+        CredentialDeletionAuthorizationDetails details = getFirstAuthorizationDetails(params, CredentialDeletionAuthorizationDetails.class);
+        if (details != null) {
+            claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, details.getCredentialId());
+        }
+    }
 
-		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
-		if (request == null) return;
-		Map<String, Object> params = request.getAdditionalParameters();
-		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
-			List<AuthorizationDetails> authorizationDetailsObject = AuthorizationDetailsProcessing.fromAdditionalParameters(params);
-			AuthorizationDetails firstAuthorizationDetails = authorizationDetailsObject.get(0);
+    private Map<String, Object> getAuthorizationRequestParameters(OAuth2Authorization authorization) {
+        OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
+        return request == null ? null : request.getAdditionalParameters();
+    }
 
-			if(!firstAuthorizationDetails.getAcrValues().isEmpty()) {
-				List<String> acr_values = firstAuthorizationDetails.getAcrValues();
-			}
-			if(firstAuthorizationDetails.getCredentialCreationRequest() != null) {
-				CredentialCreationRequest credentialCreationRequest = firstAuthorizationDetails.getCredentialCreationRequest();
-				if (credentialCreationRequest.getCertificatePolicy() != null) {
-					claims.claim(JWTCustomClaimNames.CERTIFICATE_POLICY, credentialCreationRequest.getCertificatePolicy());
-				}
-				if (credentialCreationRequest.getSubjectData() != null) {
-					claims.claim(JWTCustomClaimNames.SUBJECT_DATA, credentialCreationRequest.getSubjectData());
-				}
-			}
-		}
-	}
+    private <T extends AuthorizationDetails> T getFirstAuthorizationDetails(Map<String, Object> params, Class<T> type) {
+        Object authorizationDetails = params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS);
+        if (authorizationDetails == null) {
+            return null;
+        }
+        try {
+            AuthorizationDetails first = AuthorizationDetailsParser.parse(authorizationDetails.toString()).get(0);
+            if (type.isInstance(first)) {
+                return type.cast(first);
+            }
+            logger.error("Expected authorization_details of type {}, got {}.", type.getSimpleName(), first.getClass().getSimpleName());
+        } catch (AuthorizationDetailsException | JSONException e) {
+            logger.error(e.getMessage());
+        }
+        return null;
+    }
 
-	private void addDeletionCredentialClaims(Authentication token, JwtClaimsSet.Builder claims, OAuth2Authorization authorization) {
-		if(token.getPrincipal().getClass().equals(UserPrincipal.class)) {
-			UserPrincipal up = (UserPrincipal) token.getPrincipal();
-			claims.claim(JWTCustomClaimNames.GIVEN_NAME, this.cryptoUtils.encryptString(up.getGivenName()));
-			claims.claim(JWTCustomClaimNames.SURNAME, this.cryptoUtils.encryptString(up.getSurname()));
-		}
-
-		OAuth2AuthorizationRequest request = authorization.getAttribute(OAuth2AuthorizationRequest.class.getName());
-		if (request == null) return;
-		Map<String, Object> params = request.getAdditionalParameters();
-		if (params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) != null) {
-			JSONObject authDetailsJSON = new JSONArray(params.get(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS).toString()).getJSONObject(0);
-
-			String credentialId = authDetailsJSON.getString(OAuth2AuthorizationDetailsNames.CREDENTIAL_ID);
-			claims.claim(JWTCustomClaimNames.CREDENTIAL_ID, credentialId);
-		}
-	}
-
-
-	@Bean
-	public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
-		JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
-		JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
-		jwtGenerator.setJwtCustomizer(jwtCustomizer);
-		OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
-		OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
-		logger.info("Setting up OAuth2TokenGenerator");
-		return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
-	}
+    @Bean
+    public OAuth2TokenGenerator<?> tokenGenerator(JWKSource<SecurityContext> jwkSource, OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer) {
+        JwtEncoder jwtEncoder = new NimbusJwtEncoder(jwkSource);
+        JwtGenerator jwtGenerator = new JwtGenerator(jwtEncoder);
+        jwtGenerator.setJwtCustomizer(jwtCustomizer);
+        OAuth2AccessTokenGenerator accessTokenGenerator = new OAuth2AccessTokenGenerator();
+        OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
+        logger.info("Setting up OAuth2TokenGenerator");
+        return new DelegatingOAuth2TokenGenerator(jwtGenerator, accessTokenGenerator, refreshTokenGenerator);
+    }
 }

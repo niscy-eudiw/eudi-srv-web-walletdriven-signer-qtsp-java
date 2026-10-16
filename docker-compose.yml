@@ -1,16 +1,45 @@
 services:
+  mysql:
+    image: mysql:8.4
+    container_name: mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${SPRING_DATASOURCE_DB_NAME}
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    ports:
+      - "${MYSQL_HOST_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./tools/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    env_file:
+      - .env
+
   authorization_server:
     build:
       context: .
       dockerfile: authorization_server/Dockerfile
     container_name: authorizationserver
+    depends_on:
+      mysql:
+        condition: service_healthy
     ports:
       - "8084:8084"
     env_file:
       - .env
+    environment:
+      SPRING_DATASOURCE_DB_URL: mysql:3306
+      SPRING_PROFILES_ACTIVE: docker
     volumes:
-      - .{PATH_TO_OAUTH2_CLIENTS_CONFIG_FOLDER}:/opt/app/config/clients
-    command: ["--spring.config.additional-location=file:/opt/app/config/clients/application-secret.yml"]
+      - ./config_files:/opt/app/config/config_files
+    command: ["--spring.config.additional-location=file:/opt/app/config/config_files/application-secret.yml"]
 
   resource_server:
     build:
@@ -18,11 +47,21 @@ services:
       dockerfile: resource_server/Dockerfile
     container_name: resourceserver
     depends_on:
-      - authorization_server
+      mysql:
+        condition: service_healthy
+      authorization_server:
+        condition: service_started
     ports:
       - "8085:8085"
     volumes:
-      - {PATH_TO_HSM_CONFIG_FOLDER}:/opt/app/config/hsm/
-      - {PATH_TO_EJBCA_CONFIG_FOLDER}:/opt/app/config/ejbca/
+      - ./hsm:/opt/app/config/hsm/
+      - ./ejbca/:/opt/app/config/ejbca/
+      - ./certificates:/opt/app/certificates
     env_file:
       - .env
+    environment:
+      SPRING_DATASOURCE_DB_URL: mysql:3306
+      SPRING_PROFILES_ACTIVE: docker
+
+volumes:
+  mysql_data:

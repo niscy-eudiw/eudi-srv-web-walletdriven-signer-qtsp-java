@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="Title" content="Same-Device Flow Authentication Page" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <link rel="icon" th:href="@{/static/images/favicon.gif}" type="image/gif" />
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" th:href="@{/static/personalized.css}" media="all" type="text/css" />
+
+    <meta name="referrer" content="no-referrer">
+    <title>Authentication</title>
+</head>
+
+<body id="responsive-main-nav">
+    <div class="main">
+        <main class="w-100 mx-auto main-container">
+            <div class="page-centered">
+                <div class="wallet-card wallet-card-centered">
+                    <img class="wallet-card-logo" th:src="@{/static/images/ic-logo.svg}" alt="EU Digital Identity Wallet" />
+
+                    <h1>Authenticate with your Digital Wallet</h1>
+                    <p class="wallet-subtitle">
+                        To continue, confirm your identity in your Digital Wallet app.
+                    </p>
+
+                    <a th:href="${url}" class="common-btn primary-btn wallet-btn">Open Digital Wallet</a>
+
+                    <p class="wallet-hint">
+                        You'll be returned here automatically after confirming in your wallet.
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

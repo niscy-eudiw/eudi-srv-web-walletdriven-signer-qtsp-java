@@ -16,6 +16,7 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -23,15 +24,22 @@ public class CredentialsInfoRequest {
     @NotBlank(message = "Missing (or invalid type) string parameter credentialID")
     @Pattern(regexp = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
           message = "Invalid parameter credentialID")
+    @Schema(description = "Identifier of the credential.")
     private String credentialID;
-    // none | single | chain
     @Pattern(regexp = "^(none|single|chain)$", message = "Invalid parameter certificates")
+    @Schema(description = "Certificates to return: none, only the end entity certificate, or the full certificate "
+            + "chain.", allowableValues = {"none", "single", "chain"}, defaultValue = "single")
     private String certificates = "single";
+    @Schema(description = "Whether to return the information from the end entity certificate.",
+            defaultValue = "false")
     private Boolean certInfo = false;
+    @Schema(description = "Whether to return the authorization mode of the credential.", defaultValue = "false")
     private Boolean authInfo = false;
 
     @Pattern(regexp = "^[a-zA-Z]{2}(-[a-zA-Z]{2})?$", message = "Invalid language code")
+    @Schema(description = "Preferred language of the response (RFC 5646).")
     private String lang;
+    @Schema(description = "Arbitrary data from the signature application.")
     private String clientData;
 
     public String getCredentialID() {

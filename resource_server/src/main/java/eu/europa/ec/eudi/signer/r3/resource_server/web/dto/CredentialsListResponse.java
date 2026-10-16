@@ -24,14 +24,19 @@ import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.Crede
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoCert;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo.CredentialsInfoKey;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 public class CredentialsListResponse {
     @NotBlank
+    @Schema(description = "Identifiers of the credentials of the user.")
     private List<String> credentialIDs;
 
+    @Schema(description = "Information about each credential, in the same order as `credentialIDs`. Only returned if "
+            + "`credentialInfo` is `true`.")
     private List<CredentialInfo> credentialInfos;
 
+    @Schema(description = "Whether only the valid credentials were returned.")
     private Boolean onlyValid;
 
     public CredentialsListResponse(){
@@ -81,17 +86,24 @@ public class CredentialsListResponse {
 
     public static class CredentialInfo {
         @NotBlank
+        @Schema(description = "Identifier of the credential.")
         private String credentialID;
+        @Schema(description = "Free form description of the credential, in the `lang` language.")
         private String description;
+        @Schema(description = "Signature qualifier of the signatures created with the credential.")
         private String signatureQualifier;
         private CredentialsInfoKey key;
         private CredentialsInfoCert cert;
         private CredentialsInfoAuth auth;
 
-        private String SCAL = "1"; // 1 | 2
-        // >= 1
+        @Schema(description = "Sole Control Assurance Level of the credential (CEN TS 119 241-1).",
+                allowableValues = {"1", "2"})
+        private String SCAL = "1";
         @NotBlank
+        @Schema(description = "Maximum number of signatures that can be authorized at once.", minimum = "1",
+                example = "1")
         private int multisign;
+        @Schema(description = "Language of the `description` (RFC 5646).", example = "en-US")
         private String lang;
 
         public @NotBlank String getCredentialID() {

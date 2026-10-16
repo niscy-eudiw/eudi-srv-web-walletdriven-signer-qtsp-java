@@ -17,15 +17,22 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
+@Schema(description = "Signing key of the credential.")
 public class CredentialsInfoKey {
     @NotBlank
-    private String status; // enabled | disabled
+    @Schema(description = "Status of the signing key. A disabled key cannot be used to sign.",
+            allowableValues = {"enabled", "disabled"})
+    private String status;
     @NotBlank
+    @Schema(description = "OIDs of the signature algorithms supported by the key.")
     private List<String> algo;
     @NotBlank
+    @Schema(description = "Length of the key, in bits.")
     private int len;
+    @Schema(description = "OID of the elliptic curve, for ECDSA keys.")
     private String curve;
 
     public @NotBlank String getStatus() {

@@ -16,6 +16,16 @@
 
 package eu.europa.ec.eudi.signer.r3.common_tools.utils;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Map;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -25,15 +35,6 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Map;
 
 public class WebUtils {
 
@@ -100,7 +101,14 @@ public class WebUtils {
                 String message = WebUtils.convertStreamToString(inStream);
                 return new StatusAndMessage(statusCode, message);
             }
-            else return new StatusAndMessage(statusCode, "Request failed with status code: " + statusCode);
+            else {
+                HttpEntity entity = response.getEntity();
+                if (entity == null) throw new Exception("Presentation Response from Verifier is empty.");
+
+                InputStream inStream = entity.getContent();
+                String message = WebUtils.convertStreamToString(inStream);
+                return new StatusAndMessage(statusCode, "Request failed with status code: " + statusCode + ". Response: " + message);
+            }
         }
         catch (IOException e){
             return new StatusAndMessage(500, "Network error: Unable to connect to the server. Please try again.");
