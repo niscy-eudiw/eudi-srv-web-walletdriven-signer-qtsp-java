@@ -16,15 +16,18 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OAuth2ClientRegistrationConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.OID4VPConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
+
 @SpringBootApplication
-@EnableConfigurationProperties({ TrustedIssuersCertificateConfig.class, OID4VPConfig.class, OAuth2ClientRegistrationConfig.class, ServiceURLConfig.class})
+@EnableConfigurationProperties({ OID4VPConfig.class, OAuth2ClientRegistrationConfig.class, ServiceURLConfig.class})
 @EnableScheduling
 @ComponentScan("eu.europa.ec.eudi.signer.r3")
 public class AuthorizationServerApplication {

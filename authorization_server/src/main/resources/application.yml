@@ -31,9 +31,6 @@ oid4vp:
 service-url-config:
   service-url: ${AUTHORIZATION_SERVER} 
 
-trusted-issuers:
-  folder: certificate_of_issuers
-
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
