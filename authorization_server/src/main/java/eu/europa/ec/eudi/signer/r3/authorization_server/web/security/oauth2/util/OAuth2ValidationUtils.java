@@ -226,8 +226,8 @@ public class OAuth2ValidationUtils {
                     String credentialIdChosen = credentialsService.getCredentialIDFromSignatureQualifier(userHash, credentialAuthorizationDetails.getSignatureQualifier());
                     credentialAuthorizationDetails.setCredentialId(credentialIdChosen);
                     credentialAuthorizationDetails.removeSignatureQualifier();
-                    authorizationDetailsListCopy.add(credentialAuthorizationDetails);
                 }
+                authorizationDetailsListCopy.add(credentialAuthorizationDetails);
             }
             additionalParameters.put(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS, AuthorizationDetailsParser.serialize(authorizationDetailsListCopy));
         } catch (Exception e) {

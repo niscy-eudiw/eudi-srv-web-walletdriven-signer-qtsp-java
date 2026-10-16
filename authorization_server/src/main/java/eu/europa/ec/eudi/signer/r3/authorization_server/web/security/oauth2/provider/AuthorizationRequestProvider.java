@@ -156,7 +156,7 @@ public class AuthorizationRequestProvider implements AuthenticationProvider {
         // those flows create or remove the credential rather than signing with an
         // existing one.
         if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL_CREATION)) {
-            logger.info("Processing credential_creation authorization request.");
+            logger.info("Processing credential-creation authorization request.");
         }
         if (oAuth2AuthorizeRequestToken.getScopes().contains(OAuth2ScopesNames.CREDENTIAL_DELETION)) {
             logger.info("Processing credential_delete authorization request.");

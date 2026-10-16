@@ -19,7 +19,6 @@ import java.io.IOException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
@@ -32,8 +31,6 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Used by the Exception Translation Filter to commence a login authentication
@@ -48,7 +45,7 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
     private final SessionUrlRelationList sessionUrlRelationList;
     private final OpenIdForVPService openIdForVPService;
 
-    public OID4VPSameDeviceAuthenticationEntryPoint(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList) {
+    public OID4VPSameDeviceAuthenticationEntryPoint(OpenIdForVPService openIdForVPService, ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList) {
         this.openIdForVPService = openIdForVPService;
         this.issuerConfig = issuerConfig;
         this.sessionUrlRelationList = sessionUrlRelationList;
@@ -69,18 +66,15 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
         String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-        this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
+        try {
+            String walletLink = this.openIdForVPService.getSameDeviceRedirectLink(returnTo, sanitizeCookieString, serviceUrl);
+            this.sessionUrlRelationList.addSessionReturnToUrlAndWalletLink(sanitizeCookieString, returnTo, walletLink);
 
-        try{
-        String redirectLink = this.openIdForVPService.getSameDeviceRedirectLink(returnTo, sanitizeCookieString, serviceUrl);
-        String linkToSameDevicePage = serviceUrl + "/oid4vp/same-device?sessionId=" + URLDecoder.decode(redirectLink, StandardCharsets.UTF_8);
-
-        this.redirectStrategy.sendRedirect(request, response, linkToSameDevicePage);
-        }
-        catch(Exception e){
-             logger.error(e.getMessage());
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
-        
+            String linkToSameDevicePage = serviceUrl + "/oid4vp/same-device";
+            this.redirectStrategy.sendRedirect(request, response, linkToSameDevicePage);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Failed to start the OID4VP authentication.");
         }
     }
 

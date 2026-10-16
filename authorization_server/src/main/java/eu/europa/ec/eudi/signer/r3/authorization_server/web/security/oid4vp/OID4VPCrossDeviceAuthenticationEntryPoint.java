@@ -13,82 +13,95 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp;
 
-import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
-import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
 
+import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
+import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 public class OID4VPCrossDeviceAuthenticationEntryPoint implements AuthenticationEntryPoint {
-	private final Logger logger = LoggerFactory.getLogger(OID4VPCrossDeviceAuthenticationEntryPoint.class);
-	private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
-	private final ServiceURLConfig issuerConfig;
-	private final SessionUrlRelationList sessionUrlRelationList;
 
-	public OID4VPCrossDeviceAuthenticationEntryPoint(@Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList){
-		this.issuerConfig = issuerConfig;
-		this.sessionUrlRelationList = sessionUrlRelationList;
-	}
+    private final Logger logger = LoggerFactory.getLogger(OID4VPCrossDeviceAuthenticationEntryPoint.class);
+    private final RedirectStrategy redirectStrategy = new DefaultRedirectStrategy();
+    private final ServiceURLConfig issuerConfig;
+    private final SessionUrlRelationList sessionUrlRelationList;
+    private final OpenIdForVPService openIdForVPService;
 
-	@Override
-	public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-		logger.info("Redirecting request to OID4VPAuthentication Entry Point.");
+    public OID4VPCrossDeviceAuthenticationEntryPoint(OpenIdForVPService openIdForVPService, ServiceURLConfig issuerConfig, SessionUrlRelationList sessionUrlRelationList) {
+        this.openIdForVPService = openIdForVPService;
+        this.issuerConfig = issuerConfig;
+        this.sessionUrlRelationList = sessionUrlRelationList;
+    }
 
-		String serviceUrl = this.issuerConfig.getServiceURL();
-		logger.trace("Entry Point of the Authorization Server in url: {}", serviceUrl);
+    @Override
+    public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
+        logger.info("Redirecting request to OID4VPAuthentication Entry Point.");
 
-		String returnTo = serviceUrl+"/oauth2/authorize?"+request.getQueryString();
-		logger.info("Saved request {} to return to after authentication.", returnTo);
+        String serviceUrl = this.issuerConfig.getServiceURL();
+        logger.trace("Entry Point of the Authorization Server in url: {}", serviceUrl);
 
-		String cookieSession = getCookieSessionIdValue(request, response);
-		assert cookieSession != null;
-		String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
-		logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
+        String returnTo = serviceUrl + "/oauth2/authorize?" + request.getQueryString();
+        logger.info("Saved request {} to return to after authentication.", returnTo);
 
-		this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
+        String cookieSession = getCookieSessionIdValue(request, response);
+        assert cookieSession != null;
+        String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
+        logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-		String linkToCrossDevicePage = serviceUrl+"/oid4vp/cross-device?sessionId="+sanitizeCookieString;
-		this.redirectStrategy.sendRedirect(request, response, linkToCrossDevicePage);
-	}
+        try {
+            // The Verifier transaction is created once here and the Wallet link is kept server-side,
+            // so reloading /oid4vp/cross-device does not start a new transaction and the session id
+            // is not exposed in the page URL.
+            String walletLink = this.openIdForVPService.getCrossDeviceRedirectLink(returnTo, sanitizeCookieString, serviceUrl);
+            this.sessionUrlRelationList.addSessionReturnToUrlAndWalletLink(sanitizeCookieString, returnTo, walletLink);
 
-	private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response){
-		String cookieSession = null;
-		Cookie[] cookies = request.getCookies();
+            String linkToCrossDevicePage = serviceUrl + "/oid4vp/cross-device";
+            this.redirectStrategy.sendRedirect(request, response, linkToCrossDevicePage);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Failed to start the OID4VP authentication.");
+        }
+    }
 
-		if (cookies != null) {
-			for (Cookie cookie : cookies) {
-				if ("JSESSIONID".equals(cookie.getName())) {
-					cookieSession = cookie.getValue();
-					break;
-				}
-			}
-		}
-		if(cookieSession == null) {
-			String cookieHeader = response.getHeader("Set-Cookie");
-			if (cookieHeader != null) {
-				String[] cookiesArray = cookieHeader.split(";");
-				for (String c : cookiesArray) {
-					if (c.trim().startsWith("JSESSIONID=")) {
-						cookieSession = c.trim().substring("JSESSIONID=".length());
-						break;
-					}
-				}
-			}
-		}
-		logger.info("Current Cookie Session: {}", cookieSession);
+    private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response) {
+        String cookieSession = null;
+        Cookie[] cookies = request.getCookies();
 
-		return cookieSession;
-	}
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("JSESSIONID".equals(cookie.getName())) {
+                    cookieSession = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if (cookieSession == null) {
+            String cookieHeader = response.getHeader("Set-Cookie");
+            if (cookieHeader != null) {
+                String[] cookiesArray = cookieHeader.split(";");
+                for (String c : cookiesArray) {
+                    if (c.trim().startsWith("JSESSIONID=")) {
+                        cookieSession = c.trim().substring("JSESSIONID=".length());
+                        break;
+                    }
+                }
+            }
+        }
+        logger.info("Current Cookie Session: {}", cookieSession);
+
+        return cookieSession;
+    }
 }

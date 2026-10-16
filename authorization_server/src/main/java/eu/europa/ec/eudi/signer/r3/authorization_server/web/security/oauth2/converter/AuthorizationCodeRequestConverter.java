@@ -211,7 +211,7 @@ public class AuthorizationCodeRequestConverter implements AuthenticationConverte
         } // if the request is of the scope "credential_creation" and the session does not
         // contain that scope, the authentication is invalid...
         else if (scopes.contains(OAuth2ScopesNames.CREDENTIAL_CREATION) && !Objects.equals(token.getScope(), OAuth2ScopesNames.CREDENTIAL_CREATION)) {
-            logger.warn("{}: Request Scope = 'credential_creation' && Token Request Scope != 'credential_creation'", type);
+            logger.warn("{}: Request Scope = 'credential-creation' && Token Request Scope != 'credential-creation'", type);
             principal = ANONYMOUS_AUTHENTICATION;
             SecurityContextHolder.clearContext();
         } // if the request is of the scope "credential_delete" and the session does not

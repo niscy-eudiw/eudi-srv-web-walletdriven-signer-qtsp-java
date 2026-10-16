@@ -18,8 +18,12 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public class SignaturesSignHashResponse {
+    @Schema(description = "Base64-encoded signature values, in the same order as the `hashes` in the request.")
     private List<String> signatures;
+    @Schema(description = "Identifier of the asynchronous operation.")
     private String responseID;
 
     public List<String> getSignatures() {

@@ -22,44 +22,66 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class InfoResponse {
     @NotBlank
+    @Schema(description = "Version of the CSC API specification implemented by the remote service.")
     private String specs = "2.2.0.0";
     @NotBlank
-    private String name = "Trust Provider Signer R3 QTSP";
+    @Schema(description = "Commercial name of the remote service.")
+    private String name = "remote Qualifies Electronic Signature (rQES) QTSP";
     @NotBlank
+    @Schema(description = "URI of the image file containing the logo of the remote service.")
     private String logo = "img";
     @NotBlank
+    @Schema(description = "ISO 3166-1 Alpha-2 code of the country where the remote service provider is established.")
     private String region = "EU";
     @NotBlank
+    @Schema(description = "Language used in the responses (RFC 5646).")
     private String lang = "en-US";
     @NotBlank
+    @Schema(description = "Free form description of the remote service, in the `lang` language.")
     private String description = "test qtsp";
     @NotBlank
+    @Schema(description = "Supported service authorization mechanisms.")
     private List<String> authType;
+    @Schema(description = "OAuth 2.0 authorization servers that can be used with the remote service.")
+    private List<InfoConfig.OAuth2Server> oauth2Servers;
+    @Schema(description = "Base URI of the OAuth 2.0 authorization server used by the remote service.")
     private String oauth2;
+    @Schema(description = "Issuer identifier of the OAuth 2.0 authorization server (RFC 8414).")
     private String oauth2Issuer;
+    @Schema(description = "Whether the authorization server supports Rich Authorization Requests (RFC 9396), i.e. `authorization_details`.")
+    private Boolean supportsRar;
+    @Schema(description = "Supported types of hashes to sign.")
+    private List<String> supportedHashTypes;
+    @Schema(description = "Whether the remote service supports the asynchronous operation mode (`A`).")
     private boolean asynchronousOperationMode;
     @NotBlank
+    @Schema(description = "API methods implemented by the remote service.")
     private List<String> methods;
+    @Schema(description = "Whether the remote service returns validation information.")
     private boolean validationInfo;
     @NotBlank
+    @Schema(description = "Signature algorithms supported by the remote service.")
     private InfoConfig.SignAlgorithms signAlgorithms;
-
-    /**
-     * {
-     * formats: List<String>
-     * envelope_properties: List<List<String>>
-     * }
-     */
+    @Schema(description = "Supported document types.")
+    private List<String> documentTypes;
     @NotBlank
+    @Schema(description = "Signature formats supported by the remote service.")
     private SignatureFormats signature_formats;
+    @NotBlank
+    @Schema(description = "Supported AdES conformance levels.")
+    private List<String> conformance_levels;
 
+    @Schema(name = "SignatureFormats")
     private static class SignatureFormats {
+        @Schema(description = "Supported signature formats: `C` (CAdES), `X` (XAdES), `J` (JAdES), `P` (PAdES).")
         private List<String> formats;
+        @Schema(description = "Supported signed envelope properties for each format, in the same order as `formats`.")
         private List<List<String>> envelope_properties;
 
         public SignatureFormats() {
@@ -88,15 +110,6 @@ public class InfoResponse {
             this.envelope_properties = envelope_properties;
         }
     }
-
-    @NotBlank
-    private List<String> conformance_levels;
-
-    // New fields for CSC API 2.2.0.0
-    private List<InfoConfig.OAuth2Server> oauth2Servers;
-    private Boolean supportsRar;
-    private List<String> supportedHashTypes;
-    private List<String> documentTypes;
 
     public InfoResponse() {
         this.authType = new ArrayList<>();

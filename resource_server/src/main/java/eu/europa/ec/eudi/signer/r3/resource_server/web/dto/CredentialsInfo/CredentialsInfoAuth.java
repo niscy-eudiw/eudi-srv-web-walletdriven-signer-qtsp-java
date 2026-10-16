@@ -18,9 +18,19 @@ package eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+
+@Schema(description = "Authorization mode of the credential. Only returned if `authInfo` is `true`.")
 public class CredentialsInfoAuth {
-    private String mode; // explicit | oauth2code
+    @NotBlank
+    @Schema(description = "How the credential is authorized: with explicit authentication objects, or with an "
+            + "OAuth 2.0 authorization code.", allowableValues = {"explicit", "oauth2code"})
+    private String mode;
+    @Schema(description = "Expression combining the authentication `objects`. Only for the `explicit` mode.")
     private String expression;
+    @Schema(description = "Authentication objects required to authorize the credential. Only for the `explicit` "
+            + "mode.")
     private List<Object> objects;
 
     public String getMode() {

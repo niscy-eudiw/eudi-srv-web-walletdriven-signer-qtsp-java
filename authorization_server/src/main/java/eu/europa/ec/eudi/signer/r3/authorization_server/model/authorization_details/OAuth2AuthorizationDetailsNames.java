@@ -10,8 +10,8 @@ public final class OAuth2AuthorizationDetailsNames {
     public static final String TYPE = "type";
     public static final String LOCATIONS = "locations";
     public static final List<String> TYPE_CREDENTIAL = List.of("credential", "https://cloudsignatureconsortium.org/2025/credential");
-    public static final List<String> TYPE_CREDENTIAL_CREATION = List.of("credential_creation", "https://cloudsignatureconsortium.org/2025/credential-creation");
-    public static final List<String> TYPE_CREDENTIAL_DELETE = List.of("credential_deletion", "https://cloudsignatureconsortium.org/2025/credential-deletion");
+    public static final List<String> TYPE_CREDENTIAL_CREATION = List.of("credential-creation", "https://cloudsignatureconsortium.org/2025/credential-creation");
+    public static final List<String> TYPE_CREDENTIAL_DELETE = List.of("credential-deletion", "https://cloudsignatureconsortium.org/2025/credential-deletion");
     public static final String CREDENTIAL_ID = "credentialID";
     public static final String SIGNATURE_QUALIFIER = "signatureQualifier";
     public static final String HASH_ALGORITHM_OID = "hashAlgorithmOID";

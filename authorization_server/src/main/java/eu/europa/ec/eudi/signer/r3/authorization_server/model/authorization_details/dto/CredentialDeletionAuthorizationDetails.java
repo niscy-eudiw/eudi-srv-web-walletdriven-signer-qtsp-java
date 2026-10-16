@@ -32,7 +32,7 @@ public class CredentialDeletionAuthorizationDetails extends AuthorizationDetails
 
 	@Override
 	public void validate() throws AuthorizationDetailsException {
-		require(credentialId != null, "The 'credentialID' in the 'authorization_details' parameter is missing for credential_deletion.");
+		require(credentialId != null, "The 'credentialID' in the 'authorization_details' parameter is missing for credential-deletion.");
 	}
 
 	@Override

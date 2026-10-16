@@ -17,17 +17,31 @@
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto.CredentialsInfo;
 
 import java.util.List;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+@Schema(description = "Certificate of the credential. `issuerDN`, `serialNumber`, `subjectDN`, `validFrom`, "
+        + "`validTo`, `qcStatements` and `policy` are only returned if `certInfo` is `true`.")
 public class CredentialsInfoCert {
-    private String status; // valid | expired | revoked | suspended
-    private List<String> certificates; // one or more certificates from the certificate chain
-    private String issuerDN; // the issuer distinguished name from the end entity certificate
-    private String serialNumber; // the serial number of the end entity certificate
-    private String subjectDN; // the subject distinguished name from the end entity certificate
-    private String validFrom; // the validity start date from the end entity certificate
-    private String validTo; // the validity end date from the end entity certificate
-    private List<String> qcStatements; // OIDs of QC statements present in the certificate (required)
-    private List<String> policy; // OIDs of certificate policies present in the certificate (optional)
+    @Schema(description = "Status of the end entity certificate.",
+            allowableValues = {"valid", "expired", "revoked", "suspended"})
+    private String status;
+    @Schema(description = "Base64-encoded DER certificates: the end entity certificate (`single`), followed by the "
+            + "rest of the chain (`chain`). Absent if `certificates` is `none`.")
+    private List<String> certificates;
+    @Schema(description = "Issuer distinguished name of the end entity certificate.")
+    private String issuerDN;
+    @Schema(description = "Serial number of the end entity certificate, in decimal.")
+    private String serialNumber;
+    @Schema(description = "Subject distinguished name of the end entity certificate.")
+    private String subjectDN;
+    @Schema(description = "Start of the validity period of the end entity certificate (ASN.1 GeneralizedTime).")
+    private String validFrom;
+    @Schema(description = "End of the validity period of the end entity certificate (ASN.1 GeneralizedTime).")
+    private String validTo;
+    @Schema(description = "OIDs of the QC statements of the end entity certificate. Empty if there are none.")
+    private List<String> qcStatements;
+    @Schema(description = "OIDs of the certificate policies of the end entity certificate.")
+    private List<String> policy;
 
     public String getStatus() {
         return status;

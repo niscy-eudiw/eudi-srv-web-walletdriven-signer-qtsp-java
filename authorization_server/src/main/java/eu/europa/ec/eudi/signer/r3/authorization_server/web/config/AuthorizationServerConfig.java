@@ -165,7 +165,7 @@ public class AuthorizationServerConfig {
                     };
                     exceptions.defaultAuthenticationEntryPointFor(entryPoint, requestMatcherDefault);
 
-                    OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(issuerConfig, sessionUrlRelationList);
+                    OID4VPCrossDeviceAuthenticationEntryPoint crossDeviceEntryPoint = new OID4VPCrossDeviceAuthenticationEntryPoint(openIdForVPService, issuerConfig, sessionUrlRelationList);
                     RequestMatcher requestMatcherCrossDevice = request -> {
                         String clientId = request.getParameter(OAuth2ParameterNames.CLIENT_ID);
                         RegisteredClientAuthenticationForm authenticationForm = registeredClientAuthenticationFormRepository.findByClientId(clientId).orElseThrow();

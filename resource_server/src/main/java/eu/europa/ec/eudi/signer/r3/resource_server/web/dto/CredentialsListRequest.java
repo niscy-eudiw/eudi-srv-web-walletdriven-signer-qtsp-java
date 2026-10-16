@@ -16,21 +16,37 @@
 
 package eu.europa.ec.eudi.signer.r3.resource_server.web.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Pattern;
 
 public class CredentialsListRequest {
     @Pattern(regexp = "^[A-Za-z0-9+/=]{43}=$", message = "Invalid parameter userID")
+    @Schema(description = "Identifier of the user. Must not be sent: service authorization is user-specific and the "
+            + "user is identified by the access token.")
     private String userID;
+    @Schema(description = "Whether to return the information about each credential in `credentialInfos`.",
+            defaultValue = "false")
     private Boolean credentialInfo = false;
-    // none | single | chain
     @Pattern(regexp = "^(none|single|chain)$", message = "Invalid parameter certificates")
+    @Schema(description = "Certificates to return in `credentialInfos`: none, only the end entity certificate, or "
+            + "the full certificate chain. Only used if `credentialInfo` is `true`.",
+            allowableValues = {"none", "single", "chain"}, defaultValue = "single")
     private String certificates = "single";
+    @Schema(description = "Whether to return the information from the end entity certificate. "
+            + "Only used if `credentialInfo` is `true`.", defaultValue = "false")
     private Boolean certInfo = false;
+    @Schema(description = "Whether to return the authorization mode of each credential in `credentialInfos`. Only "
+            + "used if `credentialInfo` is `true`.", defaultValue = "false")
     private Boolean authInfo = false;
+    @Schema(description = "Whether to return only the valid credentials. Ignored if the remote service does not "
+            + "support it: the `onlyValid` output parameter indicates whether the filter was applied.",
+            defaultValue = "false")
     private Boolean onlyValid = false;
 
     @Pattern(regexp = "^[a-zA-Z]{2}(-[a-zA-Z]{2})?$", message = "Invalid language code")
+    @Schema(description = "Preferred language of the response (RFC 5646).", example = "en-US")
     private String lang;
+    @Schema(description = "Arbitrary data from the signature application.")
     private String clientData;
 
     public String getUserID() {

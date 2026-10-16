@@ -14,6 +14,7 @@ _14 Oct 2026_
 - Refactored authorization_details into typed model with parser and validator.
 - Updated Swagger UI / OpenAPI documentation for the authorization server and resource server endpoints.
 - **Breaking** Simplified the server URL environment variables. `AUTHORIZATION_SERVER` replaces `SERVICE_URL`, `SERVICE_URL_OAUTH2_ISSUER`, `AUTHORIZATION_SERVER_ISSUER_URI` and `AUTHORIZATION_SERVER_JWT_SET_URI`, and `RESOURCE_SERVER` was added.
+- Added a MySQL service to `docker-compose.yml`, with init scripts in `tools/mysql/init/`.
 
 ### Fixed
 - Fixed `authorization_details` being URL-decoded twice when building the OID4VP `transaction_data`.

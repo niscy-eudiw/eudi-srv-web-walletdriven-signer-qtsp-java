@@ -20,7 +20,6 @@ import eu.europa.ec.eudi.signer.r3.resource_server.config.InfoConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.InfoRequest;
 import eu.europa.ec.eudi.signer.r3.resource_server.web.dto.InfoResponse;
 
 @RestController
@@ -42,10 +42,10 @@ public class InfoController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public InfoResponse info(@RequestBody Map<String, Object> requestMessage) {
+    public InfoResponse info(@RequestBody InfoRequest infoRequest) {
         String lang;
-        if (requestMessage.containsKey("lang"))
-            lang = validateLangValue(requestMessage.get("lang").toString());
+        if (infoRequest.getLang() != null)
+            lang = validateLangValue(infoRequest.getLang());
         else
             lang = this.infoProperties.getLang();
 
@@ -55,7 +55,6 @@ public class InfoController {
 
         List<List<String>> envelope_properties = new ArrayList<>();
         for (String o : keySet) {
-            log.info("signature_format: {}", o);
             List<String> env_properties = this.infoProperties.getSignature_formats().get(o);
             envelope_properties.add(env_properties);
         }

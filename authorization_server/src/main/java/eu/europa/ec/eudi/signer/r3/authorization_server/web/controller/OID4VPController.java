@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -19,7 +19,6 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
-import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oauth2.constants.OAuth2ScopesNames;
 import eu.europa.ec.eudi.signer.r3.authorization_server.web.security.token.CommonTokenSetting;
@@ -28,28 +27,36 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 @Controller
 public class OID4VPController {
 	private final Logger logger = LoggerFactory.getLogger(OID4VPController.class);
-	private final OpenIdForVPService openIdForVPService;
 	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting tokenSetting;
 
-	public OID4VPController(@Autowired OpenIdForVPService openIdForVPService, @Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
-		this.openIdForVPService = openIdForVPService;
+	public OID4VPController(@Autowired ServiceURLConfig issuerConfig, @Autowired SessionUrlRelationList sessionUrlRelationList, @Autowired CommonTokenSetting tokenSetting) {
 		this.issuerConfig = issuerConfig;
 		this.sessionUrlRelationList = sessionUrlRelationList;
 		this.tokenSetting = tokenSetting;
 	}
 
 	@GetMapping("/oid4vp/cross-device")
-	public String getOID4VPCrossDevicePage(Model model, @RequestParam String sessionId){
+	public String getOID4VPCrossDevicePage(Model model, @CookieValue(name = "JSESSIONID", required = false) String sessionId){
+		if (sessionId == null) {
+			logger.error("No session cookie present in the cross-device request.");
+			model.addAttribute("errormessage", "No active authentication session found.");
+			return "error";
+		}
+
+		String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
+		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie);
+		if (sessionInformation == null || sessionInformation.getWalletLink() == null) {
+			logger.error("No Wallet link found for session {}", sanitizeCookie);
+			model.addAttribute("errormessage", "No active authentication session found.");
+			return "error";
+		}
+
 		try {
 			String serviceUrl = this.issuerConfig.getServiceURL();
-			String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
-			logger.info("Retrieved saved request to JSessionId Cookie {}", sanitizeCookie);
-
-			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie).getUrlToReturnTo();
-
-			String redirectLink = this.openIdForVPService.getCrossDeviceRedirectLink(urlToReturnTo, sanitizeCookie, serviceUrl);
+			String urlToReturnTo = sessionInformation.getUrlToReturnTo();
+			String redirectLink = sessionInformation.getWalletLink();
 
 			QRCodeWriter barcodeWriter = new QRCodeWriter();
 			BitMatrix bitMatrix = barcodeWriter.encode(redirectLink, BarcodeFormat.QR_CODE, 200, 200);
@@ -60,7 +67,7 @@ public class OID4VPController {
 			model.addAttribute("qrCode", qrCode);
 			logger.info("Generated QrCode for cross-device flow.");
 
-			String urlCrossDeviceCallback = serviceUrl+"/oid4vp/cross-device/callback?session_id="+sessionId;
+			String urlCrossDeviceCallback = serviceUrl+"/oid4vp/cross-device/callback?session_id="+sanitizeCookie;
 			model.addAttribute("url", urlCrossDeviceCallback);
 			logger.info("Define the Callback Url.");
 
@@ -96,15 +103,22 @@ public class OID4VPController {
 
 
 	@GetMapping("/oid4vp/same-device")
-	public String getOID4VPSameDevicePage(Model model, @RequestParam String sessionId){
-		try {
-			model.addAttribute("url", sessionId);
-			return "same-device-page";
-		}catch (Exception e){
-			logger.error(e.getLocalizedMessage());
-			logger.error(e.getMessage());
-			model.addAttribute("errormessage", "Failed to generate QR Code: " + e.getMessage());
+	public String getOID4VPSameDevicePage(Model model, @CookieValue(name = "JSESSIONID", required = false) String sessionId){
+		if (sessionId == null) {
+			logger.error("No session cookie present in the same-device request.");
+			model.addAttribute("errormessage", "No active authentication session found.");
 			return "error";
 		}
+
+		String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
+		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie);
+		if (sessionInformation == null || sessionInformation.getWalletLink() == null) {
+			logger.error("No Wallet link found for session {}", sanitizeCookie);
+			model.addAttribute("errormessage", "No active authentication session found.");
+			return "error";
+		}
+
+		model.addAttribute("url", sessionInformation.getWalletLink());
+		return "same-device-page";
 	}
 }
