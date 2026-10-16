@@ -26,6 +26,10 @@ import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 
 @Controller
 public class OID4VPController {
+	private static final String ERROR_VIEW = "error";
+	private static final String ERROR_MESSAGE_ATTRIBUTE = "errormessage";
+	private static final String NO_ACTIVE_SESSION_MESSAGE = "No active authentication session found.";
+
 	private final Logger logger = LoggerFactory.getLogger(OID4VPController.class);
 	private final ServiceURLConfig issuerConfig;
 	private final SessionUrlRelationList sessionUrlRelationList;
@@ -41,16 +45,16 @@ public class OID4VPController {
 	public String getOID4VPCrossDevicePage(Model model, @CookieValue(name = "JSESSIONID", required = false) String sessionId){
 		if (sessionId == null) {
 			logger.error("No session cookie present in the cross-device request.");
-			model.addAttribute("errormessage", "No active authentication session found.");
-			return "error";
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, NO_ACTIVE_SESSION_MESSAGE);
+			return ERROR_VIEW;
 		}
 
 		String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
 		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie);
 		if (sessionInformation == null || sessionInformation.getWalletLink() == null) {
 			logger.error("No Wallet link found for session {}", sanitizeCookie);
-			model.addAttribute("errormessage", "No active authentication session found.");
-			return "error";
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, NO_ACTIVE_SESSION_MESSAGE);
+			return ERROR_VIEW;
 		}
 
 		try {
@@ -96,8 +100,8 @@ public class OID4VPController {
 		}catch (Exception e){
 			logger.error(e.getLocalizedMessage());
 			logger.error(e.getMessage());
-			model.addAttribute("errormessage", "Failed to generate QR Code: " + e.getMessage());
-			return "error";
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, "Failed to generate QR Code: " + e.getMessage());
+			return ERROR_VIEW;
 		}
 	}
 
@@ -106,16 +110,16 @@ public class OID4VPController {
 	public String getOID4VPSameDevicePage(Model model, @CookieValue(name = "JSESSIONID", required = false) String sessionId){
 		if (sessionId == null) {
 			logger.error("No session cookie present in the same-device request.");
-			model.addAttribute("errormessage", "No active authentication session found.");
-			return "error";
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, NO_ACTIVE_SESSION_MESSAGE);
+			return ERROR_VIEW;
 		}
 
 		String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
 		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie);
 		if (sessionInformation == null || sessionInformation.getWalletLink() == null) {
 			logger.error("No Wallet link found for session {}", sanitizeCookie);
-			model.addAttribute("errormessage", "No active authentication session found.");
-			return "error";
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, NO_ACTIVE_SESSION_MESSAGE);
+			return ERROR_VIEW;
 		}
 
 		model.addAttribute("url", sessionInformation.getWalletLink());

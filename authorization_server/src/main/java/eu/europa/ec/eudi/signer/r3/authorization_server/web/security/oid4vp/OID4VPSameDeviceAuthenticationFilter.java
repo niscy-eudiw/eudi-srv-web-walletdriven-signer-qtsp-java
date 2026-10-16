@@ -104,7 +104,9 @@ public class OID4VPSameDeviceAuthenticationFilter extends AbstractAuthentication
             logger.error(e.getMessage());
             throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage());
         } catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted while processing the OID4VP same-device authentication.");
+            throw new AuthenticationServiceException(OID4VPEnumError.UNEXPECTED_ERROR.getFormattedMessage(), e);
+        }
 	}
 }

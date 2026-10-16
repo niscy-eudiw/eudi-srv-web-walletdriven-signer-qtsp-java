@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 # Skip if no test user is configured
-[ -z "$LOGIN_USER_GIVEN_NAME" ] && exit 0
+[[ -z "$LOGIN_USER_GIVEN_NAME" ]] && exit 0
 
 mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" <<EOSQL
 
