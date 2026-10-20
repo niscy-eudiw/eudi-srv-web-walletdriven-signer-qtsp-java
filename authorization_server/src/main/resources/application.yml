@@ -34,11 +34,12 @@ service-url-config:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    config-url: ${AUTHORIZATION_SERVER}/as/v3/api-docs/swagger-config
     urls:
       - name: Authorization Server
-        url: /v3/api-docs/public-apis
+        url: ${AUTHORIZATION_SERVER}/as/v3/api-docs/public-apis
       - name: Resource Server
-        url: ${RESOURCE_SERVER}/v3/api-docs/public-apis
+        url: ${RESOURCE_SERVER}/rs/v3/api-docs/public-apis
 
 spring:
   #config:

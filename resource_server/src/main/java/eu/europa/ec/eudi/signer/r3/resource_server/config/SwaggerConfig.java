@@ -20,6 +20,7 @@ import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.Scopes;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.tags.Tag;
 import java.util.List;
 import java.util.function.Consumer;
@@ -68,8 +69,10 @@ public class SwaggerConfig {
     }
 
     @Bean
-    OpenAPI customOpenAPI(@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String authorizationServerUrl) {
+    OpenAPI customOpenAPI(@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String authorizationServerUrl,
+                          @Value("${RESOURCE_SERVER}") String resourceServerUrl) {
         return new OpenAPI()
+                .servers(List.of(new Server().url(resourceServerUrl)))
                 .info(new Info()
                         .title("EUDI Wallet-Driven Signer QTSP - Resource Server")
                         .description("""
