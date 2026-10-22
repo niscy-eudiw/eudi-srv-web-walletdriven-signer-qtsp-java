@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.1]
+_21 Oct 2026_
+
+### Changed
+- Minor updates to the Swagger UI configuration.
+
+### Removed
+- Removed the unused `trusted-issuers` configuration (`trusted-issuers.folder`) from the authorization server.
+
+### Fixed
+- Fixed the `sessionId` cookie on the OID4VP request.
+
 ## [0.7.0]
 _14 Oct 2026_
 

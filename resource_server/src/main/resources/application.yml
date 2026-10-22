@@ -17,6 +17,13 @@ server:
   error:
     include-message: always
 
+springdoc:
+  swagger-ui:
+    config-url: ${RESOURCE_SERVER}/rs/v3/api-docs/swagger-config
+    urls:
+      - name: Resource Server
+        url: ${RESOURCE_SERVER}/rs/v3/api-docs/public-apis
+
 spring:
   #config:
   # import: file:.env[.properties]

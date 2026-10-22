@@ -28,7 +28,6 @@ import eu.europa.ec.eudi.signer.r3.authorization_server.config.ServiceURLConfig;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.OpenIdForVPService;
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
 import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -79,31 +78,8 @@ public class OID4VPSameDeviceAuthenticationEntryPoint implements AuthenticationE
     }
 
     private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response) {
-        String cookieSession = null;
-        Cookie[] cookies = request.getCookies();
-
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("JSESSIONID".equals(cookie.getName())) {
-                    cookieSession = cookie.getValue();
-                    break;
-                }
-            }
-        }
-        if (cookieSession == null) {
-            String cookieHeader = response.getHeader("Set-Cookie");
-            if (cookieHeader != null) {
-                String[] cookiesArray = cookieHeader.split(";");
-                for (String c : cookiesArray) {
-                    if (c.trim().startsWith("JSESSIONID=")) {
-                        cookieSession = c.trim().substring("JSESSIONID=".length());
-                        break;
-                    }
-                }
-            }
-        }
+        String cookieSession = request.getSession(true).getId();
         logger.info("Current Cookie Session: {}", cookieSession);
-
         return cookieSession;
     }
 }

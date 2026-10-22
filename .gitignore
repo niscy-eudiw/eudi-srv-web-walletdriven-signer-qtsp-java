@@ -6,9 +6,8 @@ target/
 !**/src/test/**/target/
 
 .env
-
 **/application-secret.yml
-
+certificates/*
 logs/*
 certificate_of_issuers/ot_root.pem
 
