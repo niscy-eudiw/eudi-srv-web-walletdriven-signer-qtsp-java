@@ -60,19 +60,10 @@ public class OID4VPCrossDeviceAuthenticationEntryPoint implements Authentication
         String sanitizeCookieString = WebUtils.getSanitizedCookieString(cookieSession);
         logger.info("Saved request to JSessionId Cookie {}", sanitizeCookieString);
 
-        try {
-            // The Verifier transaction is created once here and the Wallet link is kept server-side,
-            // so reloading /oid4vp/cross-device does not start a new transaction and the session id
-            // is not exposed in the page URL.
-            String walletLink = this.openIdForVPService.getCrossDeviceRedirectLink(returnTo, sanitizeCookieString, serviceUrl);
-            this.sessionUrlRelationList.addSessionReturnToUrlAndWalletLink(sanitizeCookieString, returnTo, walletLink);
+        this.sessionUrlRelationList.addSessionReturnToUrl(sanitizeCookieString, returnTo);
 
-            String linkToCrossDevicePage = serviceUrl + "/oid4vp/cross-device";
-            this.redirectStrategy.sendRedirect(request, response, linkToCrossDevicePage);
-        } catch (Exception e) {
-            logger.error(e.getMessage());
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Failed to start the OID4VP authentication.");
-        }
+        String linkToCrossDevicePage = serviceUrl + "/oid4vp/cross-device?sessionId="+sanitizeCookieString;
+        this.redirectStrategy.sendRedirect(request, response, linkToCrossDevicePage);
     }
 
     private String getCookieSessionIdValue(HttpServletRequest request, HttpServletResponse response) {
