@@ -42,9 +42,9 @@ public class InfoController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public InfoResponse info(@RequestBody InfoRequest infoRequest) {
+    public InfoResponse info(@RequestBody(required = false) InfoRequest infoRequest) {
         String lang;
-        if (infoRequest.getLang() != null)
+        if (infoRequest != null && infoRequest.getLang() != null)
             lang = validateLangValue(infoRequest.getLang());
         else
             lang = this.infoProperties.getLang();

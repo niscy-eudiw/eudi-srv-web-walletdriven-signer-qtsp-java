@@ -5,6 +5,7 @@ _29 Oct 2026_
 
 ### Fixed
 - Fixed Issue#43: "/oauth2/authorize returns HTTP 500 for credential authorization_details requests without scope".
+- Fixed `/csc/v2/info` returning HTTP 400 when the request body is missing; the body is now optional.
 
 
 ## [0.7.1]
