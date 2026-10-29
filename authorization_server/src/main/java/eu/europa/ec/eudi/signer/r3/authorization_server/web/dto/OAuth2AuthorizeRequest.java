@@ -305,6 +305,9 @@ public class OAuth2AuthorizeRequest {
     private static String getRequiredParameter(Map<String, String[]> parameters, String name)
             throws IllegalArgumentException {
         String[] value = parameters.get(name);
+        if (value == null || value.length == 0) {
+            throw new IllegalArgumentException("Missing required parameter: " + name);
+        }
         if (value.length != 1) {
             throw new IllegalArgumentException("Too many values for the parameter: " + name);
         }
@@ -317,7 +320,7 @@ public class OAuth2AuthorizeRequest {
     public static RequestMatcher requestMatcherWithoutScopeOrAuthorizationDetails() {
         return request
                 -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
-                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE), OAuth2AuthorizationResponseType.CODE.getValue())
                 && request.getParameter(OAuth2ParameterNames.SCOPE) == null
                 && request.getParameter(OAuth2CustomParameterNames.AUTHORIZATION_DETAILS) == null
                 && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null;
@@ -327,16 +330,15 @@ public class OAuth2AuthorizeRequest {
         return request
                 -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
                 && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null
-                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
-                && request.getParameter(OAuth2ParameterNames.SCOPE).equals(OAuth2ScopesNames.SERVICE);
-
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE), OAuth2AuthorizationResponseType.CODE.getValue())
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.SERVICE);
     }
 
     public static RequestMatcher requestMatcherForCredential() {
         return request
                 -> request.getParameter(OAuth2ParameterNames.CLIENT_ID) != null
                 && request.getParameter(PkceParameterNames.CODE_CHALLENGE) != null
-                && request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE).equals(OAuth2AuthorizationResponseType.CODE.getValue())
+                && Objects.equals(request.getParameter(OAuth2ParameterNames.RESPONSE_TYPE), OAuth2AuthorizationResponseType.CODE.getValue())
                 && ((Objects.equals(request.getParameter(OAuth2ParameterNames.SCOPE), OAuth2ScopesNames.CREDENTIAL)
                 && (request.getParameter(OAuth2CustomParameterNames.CREDENTIAL_ID) != null || request.getParameter(OAuth2CustomParameterNames.SIGNATURE_QUALIFIER) != null)
                 && request.getParameter(OAuth2CustomParameterNames.HASHES) != null
