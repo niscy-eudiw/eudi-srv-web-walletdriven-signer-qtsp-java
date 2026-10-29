@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2]
+_29 Oct 2026_
+
+### Fixed
+- Fixed Issue#43: "/oauth2/authorize returns HTTP 500 for credential authorization_details requests without scope".
+
+
 ## [0.7.1]
 _21 Oct 2026_
 
