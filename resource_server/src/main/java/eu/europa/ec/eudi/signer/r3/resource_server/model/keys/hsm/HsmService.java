@@ -24,7 +24,13 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 
 import org.bouncycastle.asn1.DERSequenceGenerator;
-import org.pkcs11.jacknji11.*;
+import org.pkcs11.jacknji11.CE;
+import org.pkcs11.jacknji11.CKA;
+import org.pkcs11.jacknji11.CKK;
+import org.pkcs11.jacknji11.CKM;
+import org.pkcs11.jacknji11.CKO;
+import org.pkcs11.jacknji11.Hex;
+import org.pkcs11.jacknji11.LongRef;
 
 public class HsmService {
 
@@ -155,6 +161,8 @@ public class HsmService {
         keyPair[1] = CE.GetAttributeValue(session, pubKey.value(), CKA.MODULUS).getValue();
         keyPair[2] = CE.GetAttributeValue(session, pubKey.value(), CKA.PUBLIC_EXPONENT).getValue();
 
+        CE.DestroyObject(session, pubKey.value());
+        CE.DestroyObject(session, privKey.value());
         CE.DestroyObject(session, secretKeyObj);
         this.hsmInfo.releaseSession(sessionRef);
         return keyPair;
@@ -199,6 +207,8 @@ public class HsmService {
         keyPair[1] = CE.GetAttributeValue(session, pubKey.value(), CKA.EC_POINT).getValue();
         keyPair[2] = CE.GetAttributeValue(session, pubKey.value(), CKA.EC_PARAMS).getValue();
 
+        CE.DestroyObject(session, pubKey.value());
+        CE.DestroyObject(session, privKey.value());
         CE.DestroyObject(session, secretKeyObj);
         this.hsmInfo.releaseSession(sessionRef);
         return keyPair;
@@ -258,6 +268,7 @@ public class HsmService {
         CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
         byte[] signed = CE.Sign(session, DTBSR);
 
+        CE.DestroyObject(session, privateKey);
         CE.DestroyObject(session, secretKeyObj);
         this.hsmInfo.releaseSession(sessionRef);
         return signed;
@@ -293,6 +304,7 @@ public class HsmService {
         CE.SignInit(session, new CKM(signatureAlgLong), privateKey);
         byte[] signed = CE.Sign(session, DTBSR);
 
+        CE.DestroyObject(session, privateKey);
         CE.DestroyObject(session, secretKeyObj);
         this.hsmInfo.releaseSession(sessionRef);
         return DEREncodeECDSASignatureValue(signed);
