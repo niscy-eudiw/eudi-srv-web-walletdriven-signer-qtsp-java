@@ -39,6 +39,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
     volumes:
       - ./config_files:/opt/app/config/config_files
+      - ./logs:/opt/app/logs
     command: ["--spring.config.additional-location=file:/opt/app/config/config_files/application-secret.yml"]
 
   resource_server:
@@ -57,6 +58,7 @@ services:
       - ./hsm:/opt/app/config/hsm/
       - ./ejbca/:/opt/app/config/ejbca/
       - ./certificates:/opt/app/certificates
+      - ./logs:/opt/app/logs
     env_file:
       - .env
     environment:

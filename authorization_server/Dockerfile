@@ -21,8 +21,6 @@ FROM eclipse-temurin:17
 
 WORKDIR /opt/app
 
-COPY ../certificate_of_issuers ./certificate_of_issuers
-
 # Start authorization_server
 COPY --from=builder /opt/app/authorization_server/target/*.jar /authorization_server.jar
 EXPOSE 8084
