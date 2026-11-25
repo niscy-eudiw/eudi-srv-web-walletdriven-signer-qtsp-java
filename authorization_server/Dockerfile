@@ -1,5 +1,5 @@
 # 1. Pulling the dependencies
-FROM maven:3.8.5-eclipse-temurin-17 AS builder
+FROM maven:3-eclipse-temurin-17-noble AS builder
 # Change working directory in the container
 WORKDIR /opt/app
 # Copy all POMs first for better build caching
@@ -17,7 +17,7 @@ COPY ../common_tools/src ./common_tools/src
 RUN mvn -B -e clean install
 
 # 3. Preparing the runtime environment
-FROM eclipse-temurin:17
+FROM eclipse-temurin:17-jre-noble
 
 WORKDIR /opt/app
 
