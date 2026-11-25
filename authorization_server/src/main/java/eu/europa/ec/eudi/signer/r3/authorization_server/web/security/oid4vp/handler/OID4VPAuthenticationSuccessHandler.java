@@ -17,6 +17,7 @@
 package eu.europa.ec.eudi.signer.r3.authorization_server.web.security.oid4vp.handler;
 
 import eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables.SessionUrlRelationList;
+import eu.europa.ec.eudi.signer.r3.common_tools.utils.WebUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,8 +62,16 @@ public class OID4VPAuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         logger.info("Save Authentication in the Context associated to the JSessionID.");
 
         String sessionId = request.getParameter("session_id");
-        String url = sessionUrlRelationList.getSessionInformation(sessionId).getUrlToReturnTo();
-        sessionUrlRelationList.removeSessionInformation(sessionId);
+        SessionUrlRelationList.SessionUrlRelation sessionInformation = (sessionId == null) ? null
+              : sessionUrlRelationList.getAndRemoveSessionInformation(WebUtils.getSanitizedCookieString(sessionId));
+        if (sessionInformation == null) {
+            // The filter already validated the session, so this only happens if it expired in the meantime.
+            logger.error("No active session information found after successful OID4VP authentication.");
+            request.getSession().setAttribute("errorMessage", "No active authentication session found. It may have expired, please start the authentication again.");
+            this.redirectStrategy.sendRedirect(request, response, "/error-page");
+            return;
+        }
+        String url = sessionInformation.getUrlToReturnTo();
 
         logger.info("Returning to: {}", url);
         this.redirectStrategy.sendRedirect(request, response, url);

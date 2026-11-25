@@ -48,7 +48,12 @@ public class OID4VPController {
 	public String getOID4VPCrossDevicePage(Model model, @RequestParam String sessionId){
 		String sanitizeCookie = WebUtils.getSanitizedCookieString(sessionId);
 		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizeCookie);
-		
+		if (sessionInformation == null || sessionInformation.getWalletLink() == null) {
+			logger.error("No Wallet link found for session {}", sanitizeCookie);
+			model.addAttribute(ERROR_MESSAGE_ATTRIBUTE, NO_ACTIVE_SESSION_MESSAGE);
+			return ERROR_VIEW;
+		}
+
 		try {
 			String serviceUrl = this.issuerConfig.getServiceURL();
 			String urlToReturnTo = sessionInformation.getUrlToReturnTo();

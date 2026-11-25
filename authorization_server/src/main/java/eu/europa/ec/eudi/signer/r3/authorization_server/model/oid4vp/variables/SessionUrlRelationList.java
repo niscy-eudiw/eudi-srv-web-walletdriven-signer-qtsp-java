@@ -16,7 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -25,45 +26,52 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SessionUrlRelationList {
+    private static final Duration EXPIRY_DURATION = Duration.ofMinutes(60);
 
-    private final ConcurrentMap<String, SessionUrlRelation> listOfVariables;
-    private final long EXPIRY_DURATION_MINUTES = 60;
+    private final ConcurrentMap<String, SessionUrlRelation> listOfVariables = new ConcurrentHashMap<>();
 
-    public SessionUrlRelationList() {
-        this.listOfVariables = new ConcurrentHashMap<>();
+    public SessionUrlRelation getSessionInformation(String sessionId){
+        SessionUrlRelation relation = this.listOfVariables.get(sessionId);
+        if (relation == null) return null;
+        if (relation.isExpired(Instant.now())) {
+            this.listOfVariables.remove(sessionId, relation);
+            return null;
+        }
+        return relation;
     }
 
-    public synchronized SessionUrlRelation getSessionInformation(String sessionId){
-        return this.listOfVariables.get(sessionId);
+    public SessionUrlRelation getAndRemoveSessionInformation(String sessionId){
+        SessionUrlRelation relation = this.listOfVariables.remove(sessionId);
+        return (relation == null || relation.isExpired(Instant.now())) ? null : relation;
     }
 
-    public synchronized void removeSessionInformation(String sessionId){
+    public void removeSessionInformation(String sessionId){
         this.listOfVariables.remove(sessionId);
     }
 
-    public synchronized void addSessionReturnToUrl(String sessionId, String url){
-        this.listOfVariables.put(sessionId, new SessionUrlRelation(url, null, LocalDateTime.now()));
+    public void addSessionReturnToUrl(String sessionId, String url){
+        addSessionReturnToUrlAndWalletLink(sessionId, url, null);
     }
 
-    public synchronized void addSessionReturnToUrlAndWalletLink(String sessionId, String url, String walletLink){
-        this.listOfVariables.put(sessionId, new SessionUrlRelation(url, walletLink, LocalDateTime.now()));
+    public void addSessionReturnToUrlAndWalletLink(String sessionId, String url, String walletLink){
+        this.listOfVariables.put(sessionId, new SessionUrlRelation(url, walletLink, Instant.now().plus(EXPIRY_DURATION)));
     }
 
-    @Scheduled(fixedRate = 3600 * 1000)
+    @Scheduled(fixedRate = 5 * 60 * 1000) // Run every 5 minutes
     public void cleanupExpiredEntries() {
-        LocalDateTime now = LocalDateTime.now();
-        listOfVariables.entrySet().removeIf(entry -> entry.getValue().getTimestamp().plusMinutes(EXPIRY_DURATION_MINUTES).isBefore(now));
+        Instant now = Instant.now();
+        listOfVariables.values().removeIf(v -> v.isExpired(now));
     }
 
     public static class SessionUrlRelation {
         private final String urlToReturnTo;
         private final String walletLink;
-        private final LocalDateTime timestamp;
+        private final Instant expiresAt;
 
-        public SessionUrlRelation(String urlToReturnTo, String walletLink, LocalDateTime timestamp) {
+        public SessionUrlRelation(String urlToReturnTo, String walletLink, Instant expiresAt) {
             this.urlToReturnTo = urlToReturnTo;
             this.walletLink = walletLink;
-            this.timestamp = timestamp;
+            this.expiresAt = expiresAt;
         }
 
         public String getUrlToReturnTo() {
@@ -74,8 +82,12 @@ public class SessionUrlRelationList {
             return walletLink;
         }
 
-        public LocalDateTime getTimestamp() {
-            return timestamp;
+        public Instant getExpiresAt() {
+            return expiresAt;
+        }
+
+        boolean isExpired(Instant now) {
+            return now.isAfter(expiresAt);
         }
     }
 }

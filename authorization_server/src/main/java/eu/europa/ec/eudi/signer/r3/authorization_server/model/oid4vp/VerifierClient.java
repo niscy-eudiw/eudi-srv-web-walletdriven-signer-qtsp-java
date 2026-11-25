@@ -57,9 +57,9 @@ public class VerifierClient {
     private final OID4VPConfig oid4VPConfig;
     private final VerifierCreatedVariables verifierVariables;
 
-    public VerifierClient(OID4VPConfig oid4VPConfig) {
+    public VerifierClient(OID4VPConfig oid4VPConfig, VerifierCreatedVariables verifierVariables) {
         this.oid4VPConfig = oid4VPConfig;
-        this.verifierVariables = new VerifierCreatedVariables();
+        this.verifierVariables = verifierVariables;
     }
 
     public String initSameDeviceTransactionToVerifier(String userId, String currentServiceUrl, JSONArray transaction_data) throws Exception {

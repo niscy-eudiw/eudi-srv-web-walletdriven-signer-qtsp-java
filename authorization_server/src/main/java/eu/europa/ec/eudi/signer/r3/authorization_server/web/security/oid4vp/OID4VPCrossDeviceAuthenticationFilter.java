@@ -29,6 +29,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
 
 	private static final RequestMatcher DEFAULT_ANT_PATH_REQUEST_MATCHER = new AntPathRequestMatcher("/oid4vp/cross-device/callback", HttpMethod.GET.name());
+	private static final String NO_ACTIVE_SESSION_MESSAGE = "No active authentication session found. It may have expired, please start the authentication again.";
 	private final OpenIdForVPService openIdForVPService;
 	private final SessionUrlRelationList sessionUrlRelationList;
 	private final CommonTokenSetting commonTokenSetting = new CommonTokenSetting();
@@ -48,10 +49,20 @@ public class OID4VPCrossDeviceAuthenticationFilter extends AbstractAuthenticatio
 		String sessionId = request.getParameter("session_id");
 		logger.info("SessionID from Request: {}", sessionId);
 
+		if (sessionId == null) {
+			logger.error("No session_id present in the cross-device callback request.");
+			throw new AuthenticationServiceException(NO_ACTIVE_SESSION_MESSAGE);
+		}
 		String sanitizedSessionId = WebUtils.getSanitizedCookieString(sessionId);
 
+		SessionUrlRelationList.SessionUrlRelation sessionInformation = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId);
+		if (sessionInformation == null) {
+			logger.error("No active session information found for session {}", sanitizedSessionId);
+			throw new AuthenticationServiceException(NO_ACTIVE_SESSION_MESSAGE);
+		}
+
 		try {
-			String urlToReturnTo = this.sessionUrlRelationList.getSessionInformation(sanitizedSessionId).getUrlToReturnTo();
+			String urlToReturnTo = sessionInformation.getUrlToReturnTo();
 			URI url = new URI(urlToReturnTo);
 
 			OID4VPAuthenticationToken unauthenticatedToken = this.openIdForVPService.pollVPTokenAndCreateOID4VPAuthToken(sanitizedSessionId, url);

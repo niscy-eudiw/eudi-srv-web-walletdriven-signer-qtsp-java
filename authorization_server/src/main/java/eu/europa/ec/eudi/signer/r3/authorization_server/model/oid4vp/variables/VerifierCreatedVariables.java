@@ -16,7 +16,8 @@
 
 package eu.europa.ec.eudi.signer.r3.authorization_server.model.oid4vp.variables;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -26,59 +27,52 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class VerifierCreatedVariables {
-    private final ConcurrentMap<String, VerifierCreatedVariable> allVariables;
-    private final long EXPIRY_DURATION_MINUTES = 60; // Example expiry time
+    private static final Duration EXPIRY_DURATION = Duration.ofMinutes(60);
+    private final ConcurrentMap<String, VerifierCreatedVariable> allVariables = new ConcurrentHashMap<>();
 
-    public VerifierCreatedVariables() {
-        this.allVariables = new ConcurrentHashMap<>();
+    public VerifierCreatedVariable getAndRemoveUsersVerifierCreatedVariable(String sessionId) {
+        VerifierCreatedVariable vcv = allVariables.remove(sessionId);
+        return (vcv == null || vcv.isExpired(Instant.now())) ? null : vcv;
     }
 
-    public synchronized VerifierCreatedVariable getAndRemoveUsersVerifierCreatedVariable(String sessionId) {
+    public VerifierCreatedVariable getUsersVerifierCreatedVariable(String sessionId) {
         VerifierCreatedVariable vcv = allVariables.get(sessionId);
-        if (vcv != null) {
-            removeVerifierCreatedVariable(sessionId);
-            return vcv;
+        if (vcv == null) return null;
+        if (vcv.isExpired(Instant.now())) {
+            allVariables.remove(sessionId, vcv);
+            return null;
         }
-        else return null;
+        return vcv;
     }
 
-    public synchronized VerifierCreatedVariable getUsersVerifierCreatedVariable(String sessionId) {
-       return allVariables.get(sessionId);
+    public void addUsersVerifierCreatedVariable(String sessionId, String nonce, String presentation_id) {
+        allVariables.put(sessionId, new VerifierCreatedVariable(nonce, presentation_id, Instant.now().plus(EXPIRY_DURATION)));
     }
 
-    public synchronized void addUsersVerifierCreatedVariable(String sessionId, String nonce, String presentation_id) {
-        allVariables.put(sessionId, new VerifierCreatedVariable(nonce, presentation_id, LocalDateTime.now()));
-    }
-
-    public synchronized void removeVerifierCreatedVariable(String sessionId){
+    public void removeVerifierCreatedVariable(String sessionId){
         allVariables.remove(sessionId);
     }
 
-    @Scheduled(fixedRate = 3600 * 1000) // Run every hour
+    @Scheduled(fixedRate = 5 * 60 * 1000) // Run every 5 minutes
     public void cleanupExpiredEntries() {
-        LocalDateTime now = LocalDateTime.now();
-		allVariables.entrySet().removeIf(entry -> entry.getValue().getTimestamp().plusMinutes(EXPIRY_DURATION_MINUTES).isBefore(now));
+        Instant now = Instant.now();
+        allVariables.values().removeIf(v -> v.isExpired(now));
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        for (String key : allVariables.keySet()) {
-            sb.append("{ ").append(key).append(": ").append(allVariables.get(key).getNonce()).append(" | ").append(allVariables.get(key).getTransaction_id()).append(" }\n");
-        }
-        sb.append("----------------------------------------\n");
-        return sb.toString();
+        return "VerifierCreatedVariables{entries=" + allVariables.size() + "}";
     }
 
     public static class VerifierCreatedVariable {
         private final String nonce;
         private final String transaction_id;
-        private final LocalDateTime timestamp;
+        private final Instant expiresAt;
 
-        public VerifierCreatedVariable(String nonce, String presentation_id, LocalDateTime timestamp) {
+        public VerifierCreatedVariable(String nonce, String presentation_id, Instant expiresAt) {
             this.nonce = nonce;
             this.transaction_id = presentation_id;
-            this.timestamp = timestamp;
+            this.expiresAt = expiresAt;
         }
 
         public String getNonce() {
@@ -89,20 +83,24 @@ public class VerifierCreatedVariables {
             return transaction_id;
         }
 
-        public LocalDateTime getTimestamp() {
-            return timestamp;
+        public Instant getExpiresAt() {
+            return expiresAt;
+        }
+
+        boolean isExpired(Instant now) {
+            return now.isAfter(expiresAt);
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (!(o instanceof VerifierCreatedVariable that)) return false;
-            return Objects.equals(nonce, that.nonce) && Objects.equals(transaction_id, that.transaction_id) && Objects.equals(timestamp, that.timestamp);
+            return Objects.equals(nonce, that.nonce) && Objects.equals(transaction_id, that.transaction_id) && Objects.equals(expiresAt, that.expiresAt);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(nonce, transaction_id, timestamp);
+            return Objects.hash(nonce, transaction_id, expiresAt);
         }
     }
 }
